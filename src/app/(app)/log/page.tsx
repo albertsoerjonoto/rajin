@@ -11,7 +11,6 @@ type Modal = 'none' | 'food' | 'exercise';
 
 export default function LogPage() {
   const { user } = useAuth();
-  const supabase = createClient();
   const [tab, setTab] = useState<Tab>('food');
   const [modal, setModal] = useState<Modal>('none');
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
@@ -35,6 +34,7 @@ export default function LogPage() {
 
   const fetchData = useCallback(async () => {
     if (!user) return;
+    const supabase = createClient();
     const today = getToday();
 
     const { data: food } = await supabase
@@ -52,7 +52,7 @@ export default function LogPage() {
       .eq('date', today)
       .order('created_at', { ascending: false });
     if (exercise) setExerciseLogs(exercise);
-  }, [user, supabase]);
+  }, [user]);
 
   useEffect(() => {
     fetchData();
@@ -61,6 +61,7 @@ export default function LogPage() {
   const saveFoodLog = async () => {
     if (!user || !description.trim() || !calories) return;
     setSaving(true);
+    const supabase = createClient();
 
     await supabase.from('food_logs').insert({
       user_id: user.id,
@@ -87,6 +88,7 @@ export default function LogPage() {
   const saveExerciseLog = async () => {
     if (!user || !exerciseType.trim() || !duration) return;
     setSaving(true);
+    const supabase = createClient();
 
     await supabase.from('exercise_logs').insert({
       user_id: user.id,
@@ -108,11 +110,13 @@ export default function LogPage() {
   };
 
   const deleteFoodLog = async (id: string) => {
+    const supabase = createClient();
     await supabase.from('food_logs').delete().eq('id', id);
     fetchData();
   };
 
   const deleteExerciseLog = async (id: string) => {
+    const supabase = createClient();
     await supabase.from('exercise_logs').delete().eq('id', id);
     fetchData();
   };

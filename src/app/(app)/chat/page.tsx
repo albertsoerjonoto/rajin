@@ -17,7 +17,6 @@ interface Message {
 
 export default function ChatPage() {
   const { user } = useAuth();
-  const supabase = createClient();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -93,6 +92,7 @@ export default function ChatPage() {
 
   const saveResults = async (msgId: string, foods: ParsedFood[], exercises: ParsedExercise[]) => {
     if (!user) return;
+    const supabase = createClient();
     const today = getToday();
 
     // Save food logs

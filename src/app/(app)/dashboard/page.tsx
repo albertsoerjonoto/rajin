@@ -8,7 +8,6 @@ import type { HabitWithLog, FoodLog, ExerciseLog, Profile } from '@/lib/types';
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const supabase = createClient();
   const [date, setDate] = useState(getToday());
   const [habits, setHabits] = useState<HabitWithLog[]>([]);
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
@@ -20,13 +19,28 @@ export default function DashboardPage() {
 
   const fetchData = useCallback(async () => {
     if (!user) return;
+    const supabase = createClient();
 
-    // Fetch profile
-    const { data: profileData } = await supabase
+    // Fetch profile (auto-create if missing for pre-migration users)
+    let { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
+
+    if (!profileData) {
+      const { data: newProfile } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email!,
+          display_name: user.email!.split('@')[0],
+          daily_calorie_goal: 2000,
+        })
+        .select()
+        .single();
+      profileData = newProfile;
+    }
     if (profileData) setProfile(profileData);
 
     // Fetch habits with logs for the date
@@ -72,7 +86,7 @@ export default function DashboardPage() {
       .eq('date', date)
       .order('created_at');
     if (exerciseData) setExerciseLogs(exerciseData);
-  }, [user, date, supabase]);
+  }, [user, date]);
 
   useEffect(() => {
     fetchData();
@@ -80,6 +94,7 @@ export default function DashboardPage() {
 
   const toggleHabit = async (habit: HabitWithLog) => {
     if (!user) return;
+    const supabase = createClient();
 
     // Optimistic update
     setHabits((prev) =>
@@ -106,6 +121,7 @@ export default function DashboardPage() {
 
   const addHabit = async () => {
     if (!user || !newHabitName.trim()) return;
+    const supabase = createClient();
 
     await supabase.from('habits').insert({
       user_id: user.id,
