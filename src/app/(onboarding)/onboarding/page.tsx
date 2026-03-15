@@ -288,7 +288,7 @@ export default function OnboardingPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1.5">Height</label>
-                  <div className="relative">
+                  <div className="flex items-center gap-2">
                     <input
                       type="number"
                       min="50"
@@ -296,16 +296,16 @@ export default function OnboardingPage() {
                       step="0.1"
                       value={heightCm}
                       onChange={(e) => setHeightCm(e.target.value)}
-                      className={inputClass}
+                      className={cn(inputClass, 'flex-1')}
                       placeholder="170"
                       autoFocus
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">cm</span>
+                    <span className="text-gray-400 text-sm font-medium w-6 shrink-0">cm</span>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1.5">Weight</label>
-                  <div className="relative">
+                  <div className="flex items-center gap-2">
                     <input
                       type="number"
                       min="10"
@@ -313,10 +313,10 @@ export default function OnboardingPage() {
                       step="0.1"
                       value={weightKg}
                       onChange={(e) => setWeightKg(e.target.value)}
-                      className={inputClass}
+                      className={cn(inputClass, 'flex-1')}
                       placeholder="70"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">kg</span>
+                    <span className="text-gray-400 text-sm font-medium w-6 shrink-0">kg</span>
                   </div>
                 </div>
               </div>
