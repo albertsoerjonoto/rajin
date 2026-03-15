@@ -12,6 +12,7 @@ import {
   validateBodyStat,
 } from '@/lib/validation';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import type { Profile, Gender } from '@/lib/types';
 
 export default function ProfilePage() {
@@ -28,6 +29,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const fetchedForUser = useRef<string | null>(null);
 
   const applyProfile = (p: Profile) => {
@@ -146,6 +149,27 @@ export default function ProfilePage() {
     await supabase.auth.signOut();
     router.push('/login');
     router.refresh();
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/delete-account', { method: 'DELETE' });
+      if (!res.ok) {
+        showToast('error', 'Failed to delete account. Please try again.');
+        setDeleting(false);
+        setShowDeleteConfirm(false);
+        return;
+      }
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push('/login');
+      router.refresh();
+    } catch {
+      showToast('error', 'Failed to delete account. Please try again.');
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const inputClass =
@@ -314,6 +338,22 @@ export default function ProfilePage() {
       >
         Sign Out
       </button>
+
+      <button
+        onClick={() => setShowDeleteConfirm(true)}
+        className="w-full mt-3 py-3 text-red-400 text-sm font-medium hover:text-red-600 transition-colors"
+      >
+        Delete Account
+      </button>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Delete Account"
+        message="This will permanently delete your account and all your data (habits, food logs, exercise logs). This cannot be undone."
+        confirmLabel={deleting ? 'Deleting...' : 'Delete Account'}
+        onConfirm={handleDeleteAccount}
+        onCancel={() => !deleting && setShowDeleteConfirm(false)}
+      />
 
       <p className="text-center text-xs text-gray-300 mt-8 mb-4">Rajin v1.0</p>
     </div>
