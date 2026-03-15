@@ -332,9 +332,9 @@ export default function DashboardPage() {
   const caloriePercent = calorieTarget > 0 ? Math.min((displayCalories / calorieTarget) * 100, 100) : 0;
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6">
+    <div className="max-w-lg mx-auto px-4">
       {ToastContainer}
-      <div className="sticky top-0 z-20 bg-bg flex items-center justify-between pb-4 -mx-4 px-4 pt-0">
+      <div className="sticky top-0 z-20 bg-bg flex items-center justify-between pb-4 -mx-4 px-4 pt-6">
         <h1 className="text-xl font-bold text-text-primary">Overview</h1>
         <DateNav date={date} onDateChange={setDate} period={period} onPeriodChange={setPeriod} showPeriodPicker />
       </div>

@@ -194,9 +194,9 @@ export default function ProfilePage() {
     'w-full px-4 py-3.5 rounded-xl border border-danger-input-border bg-surface focus:outline-none focus:ring-1 focus:ring-danger focus:border-transparent transition-all duration-200';
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6">
+    <div className="max-w-lg mx-auto px-4">
       {ToastContainer}
-      <div className="sticky top-0 z-20 bg-bg pb-4 -mx-4 px-4 pt-0">
+      <div className="sticky top-0 z-20 bg-bg pb-4 -mx-4 px-4 pt-6">
         <h1 className="text-xl font-bold text-text-primary">Profile</h1>
       </div>
 
