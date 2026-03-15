@@ -45,3 +45,70 @@ export function addDays(dateStr: string, days: number): string {
 export function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(' ');
 }
+
+export type Period = 'day' | 'week' | 'month' | 'year';
+
+export function formatWeekLabel(dateStr: string): string {
+  const today = getToday();
+  const d = new Date(dateStr + 'T12:00:00Z');
+  const dow = d.getUTCDay();
+  const monOffset = dow === 0 ? -6 : 1 - dow;
+  const monday = addDays(dateStr, monOffset);
+  const sunday = addDays(monday, 6);
+
+  const todayD = new Date(today + 'T12:00:00Z');
+  const todayDow = todayD.getUTCDay();
+  const todayMonOffset = todayDow === 0 ? -6 : 1 - todayDow;
+  const thisMonday = addDays(today, todayMonOffset);
+
+  if (monday === thisMonday) return 'This Week';
+  if (monday === addDays(thisMonday, -7)) return 'Last Week';
+  if (monday === addDays(thisMonday, 7)) return 'Next Week';
+
+  const m = new Date(monday + 'T12:00:00Z');
+  const s = new Date(sunday + 'T12:00:00Z');
+  const mLabel = m.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const sLabel = s.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' });
+  return `${mLabel}–${sLabel}`;
+}
+
+export function formatMonthLabel(dateStr: string): string {
+  const today = getToday();
+  const d = new Date(dateStr + 'T12:00:00Z');
+  const t = new Date(today + 'T12:00:00Z');
+
+  if (d.getUTCFullYear() === t.getUTCFullYear() && d.getUTCMonth() === t.getUTCMonth()) return 'This Month';
+
+  const prevMonth = new Date(t);
+  prevMonth.setUTCMonth(prevMonth.getUTCMonth() - 1);
+  if (d.getUTCFullYear() === prevMonth.getUTCFullYear() && d.getUTCMonth() === prevMonth.getUTCMonth()) return 'Last Month';
+
+  return d.toLocaleDateString('en-US', {
+    month: 'long',
+    year: d.getUTCFullYear() === t.getUTCFullYear() ? undefined : 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+export function formatYearLabel(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  return String(d.getUTCFullYear());
+}
+
+export function navigateByPeriod(dateStr: string, period: Period, direction: 1 | -1): string {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  switch (period) {
+    case 'day':
+      return addDays(dateStr, direction);
+    case 'week':
+      return addDays(dateStr, direction * 7);
+    case 'month': {
+      d.setUTCMonth(d.getUTCMonth() + direction);
+      return d.toISOString().split('T')[0];
+    }
+    case 'year': {
+      d.setUTCFullYear(d.getUTCFullYear() + direction);
+      return d.toISOString().split('T')[0];
+    }
+  }
+}

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, cn } from '@/lib/utils';
+import DateNav from '@/components/DateNav';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
@@ -21,6 +22,7 @@ export default function LogPage() {
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [date, setDate] = useState(getToday());
 
   // Food form state
   const [mealType, setMealType] = useState<MealType>('lunch');
@@ -45,13 +47,12 @@ export default function LogPage() {
     if (!user) return;
     setLoading(true);
     const supabase = createClient();
-    const today = getToday();
 
     const { data: food, error: foodError } = await supabase
       .from('food_logs')
       .select('*')
       .eq('user_id', user.id)
-      .eq('date', today)
+      .eq('date', date)
       .order('created_at', { ascending: false });
     if (foodError) showToast('error', 'Failed to load food logs');
     if (food) setFoodLogs(food);
@@ -60,12 +61,12 @@ export default function LogPage() {
       .from('exercise_logs')
       .select('*')
       .eq('user_id', user.id)
-      .eq('date', today)
+      .eq('date', date)
       .order('created_at', { ascending: false });
     if (exerciseError) showToast('error', 'Failed to load exercise logs');
     if (exercise) setExerciseLogs(exercise);
     setLoading(false);
-  }, [user, showToast]);
+  }, [user, date, showToast]);
 
   useEffect(() => {
     fetchData();
@@ -93,7 +94,7 @@ export default function LogPage() {
 
     const { error } = await supabase.from('food_logs').insert({
       user_id: user.id,
-      date: getToday(),
+      date,
       meal_type: mealType,
       description: description.trim(),
       calories: cal,
@@ -138,7 +139,7 @@ export default function LogPage() {
 
     const { error } = await supabase.from('exercise_logs').insert({
       user_id: user.id,
-      date: getToday(),
+      date,
       exercise_type: exerciseType.trim(),
       duration_minutes: dur,
       calories_burned: burned,
@@ -182,7 +183,10 @@ export default function LogPage() {
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
       {ToastContainer}
-      <h1 className="text-xl font-bold text-text-primary mb-4">Log</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold text-text-primary">Log</h1>
+        <DateNav date={date} onDateChange={setDate} />
+      </div>
 
       {/* Tab Switcher */}
       <div className="flex bg-surface-secondary rounded-xl p-1 mb-4">

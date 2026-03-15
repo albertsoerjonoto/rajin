@@ -13,7 +13,7 @@ export default function AppNotFound() {
           href="/dashboard"
           className="inline-block px-6 py-3 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all duration-200 active:scale-[0.98]"
         >
-          Go to Dashboard
+          Go to Overview
         </Link>
       </div>
     </div>

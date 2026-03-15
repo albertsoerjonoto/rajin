@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ServiceWorkerRegister } from './sw-register';
 
 const tabs = [
-  { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
+  { href: '/dashboard', label: 'Overview', icon: DashboardIcon },
   { href: '/log', label: 'Log', icon: LogIcon },
   { href: '/chat', label: 'Chat', icon: ChatIcon },
   { href: '/profile', label: 'Profile', icon: ProfileIcon },

@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { getToday, formatDisplayDate, addDays, cn } from '@/lib/utils';
+import { getToday, cn } from '@/lib/utils';
+import type { Period } from '@/lib/utils';
+import DateNav from '@/components/DateNav';
 import { computeNutritionTargets } from '@/lib/nutrition';
 import { useToast } from '@/components/Toast';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
@@ -67,6 +69,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { showToast, ToastContainer } = useToast();
   const [date, setDate] = useState(getToday());
+  const [period, setPeriod] = useState<Period>('day');
   const [habits, setHabits] = useState<HabitWithLog[]>([]);
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
@@ -331,35 +334,9 @@ export default function DashboardPage() {
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
       {ToastContainer}
-
-      {/* Date Navigator */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => setDate(addDays(date, -1))}
-          className="p-2 rounded-xl hover:bg-surface-hover transition-all duration-200 active:scale-[0.98]"
-          aria-label="Previous day"
-        >
-          <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-          </svg>
-        </button>
-        <div className="text-center">
-          <h1 className="text-lg font-semibold text-text-primary">{formatDisplayDate(date)}</h1>
-          {date !== getToday() && (
-            <button onClick={() => setDate(getToday())} className="text-xs text-accent-text font-medium mt-0.5 transition-all duration-200">
-              Go to today
-            </button>
-          )}
-        </div>
-        <button
-          onClick={() => setDate(addDays(date, 1))}
-          className="p-2 rounded-xl hover:bg-surface-hover transition-all duration-200 active:scale-[0.98]"
-          aria-label="Next day"
-        >
-          <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-          </svg>
-        </button>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold text-text-primary">Overview</h1>
+        <DateNav date={date} onDateChange={setDate} period={period} onPeriodChange={setPeriod} showPeriodPicker />
       </div>
 
       {loading ? (
