@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ServiceWorkerRegister } from './sw-register';
 
 const tabs = [
-  { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
+  { href: '/dashboard', label: 'Home', icon: DashboardIcon },
   { href: '/log', label: 'Log', icon: LogIcon },
   { href: '/chat', label: 'Chat', icon: ChatIcon },
   { href: '/profile', label: 'Profile', icon: ProfileIcon },
@@ -46,16 +46,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     checkOnboarding();
   }, [user, authLoading, router]);
 
-  // Show blank screen while checking (prevents flash of dashboard)
   if (!ready) {
-    return <div className="min-h-screen bg-gray-50" />;
+    return <div className="min-h-screen" style={{ background: 'var(--bg-main)' }} />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen pb-16" style={{ background: 'var(--bg-main)' }}>
       <ServiceWorkerRegister />
       {children}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 safe-area-bottom z-50">
+      <nav
+        className="fixed bottom-0 left-0 right-0 safe-area-bottom z-50"
+        style={{
+          background: '#171717',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+        }}
+      >
         <div className="max-w-lg mx-auto flex justify-around items-center h-16">
           {tabs.map((tab) => {
             const isActive = pathname === tab.href;
@@ -64,11 +69,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all',
-                  isActive ? 'text-emerald-600' : 'text-gray-400 hover:text-gray-600'
+                  'flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-xl transition-all',
+                  isActive ? 'text-white' : 'text-[#8e8ea0] hover:text-[#ececec]'
                 )}
               >
-                <tab.icon className="w-6 h-6" filled={isActive} />
+                <tab.icon className="w-5 h-5" filled={isActive} />
                 <span className="text-[10px] font-medium">{tab.label}</span>
               </Link>
             );

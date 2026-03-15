@@ -4,6 +4,27 @@
   --font-sans: var(--font-inter);
 }
 
+/* OpenAI/ChatGPT Design System */
+:root {
+  --bg-main: #212121;
+  --bg-surface: #2f2f2f;
+  --bg-surface-hover: #3a3a3a;
+  --bg-input: #2f2f2f;
+  --text-primary: #ececec;
+  --text-secondary: #8e8ea0;
+  --text-tertiary: #6b7280;
+  --accent: #10a37f;
+  --accent-hover: #0d8c6e;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --user-bubble: #2f2f2f;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+}
+
 /* iOS safe area support */
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -66,4 +87,44 @@
 /* Tap highlight removal for mobile */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* OpenAI-style input focus ring */
+.oai-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 12px 16px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.oai-input:focus {
+  border-color: var(--border-strong);
+}
+.oai-input::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Dark scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
+}
+
+/* Date input dark style */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.5;
 }

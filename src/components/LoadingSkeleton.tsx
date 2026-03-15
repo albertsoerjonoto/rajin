@@ -2,17 +2,20 @@
 
 export function CardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 animate-pulse">
-      <div className="h-4 bg-gray-200 rounded w-1/3 mb-3" />
-      <div className="h-3 bg-gray-100 rounded w-2/3 mb-2" />
-      <div className="h-3 bg-gray-100 rounded w-1/2" />
+    <div
+      className="rounded-xl p-4 animate-pulse"
+      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+    >
+      <div className="h-3.5 rounded-full w-1/3 mb-3" style={{ background: 'rgba(255,255,255,0.08)' }} />
+      <div className="h-2.5 rounded-full w-2/3 mb-2" style={{ background: 'rgba(255,255,255,0.05)' }} />
+      <div className="h-2.5 rounded-full w-1/2" style={{ background: 'rgba(255,255,255,0.05)' }} />
     </div>
   );
 }
 
 export function PageSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <CardSkeleton />
       <CardSkeleton />
       <CardSkeleton />

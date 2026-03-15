@@ -88,7 +88,6 @@ export default function ProfilePage() {
   const saveProfile = async () => {
     if (!user) return;
 
-    // Validate all fields
     const newErrors: Record<string, string> = {};
 
     if (calorieGoal && validateCalorieGoal(calorieGoal) === null) {
@@ -172,28 +171,64 @@ export default function ProfilePage() {
     }
   };
 
-  const inputClass =
-    'w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all';
-  const errorInputClass =
-    'w-full px-4 py-3 rounded-xl border border-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all';
+  const inputStyle = {
+    width: '100%',
+    padding: '12px 16px',
+    borderRadius: '10px',
+    background: 'var(--bg-main)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-primary)',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'border-color 0.15s ease',
+  };
+
+  const errorInputStyle = {
+    ...inputStyle,
+    border: '1px solid rgba(239,68,68,0.5)',
+  };
+
+  const cardStyle = {
+    background: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    padding: '20px',
+  };
+
+  const sectionLabelStyle = {
+    fontSize: '11px',
+    fontWeight: 600,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--text-secondary)',
+    marginBottom: '4px',
+  };
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6">
+    <div className="max-w-lg mx-auto px-4 pt-6 pb-8">
       {ToastContainer}
-      <h1 className="text-xl font-bold text-gray-900 mb-6">Profile</h1>
+      <h1 className="text-lg font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>Settings</h1>
 
       {!profile ? (
         <PageSkeleton />
       ) : (
         <>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4">
+          {/* Account Card */}
+          <div style={cardStyle} className="space-y-4 mb-3">
+            <p style={sectionLabelStyle}>Account</p>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <p className="text-sm text-gray-500 px-4 py-3 bg-gray-50 rounded-xl">{user?.email}</p>
+              <label className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>Email</label>
+              <p
+                className="text-sm px-4 py-3 rounded-lg"
+                style={{ background: 'var(--bg-main)', color: 'var(--text-tertiary)', border: '1px solid var(--border)' }}
+              >
+                {user?.email}
+              </p>
             </div>
 
             <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="displayName" className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                 Display Name
               </label>
               <input
@@ -201,13 +236,13 @@ export default function ProfilePage() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className={inputClass}
+                style={inputStyle}
                 placeholder="Your name"
               />
             </div>
 
             <div>
-              <label htmlFor="calorieGoal" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="calorieGoal" className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                 Daily Calorie Goal
               </label>
               <input
@@ -220,22 +255,26 @@ export default function ProfilePage() {
                   setCalorieGoal(e.target.value);
                   setErrors((prev) => ({ ...prev, calorieGoal: '' }));
                 }}
-                className={errors.calorieGoal ? errorInputClass : inputClass}
+                style={errors.calorieGoal ? errorInputStyle : inputStyle}
                 placeholder="2000"
               />
               {errors.calorieGoal && (
-                <p className="text-xs text-red-500 mt-1">{errors.calorieGoal}</p>
+                <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.calorieGoal}</p>
               )}
             </div>
           </div>
 
           {/* Body Stats Card */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4 mt-4">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Body Stats</h2>
-            <p className="text-xs text-gray-400 -mt-2">Used to calculate your recommended daily intake</p>
+          <div style={cardStyle} className="space-y-4 mb-4">
+            <div>
+              <p style={sectionLabelStyle}>Body Stats</p>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                Used to calculate your recommended daily intake
+              </p>
+            </div>
 
             <div>
-              <label htmlFor="dob" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="dob" className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                 Date of Birth
               </label>
               <input
@@ -247,26 +286,28 @@ export default function ProfilePage() {
                   setDateOfBirth(e.target.value);
                   setErrors((prev) => ({ ...prev, dateOfBirth: '' }));
                 }}
-                className={`${errors.dateOfBirth ? errorInputClass : inputClass} appearance-none max-w-full`}
+                style={errors.dateOfBirth ? errorInputStyle : inputStyle}
+                className="appearance-none max-w-full"
               />
               {errors.dateOfBirth && (
-                <p className="text-xs text-red-500 mt-1">{errors.dateOfBirth}</p>
+                <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.dateOfBirth}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-              <div className="flex gap-3">
+              <label className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>Gender</label>
+              <div className="flex gap-2">
                 {(['male', 'female'] as const).map((g) => (
                   <button
                     key={g}
                     type="button"
                     onClick={() => setGender(g)}
-                    className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all capitalize ${
-                      gender === g
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all capitalize"
+                    style={{
+                      background: gender === g ? 'var(--accent)' : 'var(--bg-main)',
+                      color: gender === g ? 'white' : 'var(--text-secondary)',
+                      border: `1px solid ${gender === g ? 'transparent' : 'var(--border)'}`,
+                    }}
                   >
                     {g}
                   </button>
@@ -276,7 +317,7 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="height" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="height" className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                   Height (cm)
                 </label>
                 <input
@@ -290,15 +331,15 @@ export default function ProfilePage() {
                     setHeightCm(e.target.value);
                     setErrors((prev) => ({ ...prev, heightCm: '' }));
                   }}
-                  className={errors.heightCm ? errorInputClass : inputClass}
+                  style={errors.heightCm ? errorInputStyle : inputStyle}
                   placeholder="170"
                 />
                 {errors.heightCm && (
-                  <p className="text-xs text-red-500 mt-1">{errors.heightCm}</p>
+                  <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.heightCm}</p>
                 )}
               </div>
               <div>
-                <label htmlFor="weight" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="weight" className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                   Weight (kg)
                 </label>
                 <input
@@ -312,11 +353,11 @@ export default function ProfilePage() {
                     setWeightKg(e.target.value);
                     setErrors((prev) => ({ ...prev, weightKg: '' }));
                   }}
-                  className={errors.weightKg ? errorInputClass : inputClass}
+                  style={errors.weightKg ? errorInputStyle : inputStyle}
                   placeholder="70"
                 />
                 {errors.weightKg && (
-                  <p className="text-xs text-red-500 mt-1">{errors.weightKg}</p>
+                  <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.weightKg}</p>
                 )}
               </div>
             </div>
@@ -325,26 +366,35 @@ export default function ProfilePage() {
           <button
             onClick={saveProfile}
             disabled={saving}
-            className="w-full mt-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50"
+            className="w-full py-3 text-sm font-semibold rounded-xl transition-all disabled:opacity-50"
+            style={{ background: 'var(--accent)', color: 'white' }}
           >
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
           </button>
         </>
       )}
 
-      <button
-        onClick={handleSignOut}
-        className="w-full mt-4 py-3 text-red-500 font-medium rounded-xl border border-red-200 hover:bg-red-50 transition-all"
-      >
-        Sign Out
-      </button>
-
-      <button
-        onClick={() => setShowDeleteConfirm(true)}
-        className="w-full mt-3 py-3 text-red-400 text-sm font-medium hover:text-red-600 transition-colors"
-      >
-        Delete Account
-      </button>
+      {/* Danger zone */}
+      <div style={{ ...cardStyle, marginTop: '16px' }} className="space-y-1">
+        <p style={sectionLabelStyle}>Account Actions</p>
+        <button
+          onClick={handleSignOut}
+          className="w-full py-2.5 text-sm font-medium rounded-lg transition-all text-left px-0"
+          style={{ color: 'var(--text-primary)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#ececec'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+        >
+          Sign out
+        </button>
+        <div style={{ height: '1px', background: 'var(--border)' }} />
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="w-full py-2.5 text-sm font-medium rounded-lg transition-all text-left px-0"
+          style={{ color: '#f87171' }}
+        >
+          Delete account
+        </button>
+      </div>
 
       <ConfirmDialog
         open={showDeleteConfirm}
@@ -355,7 +405,7 @@ export default function ProfilePage() {
         onCancel={() => !deleting && setShowDeleteConfirm(false)}
       />
 
-      <p className="text-center text-xs text-gray-300 mt-8 mb-4">Rajin v1.0</p>
+      <p className="text-center text-xs mt-6" style={{ color: 'var(--text-tertiary)' }}>Rajin v1.0</p>
     </div>
   );
 }

@@ -105,7 +105,6 @@ export default function DashboardPage() {
     setTogglingId(habit.id);
     const supabase = createClient();
 
-    // Optimistic update
     const wasCompleted = habit.completed;
     setHabits((prev) =>
       prev.map((h) => (h.id === habit.id ? { ...h, completed: !h.completed } : h))
@@ -115,7 +114,6 @@ export default function DashboardPage() {
       if (wasCompleted && habit.log_id) {
         const { error } = await supabase.from('habit_logs').delete().eq('id', habit.log_id);
         if (error) throw error;
-        // Clear the log_id locally
         setHabits((prev) =>
           prev.map((h) => (h.id === habit.id ? { ...h, log_id: undefined } : h))
         );
@@ -131,7 +129,6 @@ export default function DashboardPage() {
           .select()
           .single();
         if (error) throw error;
-        // Store the new log_id locally
         if (data) {
           setHabits((prev) =>
             prev.map((h) => (h.id === habit.id ? { ...h, log_id: data.id } : h))
@@ -139,7 +136,6 @@ export default function DashboardPage() {
         }
       }
     } catch {
-      // Revert optimistic update on error
       setHabits((prev) =>
         prev.map((h) => (h.id === habit.id ? { ...h, completed: wasCompleted } : h))
       );
@@ -189,6 +185,22 @@ export default function DashboardPage() {
 
   const targets = profile ? computeNutritionTargets(profile) : null;
 
+  const cardStyle = {
+    background: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    padding: '16px',
+  };
+
+  const sectionLabelStyle = {
+    fontSize: '11px',
+    fontWeight: 600,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--text-secondary)',
+    marginBottom: '10px',
+  };
+
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
       {ToastContainer}
@@ -197,27 +209,39 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => setDate(addDays(date, -1))}
-          className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-xl transition-colors"
+          style={{ color: 'var(--text-secondary)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-surface)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
           aria-label="Previous day"
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
           </svg>
         </button>
         <div className="text-center">
-          <h1 className="text-lg font-semibold text-gray-900">{formatDisplayDate(date)}</h1>
+          <h1 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+            {formatDisplayDate(date)}
+          </h1>
           {date !== getToday() && (
-            <button onClick={() => setDate(getToday())} className="text-xs text-emerald-600 font-medium mt-0.5">
+            <button
+              onClick={() => setDate(getToday())}
+              className="text-xs font-medium mt-0.5"
+              style={{ color: 'var(--accent)' }}
+            >
               Go to today
             </button>
           )}
         </div>
         <button
           onClick={() => setDate(addDays(date, 1))}
-          className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-xl transition-colors"
+          style={{ color: 'var(--text-secondary)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-surface)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
           aria-label="Next day"
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </button>
@@ -228,38 +252,62 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* Habits Section */}
-          <section className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Habits</h2>
-              <button onClick={() => setShowAddHabit(true)} className="text-emerald-600 text-sm font-medium">
+          <section className="mb-5">
+            <div className="flex items-center justify-between mb-2.5">
+              <p style={sectionLabelStyle}>Habits</p>
+              <button
+                onClick={() => setShowAddHabit(true)}
+                className="text-xs font-medium transition-colors"
+                style={{ color: 'var(--accent)' }}
+              >
                 + Add
               </button>
             </div>
 
             {showAddHabit && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3 animate-fade-in">
+              <div style={{ ...cardStyle, marginBottom: '10px' }} className="animate-fade-in">
                 <div className="flex gap-2 mb-3">
                   <input
                     type="text"
                     value={newHabitEmoji}
                     onChange={(e) => setNewHabitEmoji(e.target.value)}
-                    className="w-12 text-center text-xl px-2 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-12 text-center text-xl px-2 py-2 rounded-lg"
+                    style={{
+                      background: 'var(--bg-main)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-primary)',
+                      outline: 'none',
+                    }}
                     placeholder="✅"
                   />
                   <input
                     type="text"
                     value={newHabitName}
                     onChange={(e) => setNewHabitName(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 px-3 py-2 rounded-lg text-sm"
+                    style={{
+                      background: 'var(--bg-main)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-primary)',
+                      outline: 'none',
+                    }}
                     placeholder="Habit name"
                     autoFocus
                   />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-gray-500 rounded-xl hover:bg-gray-50">
+                  <button
+                    onClick={() => setShowAddHabit(false)}
+                    className="flex-1 py-2 text-sm rounded-lg transition-colors"
+                    style={{ color: 'var(--text-secondary)', background: 'var(--bg-main)' }}
+                  >
                     Cancel
                   </button>
-                  <button onClick={addHabit} className="flex-1 py-2 text-sm text-white bg-emerald-500 rounded-xl hover:bg-emerald-600">
+                  <button
+                    onClick={addHabit}
+                    className="flex-1 py-2 text-sm font-medium text-white rounded-lg"
+                    style={{ background: 'var(--accent)' }}
+                  >
                     Add Habit
                   </button>
                 </div>
@@ -267,30 +315,38 @@ export default function DashboardPage() {
             )}
 
             {habits.length === 0 && !showAddHabit ? (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-                <p className="text-gray-400 text-sm">No habits yet. Tap + Add to create one!</p>
+              <div style={cardStyle} className="text-center py-6">
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  No habits yet. Tap + Add to create one.
+                </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 {habits.map((habit) => (
                   <button
                     key={habit.id}
                     onClick={() => toggleHabit(habit)}
                     disabled={togglingId === habit.id}
                     className={cn(
-                      'bg-white rounded-2xl p-4 shadow-sm border text-left transition-all active:scale-95',
-                      habit.completed ? 'border-emerald-200 bg-emerald-50' : 'border-gray-100 hover:border-gray-200',
+                      'text-left transition-all active:scale-95 rounded-xl p-4',
                       togglingId === habit.id && 'opacity-60'
                     )}
+                    style={{
+                      background: habit.completed ? 'rgba(16,163,127,0.12)' : 'var(--bg-surface)',
+                      border: `1px solid ${habit.completed ? 'rgba(16,163,127,0.3)' : 'var(--border)'}`,
+                    }}
                   >
-                    <div className="text-2xl mb-1">
+                    <div className="text-xl mb-1.5">
                       {habit.completed ? (
                         <span className="animate-checkmark inline-block">{habit.emoji}</span>
                       ) : (
-                        <span className="opacity-40">{habit.emoji}</span>
+                        <span style={{ opacity: 0.4 }}>{habit.emoji}</span>
                       )}
                     </div>
-                    <p className={cn('text-sm font-medium', habit.completed ? 'text-emerald-700' : 'text-gray-600')}>
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: habit.completed ? 'var(--accent)' : 'var(--text-secondary)' }}
+                    >
                       {habit.name}
                     </p>
                   </button>
@@ -300,78 +356,94 @@ export default function DashboardPage() {
           </section>
 
           {/* Food Summary */}
-          <section className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Food</h2>
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <div className="flex items-end justify-between mb-2">
+          <section className="mb-5">
+            <p style={sectionLabelStyle}>Nutrition</p>
+            <div style={cardStyle}>
+              <div className="flex items-end justify-between mb-3">
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{totalCalories}</p>
-                  <p className="text-xs text-gray-400">of {calorieGoal} cal goal</p>
+                  <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                    {totalCalories}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                    of {calorieGoal} cal goal
+                  </p>
                 </div>
-                <p className={cn('text-sm font-medium', caloriePercent >= 100 ? 'text-orange-500' : 'text-emerald-600')}>
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: caloriePercent >= 100 ? '#f59e0b' : 'var(--accent)' }}
+                >
                   {Math.round(caloriePercent)}%
                 </p>
               </div>
-              <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="w-full h-1.5 rounded-full overflow-hidden"
+                style={{ background: 'var(--bg-main)' }}
+              >
                 <div
-                  className={cn(
-                    'h-full rounded-full transition-all duration-700 animate-progress',
-                    caloriePercent >= 100 ? 'bg-orange-400' : 'bg-emerald-400'
-                  )}
-                  style={{ width: `${caloriePercent}%` }}
+                  className="h-full rounded-full transition-all duration-700 animate-progress"
+                  style={{
+                    width: `${caloriePercent}%`,
+                    background: caloriePercent >= 100 ? '#f59e0b' : 'var(--accent)',
+                  }}
                 />
               </div>
               <div className="grid grid-cols-4 gap-2 mt-3">
                 {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((meal) => (
                   <div key={meal} className="text-center">
-                    <p className="text-xs text-gray-400 capitalize">{meal}</p>
-                    <p className="text-sm font-semibold text-gray-700">{mealBreakdown[meal]}</p>
+                    <p className="text-xs capitalize" style={{ color: 'var(--text-tertiary)' }}>{meal}</p>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--text-primary)' }}>
+                      {mealBreakdown[meal]}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Nutrition Targets — only shown when body stats are filled */}
+          {/* Nutrition Targets */}
           {targets?.hasData && (
-            <section className="mb-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Nutrition</h2>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                {/* TDEE & Deficit/Surplus */}
+            <section className="mb-5">
+              <p style={sectionLabelStyle}>Targets</p>
+              <div style={cardStyle}>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-xs text-gray-400">TDEE (est.)</p>
-                    <p className="text-lg font-bold text-gray-900">{targets.tdee} cal</p>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>TDEE (est.)</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{targets.tdee} cal</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-400">Your goal</p>
-                    <p className={cn(
-                      'text-sm font-semibold',
-                      targets.calorieDelta < -50 ? 'text-blue-600' :
-                      targets.calorieDelta > 50 ? 'text-orange-500' : 'text-emerald-600'
-                    )}>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Your goal</p>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{
+                        color: targets.calorieDelta < -50 ? '#60a5fa' :
+                          targets.calorieDelta > 50 ? '#f59e0b' : 'var(--accent)'
+                      }}
+                    >
                       {targets.deltaLabel}
                     </p>
                   </div>
                 </div>
 
-                {/* Net calories when exercise is logged */}
                 {totalCaloriesBurned > 0 && (
-                  <div className="bg-gray-50 rounded-xl px-3 py-2 mb-3">
-                    <div className="flex justify-between text-xs text-gray-500">
+                  <div
+                    className="rounded-lg px-3 py-2 mb-3"
+                    style={{ background: 'var(--bg-main)' }}
+                  >
+                    <div className="flex justify-between text-xs" style={{ color: 'var(--text-secondary)' }}>
                       <span>Eaten: {totalCalories}</span>
                       <span>Burned: {totalCaloriesBurned}</span>
-                      <span className="font-semibold text-gray-700">Net: {netCalories} cal</span>
+                      <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        Net: {netCalories} cal
+                      </span>
                     </div>
                   </div>
                 )}
 
-                {/* Macro Recommendations with progress bars */}
                 <div className="space-y-2.5">
                   {[
-                    { ...targets.protein, eaten: totalProtein, color: 'bg-blue-400' },
-                    { ...targets.carbs, eaten: totalCarbs, color: 'bg-amber-400' },
-                    { ...targets.fat, eaten: totalFat, color: 'bg-rose-400' },
+                    { ...targets.protein, eaten: totalProtein, trackColor: '#60a5fa' },
+                    { ...targets.carbs, eaten: totalCarbs, trackColor: '#fbbf24' },
+                    { ...targets.fat, eaten: totalFat, trackColor: '#f87171' },
                   ].map((macro) => {
                     const midTarget = (macro.min + macro.max) / 2;
                     const percent = midTarget > 0 ? Math.min((macro.eaten / midTarget) * 100, 100) : 0;
@@ -380,26 +452,33 @@ export default function DashboardPage() {
 
                     return (
                       <div key={macro.label}>
-                        <div className="flex justify-between items-baseline mb-0.5">
-                          <span className="text-xs font-medium text-gray-600">{macro.label}</span>
-                          <span className="text-xs text-gray-400">
-                            <span className={cn(
-                              'font-semibold',
-                              inRange ? 'text-emerald-600' : over ? 'text-orange-500' : 'text-gray-700'
-                            )}>
+                        <div className="flex justify-between items-baseline mb-1">
+                          <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                            {macro.label}
+                          </span>
+                          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                            <span
+                              className="font-semibold"
+                              style={{
+                                color: inRange ? 'var(--accent)' : over ? '#f59e0b' : 'var(--text-primary)'
+                              }}
+                            >
                               {macro.eaten}g
                             </span>
                             {' / '}
                             {macro.min}–{macro.max}g
                           </span>
                         </div>
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="w-full h-1 rounded-full overflow-hidden"
+                          style={{ background: 'var(--bg-main)' }}
+                        >
                           <div
-                            className={cn(
-                              'h-full rounded-full transition-all duration-500',
-                              inRange ? 'bg-emerald-400' : over ? 'bg-orange-400' : macro.color
-                            )}
-                            style={{ width: `${percent}%` }}
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${percent}%`,
+                              background: inRange ? 'var(--accent)' : over ? '#f59e0b' : macro.trackColor,
+                            }}
                           />
                         </div>
                       </div>
@@ -412,19 +491,25 @@ export default function DashboardPage() {
 
           {/* Exercise Summary */}
           <section className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Exercise</h2>
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <p style={sectionLabelStyle}>Exercise</p>
+            <div style={cardStyle}>
               {exerciseLogs.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-2">No exercise logged today</p>
+                <p className="text-sm text-center py-2" style={{ color: 'var(--text-secondary)' }}>
+                  No exercise logged today
+                </p>
               ) : (
                 <div className="flex gap-6">
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">{totalExerciseMinutes}</p>
-                    <p className="text-xs text-gray-400">minutes</p>
+                    <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                      {totalExerciseMinutes}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>minutes</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">{totalCaloriesBurned}</p>
-                    <p className="text-xs text-gray-400">cal burned</p>
+                    <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                      {totalCaloriesBurned}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>cal burned</p>
                   </div>
                 </div>
               )}

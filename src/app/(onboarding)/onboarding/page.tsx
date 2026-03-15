@@ -12,10 +12,10 @@ import type { Gender } from '@/lib/types';
 const TOTAL_STEPS = 4;
 
 const STEPS = [
-  { emoji: '👋', title: 'What should we call you?', subtitle: 'You can always change this later' },
-  { emoji: '⚡', title: "What's your gender?", subtitle: 'Used to calculate your daily nutrition needs' },
-  { emoji: '🎂', title: 'When were you born?', subtitle: 'Helps us estimate your calorie needs' },
-  { emoji: '📏', title: 'Your body measurements', subtitle: 'For more accurate calorie recommendations' },
+  { title: 'What should we call you?', subtitle: 'You can always change this later' },
+  { title: "What's your gender?", subtitle: 'Used to calculate your daily nutrition needs' },
+  { title: 'When were you born?', subtitle: 'Helps us estimate your calorie needs' },
+  { title: 'Your body measurements', subtitle: 'For more accurate calorie recommendations' },
 ];
 
 export default function OnboardingPage() {
@@ -29,14 +29,12 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(false);
 
-  // Form state
   const [displayName, setDisplayName] = useState('');
   const [gender, setGender] = useState<Gender | ''>('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [heightCm, setHeightCm] = useState('');
   const [weightKg, setWeightKg] = useState('');
 
-  // Fetch profile on mount — pre-populate and redirect if already onboarded
   useEffect(() => {
     if (authLoading || !user || fetchedRef.current) return;
     fetchedRef.current = true;
@@ -61,7 +59,6 @@ export default function OnboardingPage() {
         setHeightCm(data.height_cm ? String(data.height_cm) : '');
         setWeightKg(data.weight_kg ? String(data.weight_kg) : '');
 
-        // Resume from saved step
         const savedStep = data.onboarding_step ?? 0;
         if (savedStep > 0 && savedStep < TOTAL_STEPS) {
           setStep(savedStep);
@@ -92,8 +89,6 @@ export default function OnboardingPage() {
 
   const handleContinue = async () => {
     if (saving) return;
-
-    // Validate and save based on current step
     const nextStep = step + 1;
 
     if (step === 0) {
@@ -139,7 +134,6 @@ export default function OnboardingPage() {
       return;
     }
 
-    // Advance step
     setDirection('forward');
     setStep(nextStep);
   };
@@ -156,13 +150,11 @@ export default function OnboardingPage() {
   const handleSkip = async () => {
     const nextStep = step + 1;
     if (step === 3) {
-      // Final step — mark onboarding as complete even when skipping
       const ok = await saveStep({ onboarding_completed: true, onboarding_step: nextStep });
       if (!ok) return;
       router.replace('/dashboard');
       return;
     }
-    // Save step progress even when skipping
     const ok = await saveStep({ onboarding_step: nextStep });
     if (!ok) return;
     setDirection('forward');
@@ -174,12 +166,20 @@ export default function OnboardingPage() {
     setStep((s) => s - 1);
   };
 
-  const inputClass =
-    'w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-lg';
+  const inputStyle = {
+    width: '100%',
+    padding: '14px 16px',
+    borderRadius: '12px',
+    background: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-primary)',
+    fontSize: '16px',
+    outline: 'none',
+    transition: 'border-color 0.15s ease',
+  };
 
-  // Loading state
   if (authLoading || !ready) {
-    return <div className="min-h-screen bg-gray-50" />;
+    return <div className="min-h-screen" style={{ background: 'var(--bg-main)' }} />;
   }
 
   return (
@@ -191,11 +191,10 @@ export default function OnboardingPage() {
         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
           <div
             key={i}
-            className={cn(
-              'h-1.5 flex-1 rounded-full transition-all duration-300',
-              i < step ? 'bg-emerald-500' :
-              i === step ? 'bg-emerald-500' : 'bg-gray-200'
-            )}
+            className="h-1 flex-1 rounded-full transition-all duration-300"
+            style={{
+              background: i <= step ? 'var(--accent)' : 'var(--bg-surface)',
+            }}
           />
         ))}
       </div>
@@ -205,12 +204,13 @@ export default function OnboardingPage() {
         {step > 0 && (
           <button
             onClick={handleBack}
-            className="flex items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors"
+            className="flex items-center gap-1 transition-colors text-sm"
+            style={{ color: 'var(--text-secondary)' }}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
-            <span className="text-sm">Back</span>
+            Back
           </button>
         )}
       </div>
@@ -224,16 +224,11 @@ export default function OnboardingPage() {
             direction === 'forward' ? 'motion-safe:animate-slide-in-right' : 'motion-safe:animate-slide-in-left'
           )}
         >
-          {/* Emoji */}
-          <div className="text-center mb-6">
-            <span className="text-6xl">{STEPS[step].emoji}</span>
-          </div>
-
           {/* Title + Subtitle */}
-          <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">
+          <h1 className="text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
             {STEPS[step].title}
           </h1>
-          <p className="text-sm text-gray-400 text-center mb-8">
+          <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
             {STEPS[step].subtitle}
           </p>
 
@@ -250,7 +245,7 @@ export default function OnboardingPage() {
                     handleContinue();
                   }
                 }}
-                className={inputClass}
+                style={inputStyle}
                 placeholder="Your name"
                 autoFocus
               />
@@ -264,15 +259,14 @@ export default function OnboardingPage() {
                     type="button"
                     onClick={() => {
                       setGender(g);
-                      // Auto-advance after a brief visual feedback
                       setTimeout(() => handleGenderContinue(g), 250);
                     }}
-                    className={cn(
-                      'flex-1 py-4 rounded-2xl text-base font-semibold transition-all capitalize',
-                      gender === g
-                        ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:border-emerald-300'
-                    )}
+                    className="flex-1 py-4 rounded-xl text-base font-medium transition-all capitalize"
+                    style={{
+                      background: gender === g ? 'var(--accent)' : 'var(--bg-surface)',
+                      color: gender === g ? 'white' : 'var(--text-secondary)',
+                      border: `1px solid ${gender === g ? 'transparent' : 'var(--border)'}`,
+                    }}
                   >
                     {g === 'male' ? '👨 Male' : '👩 Female'}
                   </button>
@@ -287,7 +281,7 @@ export default function OnboardingPage() {
             {step === 3 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Height</label>
+                  <label className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>Height</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -296,15 +290,15 @@ export default function OnboardingPage() {
                       step="0.1"
                       value={heightCm}
                       onChange={(e) => setHeightCm(e.target.value)}
-                      className={cn(inputClass, 'flex-1')}
+                      style={{ ...inputStyle, flex: 1 }}
                       placeholder="170"
                       autoFocus
                     />
-                    <span className="text-gray-400 text-sm font-medium w-6 shrink-0">cm</span>
+                    <span className="text-sm font-medium w-6 shrink-0" style={{ color: 'var(--text-tertiary)' }}>cm</span>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Weight</label>
+                  <label className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>Weight</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -313,10 +307,10 @@ export default function OnboardingPage() {
                       step="0.1"
                       value={weightKg}
                       onChange={(e) => setWeightKg(e.target.value)}
-                      className={cn(inputClass, 'flex-1')}
+                      style={{ ...inputStyle, flex: 1 }}
                       placeholder="70"
                     />
-                    <span className="text-gray-400 text-sm font-medium w-6 shrink-0">kg</span>
+                    <span className="text-sm font-medium w-6 shrink-0" style={{ color: 'var(--text-tertiary)' }}>kg</span>
                   </div>
                 </div>
               </div>
@@ -325,18 +319,20 @@ export default function OnboardingPage() {
         </div>
 
         {/* Buttons */}
-        <div className="mt-8 space-y-3">
+        <div className="mt-8 space-y-2">
           <button
             onClick={handleContinue}
             disabled={saving}
-            className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 text-base"
+            className="w-full py-3.5 text-sm font-semibold rounded-xl transition-all disabled:opacity-50"
+            style={{ background: 'var(--accent)', color: 'white' }}
           >
             {saving ? 'Saving...' : step === 3 ? 'Get Started' : 'Continue'}
           </button>
           <button
             onClick={handleSkip}
             disabled={saving}
-            className="w-full py-2 text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors"
+            className="w-full py-2 text-sm font-medium transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
           >
             {step === 3 ? 'Skip for now' : 'Skip'}
           </button>
@@ -346,7 +342,7 @@ export default function OnboardingPage() {
   );
 }
 
-// ── Custom DOB Picker: Year → Month → Day ──────────────────────────
+// ── Custom DOB Picker ──────────────────────────
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -354,7 +350,6 @@ const MONTHS = [
 ];
 
 function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  // Parse existing value
   const parsed = value ? { year: +value.slice(0, 4), month: +value.slice(5, 7), day: +value.slice(8, 10) } : null;
 
   const [pickerStep, setPickerStep] = useState<'year' | 'month' | 'day'>(parsed ? 'day' : 'year');
@@ -366,31 +361,24 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
   const currentMonth = new Date().getMonth() + 1;
   const currentDay = new Date().getDate();
 
-  // Generate years from current year down to 120 years ago
   const years: number[] = [];
   for (let y = currentYear; y >= currentYear - 120; y--) years.push(y);
 
-  // Scroll to a sensible default when year picker opens
   useEffect(() => {
     if (pickerStep !== 'year' || !yearListRef.current) return;
     const container = yearListRef.current;
-    // Scroll to selected year, or default to ~25 years ago
     const targetYear = selectedYear ?? (currentYear - 25);
     const targetIndex = currentYear - targetYear;
-    const itemHeight = 48; // h-12 = 48px
+    const itemHeight = 48;
     const containerHeight = container.clientHeight;
     container.scrollTop = Math.max(0, targetIndex * itemHeight - containerHeight / 2 + itemHeight / 2);
   }, [pickerStep, selectedYear, currentYear]);
 
-  // Get available months for selected year
   const getMonths = () => {
-    if (selectedYear === currentYear) {
-      return MONTHS.slice(0, currentMonth);
-    }
+    if (selectedYear === currentYear) return MONTHS.slice(0, currentMonth);
     return MONTHS;
   };
 
-  // Get days in selected month/year
   const getDays = () => {
     if (!selectedYear || !selectedMonth) return [];
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
@@ -405,7 +393,6 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
 
   const handleYearSelect = (year: number) => {
     setSelectedYear(year);
-    // If previously selected month is invalid for this year, reset
     if (year === currentYear && selectedMonth && selectedMonth > currentMonth) {
       setSelectedMonth(null);
     }
@@ -413,8 +400,7 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
   };
 
   const handleMonthSelect = (monthIndex: number) => {
-    const month = monthIndex + 1;
-    setSelectedMonth(month);
+    setSelectedMonth(monthIndex + 1);
     setPickerStep('day');
   };
 
@@ -424,7 +410,6 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
     onChange(dateStr);
   };
 
-  // If a date is already selected, show it with an edit option
   if (value && pickerStep === 'day' && parsed) {
     const displayDate = new Date(value + 'T12:00:00Z');
     const formatted = displayDate.toLocaleDateString('en-US', {
@@ -432,65 +417,69 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
     });
 
     return (
-      <div className="space-y-3">
-        <div className="bg-white rounded-2xl border border-emerald-200 p-4 flex items-center justify-between">
-          <div>
-            <p className="text-lg font-semibold text-gray-900">{formatted}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => { setPickerStep('year'); onChange(''); }}
-            className="text-sm text-emerald-600 font-medium hover:underline"
-          >
-            Change
-          </button>
-        </div>
+      <div
+        className="rounded-xl p-4 flex items-center justify-between"
+        style={{
+          background: 'rgba(16,163,127,0.1)',
+          border: '1px solid rgba(16,163,127,0.25)',
+        }}
+      >
+        <p className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>{formatted}</p>
+        <button
+          type="button"
+          onClick={() => { setPickerStep('year'); onChange(''); }}
+          className="text-sm font-medium"
+          style={{ color: 'var(--accent)' }}
+        >
+          Change
+        </button>
       </div>
     );
   }
 
-  const pillClass = (isSelected: boolean) => cn(
-    'px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
-    isSelected
-      ? 'bg-emerald-500 text-white shadow-sm'
-      : 'bg-white text-gray-700 border border-gray-200 hover:border-emerald-300'
-  );
+  const pillStyle = (isSelected: boolean): React.CSSProperties => ({
+    padding: '8px 12px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 500,
+    transition: 'all 0.15s',
+    background: isSelected ? 'var(--accent)' : 'var(--bg-surface)',
+    color: isSelected ? 'white' : 'var(--text-secondary)',
+    border: `1px solid ${isSelected ? 'transparent' : 'var(--border)'}`,
+  });
 
   return (
-    <div className="space-y-4">
-      {/* Breadcrumb navigation */}
+    <div className="space-y-3">
+      {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-sm">
         <button
           type="button"
           onClick={() => setPickerStep('year')}
-          className={cn(
-            'font-medium transition-colors',
-            pickerStep === 'year' ? 'text-emerald-600' : selectedYear ? 'text-gray-700 hover:text-emerald-600' : 'text-gray-400'
-          )}
+          style={{ color: pickerStep === 'year' ? 'var(--accent)' : selectedYear ? 'var(--text-primary)' : 'var(--text-tertiary)', fontWeight: 500 }}
         >
           {selectedYear ?? 'Year'}
         </button>
-        <span className="text-gray-300">›</span>
+        <span style={{ color: 'var(--text-tertiary)' }}>›</span>
         <button
           type="button"
           onClick={() => selectedYear && setPickerStep('month')}
           disabled={!selectedYear}
-          className={cn(
-            'font-medium transition-colors',
-            pickerStep === 'month' ? 'text-emerald-600' : selectedMonth ? 'text-gray-700 hover:text-emerald-600' : 'text-gray-400'
-          )}
+          style={{ color: pickerStep === 'month' ? 'var(--accent)' : selectedMonth ? 'var(--text-primary)' : 'var(--text-tertiary)', fontWeight: 500 }}
         >
           {selectedMonth ? MONTHS[selectedMonth - 1] : 'Month'}
         </button>
-        <span className="text-gray-300">›</span>
-        <span className="text-gray-400 font-medium">Day</span>
+        <span style={{ color: 'var(--text-tertiary)' }}>›</span>
+        <span style={{ color: 'var(--text-tertiary)', fontWeight: 500 }}>Day</span>
       </div>
 
-      {/* Scrollable content */}
-      <div className={cn(
-        "bg-white rounded-2xl border border-gray-200 overflow-y-auto scrollbar-hide",
-        pickerStep === 'year' ? 'max-h-72' : 'p-4 max-h-60'
-      )}>
+      {/* Picker content */}
+      <div
+        className={cn(
+          "rounded-xl overflow-y-auto scrollbar-hide",
+          pickerStep === 'year' ? 'max-h-72' : 'p-3 max-h-60'
+        )}
+        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+      >
         {pickerStep === 'year' && (
           <div ref={yearListRef} className="max-h-72 overflow-y-auto scrollbar-hide">
             {years.map((y) => (
@@ -498,12 +487,11 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
                 key={y}
                 type="button"
                 onClick={() => handleYearSelect(y)}
-                className={cn(
-                  'w-full h-12 text-center text-base font-medium transition-all',
-                  y === selectedYear
-                    ? 'bg-emerald-500 text-white'
-                    : 'text-gray-700 hover:bg-emerald-50'
-                )}
+                className="w-full h-12 text-center text-base font-medium transition-all"
+                style={{
+                  background: y === selectedYear ? 'var(--accent)' : 'transparent',
+                  color: y === selectedYear ? 'white' : 'var(--text-secondary)',
+                }}
               >
                 {y}
               </button>
@@ -514,12 +502,7 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
         {pickerStep === 'month' && (
           <div className="grid grid-cols-3 gap-2">
             {getMonths().map((m, i) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => handleMonthSelect(i)}
-                className={pillClass(i + 1 === selectedMonth)}
-              >
+              <button key={m} type="button" onClick={() => handleMonthSelect(i)} style={pillStyle(i + 1 === selectedMonth)}>
                 {m.slice(0, 3)}
               </button>
             ))}
@@ -527,13 +510,13 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
         )}
 
         {pickerStep === 'day' && (
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1.5">
             {getDays().map((d) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => handleDaySelect(d)}
-                className={pillClass(parsed?.day === d && parsed?.month === selectedMonth && parsed?.year === selectedYear)}
+                style={pillStyle(parsed?.day === d && parsed?.month === selectedMonth && parsed?.year === selectedYear)}
               >
                 {d}
               </button>
