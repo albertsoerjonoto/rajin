@@ -62,14 +62,18 @@ export default function ChatPage() {
 
     const update = () => {
       if (!containerRef.current) return;
-      // Detect keyboard: visual viewport shrinks when keyboard opens
       const isKeyboardOpen = window.innerHeight - vv.height > 100;
-      // When keyboard open: nav is behind keyboard, use full visual viewport
-      // When closed: subtract nav height (64px)
       const navH = isKeyboardOpen ? 0 : 64;
       containerRef.current.style.height = `${vv.height - navH}px`;
-      // Follow iOS scroll position so container stays in visible area
-      containerRef.current.style.top = `${vv.offsetTop}px`;
+
+      if (isKeyboardOpen) {
+        // Follow iOS scroll so container stays in visible area
+        containerRef.current.style.top = `${vv.offsetTop}px`;
+      } else {
+        // Keyboard closed: reset to top and scroll page back
+        containerRef.current.style.top = '0px';
+        window.scrollTo(0, 0);
+      }
     };
 
     update();
