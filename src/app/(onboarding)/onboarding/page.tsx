@@ -136,6 +136,14 @@ export default function OnboardingPage() {
     setStep((s) => s + 1);
   };
 
+  const handleGenderContinue = async (g: Gender) => {
+    if (saving) return;
+    const ok = await saveStep({ gender: g });
+    if (!ok) return;
+    setDirection('forward');
+    setStep((s) => s + 1);
+  };
+
   const handleSkip = async () => {
     if (step === 3) {
       // Final step — mark onboarding as complete even when skipping
@@ -241,7 +249,11 @@ export default function OnboardingPage() {
                   <button
                     key={g}
                     type="button"
-                    onClick={() => setGender(g)}
+                    onClick={() => {
+                      setGender(g);
+                      // Auto-advance after a brief visual feedback
+                      setTimeout(() => handleGenderContinue(g), 250);
+                    }}
                     className={cn(
                       'flex-1 py-4 rounded-2xl text-base font-semibold transition-all capitalize',
                       gender === g
