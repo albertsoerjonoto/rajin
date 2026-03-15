@@ -52,6 +52,7 @@ export default function ChatPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<ChatContext | null>(null);
   const shouldAutoScroll = useRef(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const isToday = date === getToday();
 
@@ -63,17 +64,17 @@ export default function ChatPage() {
     const update = () => {
       if (!containerRef.current) return;
       const isKeyboardOpen = window.innerHeight - vv.height > 100;
-      const navH = isKeyboardOpen ? 0 : 64;
-      containerRef.current.style.height = `${vv.height - navH}px`;
+      // Always use full visual viewport height
+      containerRef.current.style.height = `${vv.height}px`;
 
       if (isKeyboardOpen) {
-        // Follow iOS scroll so container stays in visible area
         containerRef.current.style.top = `${vv.offsetTop}px`;
       } else {
-        // Keyboard closed: reset to top and scroll page back
         containerRef.current.style.top = '0px';
         window.scrollTo(0, 0);
       }
+
+      setKeyboardVisible(isKeyboardOpen);
     };
 
     update();
@@ -500,7 +501,7 @@ export default function ChatPage() {
     (msg.exerciseEdits?.length ?? 0) > 0;
 
   return (
-    <div ref={containerRef} className="fixed inset-x-0 top-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
+    <div ref={containerRef} className="fixed inset-x-0 top-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: '100vh' }}>
       <div className="max-w-lg mx-auto flex flex-col h-full w-full">
       {ToastContainer}
 
@@ -714,7 +715,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="px-4 pb-4 pt-2">
+      <div className={cn("px-4 pt-2", keyboardVisible ? "pb-2" : "pb-20")}>
         <div className={cn(
           'flex items-center bg-surface-secondary rounded-2xl px-4 py-1 transition-colors',
           !isToday && 'opacity-50'
