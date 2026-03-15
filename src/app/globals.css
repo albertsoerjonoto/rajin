@@ -303,7 +303,12 @@
   display: none;
 }
 
-/* Tap highlight removal for mobile */
+/* Tap highlight removal for mobile + hide all scrollbars */
 * {
   -webkit-tap-highlight-color: transparent;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
 }
