@@ -8,7 +8,60 @@ import { computeNutritionTargets } from '@/lib/nutrition';
 import { useToast } from '@/components/Toast';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import EmojiPicker from '@/components/EmojiPicker';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from '@dnd-kit/core';
+import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { HabitWithLog, FoodLog, ExerciseLog, Profile } from '@/lib/types';
+
+function HabitCardContent({ habit, isDragging }: { habit: HabitWithLog; isDragging?: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 text-text-tertiary">
+        <circle cx="7" cy="5" r="1.5" fill="currentColor" />
+        <circle cx="17" cy="5" r="1.5" fill="currentColor" />
+        <circle cx="7" cy="12" r="1.5" fill="currentColor" />
+        <circle cx="17" cy="12" r="1.5" fill="currentColor" />
+        <circle cx="7" cy="19" r="1.5" fill="currentColor" />
+        <circle cx="17" cy="19" r="1.5" fill="currentColor" />
+      </svg>
+      <span className="text-base leading-none shrink-0">{habit.emoji}</span>
+      <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', isDragging ? 'text-text-primary' : 'text-text-secondary')}>
+        {habit.name}
+      </span>
+    </div>
+  );
+}
+
+function SortableHabitCard({ habit, onEdit }: { habit: HabitWithLog; onEdit: (h: HabitWithLog) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: habit.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => onEdit(habit)}
+      className="bg-surface rounded-xl px-3 py-2.5 border border-border hover:border-border-strong text-left transition-colors touch-manipulation cursor-grab active:cursor-grabbing"
+    >
+      <HabitCardContent habit={habit} />
+    </button>
+  );
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -27,6 +80,43 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmoji, setEditEmoji] = useState('');
+  const [activeHabit, setActiveHabit] = useState<HabitWithLog | null>(null);
+  const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const dragged = habits.find((h) => h.id === event.active.id);
+    if (dragged) setActiveHabit(dragged);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveHabit(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id || !user) return;
+
+    const oldIndex = habits.findIndex((h) => h.id === active.id);
+    const newIndex = habits.findIndex((h) => h.id === over.id);
+    const reordered = arrayMove(habits, oldIndex, newIndex);
+
+    // Optimistic update
+    setHabits(reordered);
+
+    // Persist new sort_order
+    const supabase = createClient();
+    const results = await Promise.all(
+      reordered.map((h, i) =>
+        supabase.from('habits').update({ sort_order: i }).eq('id', h.id)
+      )
+    );
+    if (results.some((r) => r.error)) {
+      showToast('error', 'Failed to save order');
+      fetchData();
+    }
+  };
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -226,10 +316,17 @@ export default function DashboardPage() {
     snack: foodLogs.filter((f) => f.meal_type === 'snack').reduce((s, f) => s + f.calories, 0),
   };
 
+  // Filtered values when a meal is selected
+  const filteredLogs = selectedMeal ? foodLogs.filter((f) => f.meal_type === selectedMeal) : foodLogs;
+  const displayCalories = selectedMeal ? mealBreakdown[selectedMeal as keyof typeof mealBreakdown] : totalCalories;
+  const displayProtein = filteredLogs.reduce((sum, f) => sum + (f.protein_g || 0), 0);
+  const displayCarbs = filteredLogs.reduce((sum, f) => sum + (f.carbs_g || 0), 0);
+  const displayFat = filteredLogs.reduce((sum, f) => sum + (f.fat_g || 0), 0);
+
   const targets = profile ? computeNutritionTargets(profile) : null;
   const hasBodyStats = targets?.hasData ?? false;
   const calorieTarget = targets?.calorieTarget ?? 0;
-  const caloriePercent = calorieTarget > 0 ? Math.min((totalCalories / calorieTarget) * 100, 100) : 0;
+  const caloriePercent = calorieTarget > 0 ? Math.min((displayCalories / calorieTarget) * 100, 100) : 0;
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
@@ -316,91 +413,107 @@ export default function DashboardPage() {
               <div className="bg-surface rounded-2xl p-6 border border-border text-center">
                 <p className="text-text-tertiary text-sm">No habits yet. Tap Add to create one!</p>
               </div>
+            ) : editMode ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={habits.map((h) => h.id)} strategy={rectSortingStrategy}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {habits.map((habit) =>
+                      editingId === habit.id ? (
+                        <div
+                          key={habit.id}
+                          className="col-span-2 bg-surface rounded-2xl p-4 border border-accent-border animate-fade-in"
+                        >
+                          <div className="flex gap-2 mb-3">
+                            <EmojiPicker value={editEmoji} onChange={setEditEmoji} />
+                            <input
+                              type="text"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="flex-1 px-3 py-2 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring text-sm"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => deleteHabit(habit.id)}
+                              className="py-2 px-3 text-sm text-danger-text rounded-xl hover:bg-danger-surface transition-all duration-200"
+                            >
+                              Delete
+                            </button>
+                            <div className="flex-1" />
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="py-2 px-3 text-sm text-text-secondary rounded-xl hover:bg-surface-hover transition-all duration-200"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={saveEdit}
+                              className="py-2 px-4 text-sm text-accent-fg bg-accent rounded-xl hover:bg-accent-hover transition-all duration-200 active:scale-[0.98]"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <SortableHabitCard key={habit.id} habit={habit} onEdit={startEditing} />
+                      )
+                    )}
+                  </div>
+                </SortableContext>
+                <DragOverlay>
+                  {activeHabit ? (
+                    <div className="bg-surface rounded-xl px-3 py-2.5 border border-accent-border shadow-lg scale-105">
+                      <HabitCardContent habit={activeHabit} isDragging />
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             ) : (
               <div className="grid grid-cols-2 gap-2">
-                {habits.map((habit) =>
-                  editingId === habit.id ? (
-                    <div
-                      key={habit.id}
-                      className="col-span-2 bg-surface rounded-2xl p-4 border border-accent-border animate-fade-in"
-                    >
-                      <div className="flex gap-2 mb-3">
-                        <EmojiPicker value={editEmoji} onChange={setEditEmoji} />
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="flex-1 px-3 py-2 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring text-sm"
-                          autoFocus
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => deleteHabit(habit.id)}
-                          className="py-2 px-3 text-sm text-danger-text rounded-xl hover:bg-danger-surface transition-all duration-200"
-                        >
-                          Delete
-                        </button>
-                        <div className="flex-1" />
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="py-2 px-3 text-sm text-text-secondary rounded-xl hover:bg-surface-hover transition-all duration-200"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={saveEdit}
-                          className="py-2 px-4 text-sm text-accent-fg bg-accent rounded-xl hover:bg-accent-hover transition-all duration-200 active:scale-[0.98]"
-                        >
-                          Save
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      key={habit.id}
-                      onClick={() => editMode ? startEditing(habit) : toggleHabit(habit)}
-                      disabled={!editMode && togglingId === habit.id}
-                      className={cn(
-                        'bg-surface rounded-xl px-3 py-2.5 border text-left transition-all duration-200 active:scale-[0.97]',
-                        habit.completed ? 'border-positive-border bg-positive-surface' : 'border-border hover:border-border-strong',
-                        !editMode && togglingId === habit.id && 'opacity-60'
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={cn('text-base leading-none shrink-0', habit.completed && !editMode && 'animate-checkmark inline-block')}>
-                          {habit.emoji}
-                        </span>
-                        <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
-                          {habit.name}
-                        </span>
-                        {editMode ? (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                            <path d="M9 18l6-6-6-6" />
-                          </svg>
-                        ) : (
-                          <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
-                            <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
-                            {habit.completed && (
-                              <g>
-                                <circle cx="12" cy="12" r="10" fill="var(--c-positive)" className="animate-circle-fill" />
-                                <path
-                                  d="M7 12.5l3.5 3.5 6.5-7"
-                                  fill="none"
-                                  stroke="white"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="animate-check-draw"
-                                />
-                              </g>
-                            )}
-                          </svg>
+                {habits.map((habit) => (
+                  <button
+                    key={habit.id}
+                    onClick={() => toggleHabit(habit)}
+                    disabled={togglingId === habit.id}
+                    className={cn(
+                      'bg-surface rounded-xl px-3 py-2.5 border text-left transition-all duration-200 active:scale-[0.97]',
+                      habit.completed ? 'border-positive-border bg-positive-surface' : 'border-border hover:border-border-strong',
+                      togglingId === habit.id && 'opacity-60'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={cn('text-base leading-none shrink-0', habit.completed && 'animate-checkmark inline-block')}>
+                        {habit.emoji}
+                      </span>
+                      <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
+                        {habit.name}
+                      </span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
+                        {habit.completed && (
+                          <g>
+                            <circle cx="12" cy="12" r="10" fill="var(--c-positive)" className="animate-circle-fill" />
+                            <path
+                              d="M7 12.5l3.5 3.5 6.5-7"
+                              fill="none"
+                              stroke="white"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="animate-check-draw"
+                            />
+                          </g>
                         )}
-                      </div>
-                    </button>
-                  )
-                )}
+                      </svg>
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
           </section>
@@ -411,71 +524,105 @@ export default function DashboardPage() {
             <div className="bg-surface rounded-2xl p-5 border border-border">
               {/* Calorie Summary */}
               {hasBodyStats ? (
-                <div className="mb-3">
-                  <div className="flex items-baseline justify-between mb-1.5">
-                    <span className="text-2xl font-bold text-text-primary">{totalCalories}</span>
-                    <span className="text-xs text-text-tertiary">
-                      of {targets!.calorieRange.min}–{targets!.calorieRange.max} cal
-                    </span>
+                <div className="mb-4">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-3xl font-bold text-text-primary transition-all duration-300">{displayCalories}</span>
+                      <span className="text-sm text-text-tertiary">cal</span>
+                    </div>
+                    {selectedMeal ? (
+                      <span className="text-xs text-accent-text font-medium">
+                        {selectedMeal === 'snack' ? 'Other' : selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1)} only
+                      </span>
+                    ) : (
+                      <span className="text-xs text-text-tertiary">
+                        of {targets!.calorieRange.min}–{targets!.calorieRange.max}
+                      </span>
+                    )}
                   </div>
-                  <div className="w-full h-2.5 bg-surface-secondary rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        'h-full rounded-full transition-all duration-500',
-                        totalCalories > targets!.calorieRange.max ? 'bg-warning-bar' :
-                        totalCalories >= targets!.calorieRange.min ? 'bg-positive-bar' : 'bg-accent'
-                      )}
-                      style={{ width: `${caloriePercent}%` }}
-                    />
-                  </div>
+                  {!selectedMeal && (
+                    <div className="w-full h-3 bg-surface-secondary rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          'h-full rounded-full transition-all duration-500',
+                          totalCalories > targets!.calorieRange.max ? 'bg-warning-bar' :
+                          totalCalories >= targets!.calorieRange.min ? 'bg-positive-bar' : 'bg-accent'
+                        )}
+                        style={{ width: `${caloriePercent}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="mb-3">
-                  <p className="text-2xl font-bold text-text-primary">{totalCalories}</p>
-                  <p className="text-xs text-text-tertiary">cal eaten today</p>
-                  <p className="text-[11px] text-text-tertiary mt-1">
-                    Add your stats in Profile to see your calorie range
-                  </p>
+                <div className="mb-4">
+                  <div className="flex items-baseline gap-1.5">
+                    <p className="text-3xl font-bold text-text-primary transition-all duration-300">{displayCalories}</p>
+                    <span className="text-sm text-text-tertiary">cal</span>
+                  </div>
+                  {selectedMeal ? (
+                    <p className="text-xs text-accent-text font-medium mt-0.5">
+                      {selectedMeal === 'snack' ? 'Other' : selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1)} only
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-text-tertiary mt-0.5">eaten today</p>
+                      <p className="text-[11px] text-text-tertiary mt-1">
+                        Add your stats in Profile to see your calorie range
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
 
               {/* Meal Breakdown */}
               <div className="grid grid-cols-4 gap-2">
                 {([['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner'], ['snack', 'Other']] as const).map(([key, label]) => (
-                  <div key={key} className="text-center">
-                    <p className="text-xs text-text-tertiary">{label}</p>
-                    <p className="text-sm font-semibold text-text-label">{mealBreakdown[key]}</p>
-                  </div>
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSelectedMeal(selectedMeal === key ? null : key)}
+                    className={cn(
+                      'text-center rounded-lg py-1.5 transition-all duration-200',
+                      selectedMeal === key
+                        ? 'bg-accent text-accent-fg'
+                        : 'hover:bg-surface-secondary active:scale-[0.97]'
+                    )}
+                  >
+                    <p className={cn('text-[11px]', selectedMeal === key ? 'text-accent-fg/70' : 'text-text-tertiary')}>{label}</p>
+                    <p className={cn('text-sm font-semibold', selectedMeal === key ? 'text-accent-fg' : 'text-text-label')}>{mealBreakdown[key]}</p>
+                  </button>
                 ))}
               </div>
 
               {/* Nutrition subsection */}
               {hasBodyStats && targets && (
-                <div className="border-t border-border mt-3 pt-3">
-                  <div className="flex items-baseline gap-1.5 mb-3 text-xs text-text-tertiary">
-                    <span>TDEE ~{targets.tdee}</span>
-                    <span>·</span>
-                    <span className={cn(
-                      'font-semibold',
-                      targets.calorieOffset < -50 ? 'text-info' :
-                      targets.calorieOffset > 50 ? 'text-warning' : 'text-positive-text'
-                    )}>
-                      {targets.deltaLabel}
-                    </span>
-                    {totalCaloriesBurned > 0 && (
-                      <>
-                        <span>·</span>
-                        <span>{totalCalories} in · {totalCaloriesBurned} out · {netCalories} net</span>
-                      </>
-                    )}
-                  </div>
+                <div className="border-t border-border mt-4 pt-4">
+                  {!selectedMeal && (
+                    <div className="flex items-baseline gap-1.5 mb-4 text-xs text-text-tertiary">
+                      <span className="font-medium">TDEE ~{targets.tdee}</span>
+                      <span>·</span>
+                      <span className={cn(
+                        'font-semibold',
+                        targets.calorieOffset < -50 ? 'text-info' :
+                        targets.calorieOffset > 50 ? 'text-warning' : 'text-positive-text'
+                      )}>
+                        {targets.deltaLabel}
+                      </span>
+                      {totalCaloriesBurned > 0 && (
+                        <>
+                          <span>·</span>
+                          <span>{totalCalories} in · {totalCaloriesBurned} out · {netCalories} net</span>
+                        </>
+                      )}
+                    </div>
+                  )}
 
                   {/* Macro Bars */}
-                  <div className="space-y-2.5">
+                  <div className={cn('space-y-3', selectedMeal && 'mt-0')}>
                     {[
-                      { ...targets.protein, eaten: totalProtein, color: 'bg-info-bar' },
-                      { ...targets.carbs, eaten: totalCarbs, color: 'bg-macro-carbs' },
-                      { ...targets.fat, eaten: totalFat, color: 'bg-macro-fat' },
+                      { ...targets.protein, eaten: displayProtein, color: 'bg-info-bar' },
+                      { ...targets.carbs, eaten: displayCarbs, color: 'bg-macro-carbs' },
+                      { ...targets.fat, eaten: displayFat, color: 'bg-macro-fat' },
                     ].map((macro) => {
                       const midTarget = (macro.min + macro.max) / 2;
                       const percent = midTarget > 0 ? Math.min((macro.eaten / midTarget) * 100, 100) : 0;
@@ -484,20 +631,24 @@ export default function DashboardPage() {
 
                       return (
                         <div key={macro.label}>
-                          <div className="flex justify-between items-baseline mb-0.5">
+                          <div className="flex justify-between items-baseline mb-1">
                             <span className="text-xs font-medium text-text-muted">{macro.label}</span>
                             <span className="text-xs text-text-tertiary">
                               <span className={cn(
-                                'font-semibold',
+                                'font-semibold transition-all duration-300',
                                 macroInRange ? 'text-positive-text' : over ? 'text-warning' : 'text-text-label'
                               )}>
                                 {macro.eaten}g
                               </span>
-                              {' / '}
-                              {macro.min}–{macro.max}g
+                              {!selectedMeal && (
+                                <>
+                                  {' / '}
+                                  {macro.min}–{macro.max}g
+                                </>
+                              )}
                             </span>
                           </div>
-                          <div className="w-full h-2 bg-surface-secondary rounded-full overflow-hidden">
+                          <div className="w-full h-2.5 bg-surface-secondary rounded-full overflow-hidden">
                             <div
                               className={cn(
                                 'h-full rounded-full transition-all duration-500',
