@@ -196,7 +196,9 @@ export default function ProfilePage() {
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
       {ToastContainer}
-      <h1 className="text-xl font-bold text-text-primary mb-6">Profile</h1>
+      <div className="sticky top-0 z-20 bg-bg pb-4 -mx-4 px-4 pt-0">
+        <h1 className="text-xl font-bold text-text-primary">Profile</h1>
+      </div>
 
       {!profile ? (
         <PageSkeleton />

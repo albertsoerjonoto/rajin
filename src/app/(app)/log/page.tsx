@@ -215,7 +215,7 @@ export default function LogPage() {
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
       {ToastContainer}
-      <div className="flex items-center justify-between mb-4">
+      <div className="sticky top-0 z-20 bg-bg flex items-center justify-between pb-4 -mx-4 px-4 pt-0">
         <h1 className="text-xl font-bold text-text-primary">Log</h1>
         <DateNav date={date} onDateChange={setDate} />
       </div>
