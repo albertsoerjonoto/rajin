@@ -360,6 +360,7 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
   const [pickerStep, setPickerStep] = useState<'year' | 'month' | 'day'>(parsed ? 'day' : 'year');
   const [selectedYear, setSelectedYear] = useState<number | null>(parsed?.year ?? null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(parsed?.month ?? null);
+  const yearListRef = useRef<HTMLDivElement>(null);
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -368,6 +369,18 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
   // Generate years from current year down to 120 years ago
   const years: number[] = [];
   for (let y = currentYear; y >= currentYear - 120; y--) years.push(y);
+
+  // Scroll to a sensible default when year picker opens
+  useEffect(() => {
+    if (pickerStep !== 'year' || !yearListRef.current) return;
+    const container = yearListRef.current;
+    // Scroll to selected year, or default to ~25 years ago
+    const targetYear = selectedYear ?? (currentYear - 25);
+    const targetIndex = currentYear - targetYear;
+    const itemHeight = 48; // h-12 = 48px
+    const containerHeight = container.clientHeight;
+    container.scrollTop = Math.max(0, targetIndex * itemHeight - containerHeight / 2 + itemHeight / 2);
+  }, [pickerStep, selectedYear, currentYear]);
 
   // Get available months for selected year
   const getMonths = () => {
@@ -473,16 +486,24 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
         <span className="text-gray-400 font-medium">Day</span>
       </div>
 
-      {/* Scrollable grid */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 max-h-60 overflow-y-auto scrollbar-hide">
+      {/* Scrollable content */}
+      <div className={cn(
+        "bg-white rounded-2xl border border-gray-200 overflow-y-auto scrollbar-hide",
+        pickerStep === 'year' ? 'max-h-72' : 'p-4 max-h-60'
+      )}>
         {pickerStep === 'year' && (
-          <div className="grid grid-cols-4 gap-2">
+          <div ref={yearListRef} className="max-h-72 overflow-y-auto scrollbar-hide">
             {years.map((y) => (
               <button
                 key={y}
                 type="button"
                 onClick={() => handleYearSelect(y)}
-                className={pillClass(y === selectedYear)}
+                className={cn(
+                  'w-full h-12 text-center text-base font-medium transition-all',
+                  y === selectedYear
+                    ? 'bg-emerald-500 text-white'
+                    : 'text-gray-700 hover:bg-emerald-50'
+                )}
               >
                 {y}
               </button>
