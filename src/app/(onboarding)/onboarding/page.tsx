@@ -223,6 +223,12 @@ export default function OnboardingPage() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && displayName.trim()) {
+                    e.preventDefault();
+                    handleContinue();
+                  }
+                }}
                 className={inputClass}
                 placeholder="Your name"
                 autoFocus
