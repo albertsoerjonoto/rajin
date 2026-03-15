@@ -673,17 +673,33 @@ export default function DashboardPage() {
               {exerciseLogs.length === 0 ? (
                 <p className="text-sm text-text-tertiary text-center">No exercise logged today</p>
               ) : (
-                <div className="flex items-center gap-3">
-                  <div className="text-center flex-1">
-                    <p className="text-2xl font-bold text-text-primary">{totalExerciseMinutes}</p>
-                    <p className="text-xs text-text-tertiary">minutes</p>
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-text-primary">
+                        {totalExerciseMinutes}
+                        <span className="text-sm font-normal text-text-tertiary ml-1">min</span>
+                      </p>
+                    </div>
+                    <div className="w-px h-10 bg-border" />
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-bold text-text-primary">
+                        {totalCaloriesBurned}
+                        <span className="text-sm font-normal text-text-tertiary ml-1">cal</span>
+                      </p>
+                    </div>
                   </div>
-                  <div className="w-px h-8 bg-border" />
-                  <div className="text-center flex-1">
-                    <p className="text-2xl font-bold text-text-primary">{totalCaloriesBurned}</p>
-                    <p className="text-xs text-text-tertiary">cal burned</p>
+                  <div className="border-t border-border mt-4 pt-4 space-y-2">
+                    {exerciseLogs.map((log) => (
+                      <div key={log.id} className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-text-primary">{log.exercise_type}</p>
+                        <p className="text-xs text-text-secondary">
+                          {log.duration_minutes} min · {log.calories_burned} cal
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                </>
               )}
             </div>
           </section>
