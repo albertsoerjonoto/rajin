@@ -175,11 +175,11 @@ export default function OnboardingPage() {
   };
 
   const inputClass =
-    'w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-lg';
+    'w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-lg';
 
   // Loading state
   if (authLoading || !ready) {
-    return <div className="min-h-screen bg-gray-50" />;
+    return <div className="min-h-screen bg-bg" />;
   }
 
   return (
@@ -193,8 +193,8 @@ export default function OnboardingPage() {
             key={i}
             className={cn(
               'h-1.5 flex-1 rounded-full transition-all duration-300',
-              i < step ? 'bg-emerald-500' :
-              i === step ? 'bg-emerald-500' : 'bg-gray-200'
+              i < step ? 'bg-accent' :
+              i === step ? 'bg-accent' : 'bg-surface-secondary'
             )}
           />
         ))}
@@ -205,7 +205,7 @@ export default function OnboardingPage() {
         {step > 0 && (
           <button
             onClick={handleBack}
-            className="flex items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors"
+            className="flex items-center gap-1 text-text-secondary hover:text-text-primary transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -230,10 +230,10 @@ export default function OnboardingPage() {
           </div>
 
           {/* Title + Subtitle */}
-          <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">
+          <h1 className="text-2xl font-bold text-text-primary text-center mb-2">
             {STEPS[step].title}
           </h1>
-          <p className="text-sm text-gray-400 text-center mb-8">
+          <p className="text-sm text-text-tertiary text-center mb-8">
             {STEPS[step].subtitle}
           </p>
 
@@ -270,8 +270,8 @@ export default function OnboardingPage() {
                     className={cn(
                       'flex-1 py-4 rounded-2xl text-base font-semibold transition-all capitalize',
                       gender === g
-                        ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:border-emerald-300'
+                        ? 'bg-accent text-accent-fg shadow-md'
+                        : 'bg-surface text-text-muted border border-border-strong hover:border-accent-border'
                     )}
                   >
                     {g === 'male' ? '👨 Male' : '👩 Female'}
@@ -287,7 +287,7 @@ export default function OnboardingPage() {
             {step === 3 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Height</label>
+                  <label className="block text-sm font-medium text-text-muted mb-1.5">Height</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -300,11 +300,11 @@ export default function OnboardingPage() {
                       placeholder="170"
                       autoFocus
                     />
-                    <span className="text-gray-400 text-sm font-medium w-6 shrink-0">cm</span>
+                    <span className="text-text-tertiary text-sm font-medium w-6 shrink-0">cm</span>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Weight</label>
+                  <label className="block text-sm font-medium text-text-muted mb-1.5">Weight</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -316,7 +316,7 @@ export default function OnboardingPage() {
                       className={cn(inputClass, 'flex-1')}
                       placeholder="70"
                     />
-                    <span className="text-gray-400 text-sm font-medium w-6 shrink-0">kg</span>
+                    <span className="text-text-tertiary text-sm font-medium w-6 shrink-0">kg</span>
                   </div>
                 </div>
               </div>
@@ -329,14 +329,14 @@ export default function OnboardingPage() {
           <button
             onClick={handleContinue}
             disabled={saving}
-            className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 text-base"
+            className="w-full py-3.5 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 text-base"
           >
             {saving ? 'Saving...' : step === 3 ? 'Get Started' : 'Continue'}
           </button>
           <button
             onClick={handleSkip}
             disabled={saving}
-            className="w-full py-2 text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors"
+            className="w-full py-2 text-text-tertiary text-sm font-medium hover:text-text-muted transition-colors"
           >
             {step === 3 ? 'Skip for now' : 'Skip'}
           </button>
@@ -433,14 +433,14 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
 
     return (
       <div className="space-y-3">
-        <div className="bg-white rounded-2xl border border-emerald-200 p-4 flex items-center justify-between">
+        <div className="bg-surface rounded-2xl border border-accent-border p-4 flex items-center justify-between">
           <div>
-            <p className="text-lg font-semibold text-gray-900">{formatted}</p>
+            <p className="text-lg font-semibold text-text-primary">{formatted}</p>
           </div>
           <button
             type="button"
             onClick={() => { setPickerStep('year'); onChange(''); }}
-            className="text-sm text-emerald-600 font-medium hover:underline"
+            className="text-sm text-accent-text font-medium hover:underline"
           >
             Change
           </button>
@@ -452,8 +452,8 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
   const pillClass = (isSelected: boolean) => cn(
     'px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
     isSelected
-      ? 'bg-emerald-500 text-white shadow-sm'
-      : 'bg-white text-gray-700 border border-gray-200 hover:border-emerald-300'
+      ? 'bg-accent text-accent-fg shadow-sm'
+      : 'bg-surface text-text-label border border-border-strong hover:border-accent-border'
   );
 
   return (
@@ -465,30 +465,30 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
           onClick={() => setPickerStep('year')}
           className={cn(
             'font-medium transition-colors',
-            pickerStep === 'year' ? 'text-emerald-600' : selectedYear ? 'text-gray-700 hover:text-emerald-600' : 'text-gray-400'
+            pickerStep === 'year' ? 'text-accent-text' : selectedYear ? 'text-text-label hover:text-accent-text' : 'text-text-tertiary'
           )}
         >
           {selectedYear ?? 'Year'}
         </button>
-        <span className="text-gray-300">›</span>
+        <span className="text-text-tertiary">›</span>
         <button
           type="button"
           onClick={() => selectedYear && setPickerStep('month')}
           disabled={!selectedYear}
           className={cn(
             'font-medium transition-colors',
-            pickerStep === 'month' ? 'text-emerald-600' : selectedMonth ? 'text-gray-700 hover:text-emerald-600' : 'text-gray-400'
+            pickerStep === 'month' ? 'text-accent-text' : selectedMonth ? 'text-text-label hover:text-accent-text' : 'text-text-tertiary'
           )}
         >
           {selectedMonth ? MONTHS[selectedMonth - 1] : 'Month'}
         </button>
-        <span className="text-gray-300">›</span>
-        <span className="text-gray-400 font-medium">Day</span>
+        <span className="text-text-tertiary">›</span>
+        <span className="text-text-tertiary font-medium">Day</span>
       </div>
 
       {/* Scrollable content */}
       <div className={cn(
-        "bg-white rounded-2xl border border-gray-200 overflow-y-auto scrollbar-hide",
+        "bg-surface rounded-2xl border border-border-strong overflow-y-auto scrollbar-hide",
         pickerStep === 'year' ? 'max-h-72' : 'p-4 max-h-60'
       )}>
         {pickerStep === 'year' && (
@@ -501,8 +501,8 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
                 className={cn(
                   'w-full h-12 text-center text-base font-medium transition-all',
                   y === selectedYear
-                    ? 'bg-emerald-500 text-white'
-                    : 'text-gray-700 hover:bg-emerald-50'
+                    ? 'bg-accent text-accent-fg'
+                    : 'text-text-label hover:bg-surface-hover'
                 )}
               >
                 {y}

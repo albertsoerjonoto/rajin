@@ -48,14 +48,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Show blank screen while checking (prevents flash of dashboard)
   if (!ready) {
-    return <div className="min-h-screen bg-gray-50" />;
+    return <div className="min-h-screen bg-bg" />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-bg pb-20">
       <ServiceWorkerRegister />
       {children}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 safe-area-bottom z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl border-t border-nav-border safe-area-bottom z-50">
         <div className="max-w-lg mx-auto flex justify-around items-center h-16">
           {tabs.map((tab) => {
             const isActive = pathname === tab.href;
@@ -64,8 +64,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all',
-                  isActive ? 'text-emerald-600' : 'text-gray-400 hover:text-gray-600'
+                  'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-200',
+                  isActive ? 'text-nav-active' : 'text-nav-inactive hover:text-nav-inactive-hover'
                 )}
               >
                 <tab.icon className="w-6 h-6" filled={isActive} />

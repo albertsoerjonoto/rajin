@@ -177,22 +177,22 @@ export default function LogPage() {
   };
 
   const inputClass =
-    'w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500';
+    'w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
       {ToastContainer}
-      <h1 className="text-xl font-bold text-gray-900 mb-4">Log</h1>
+      <h1 className="text-xl font-bold text-text-primary mb-4">Log</h1>
 
       {/* Tab Switcher */}
-      <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
+      <div className="flex bg-surface-secondary rounded-xl p-1 mb-4">
         {(['food', 'exercise'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
               'flex-1 py-2 text-sm font-medium rounded-lg transition-all capitalize',
-              tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+              tab === t ? 'bg-surface text-text-primary shadow-sm' : 'text-text-secondary'
             )}
           >
             {t === 'food' ? '🍽️ Food' : '🏃 Exercise'}
@@ -208,17 +208,17 @@ export default function LogPage() {
           {tab === 'food' && (
             <div className="space-y-3">
               {foodLogs.length === 0 ? (
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-                  <p className="text-gray-400 text-sm">No food logged today</p>
+                <div className="bg-surface rounded-2xl p-5 border border-border text-center">
+                  <p className="text-text-tertiary text-sm">No food logged today</p>
                 </div>
               ) : (
-                foodLogs.map((log) => (
-                  <div key={log.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 animate-fade-in">
+                foodLogs.map((log, i) => (
+                  <div key={log.id} className="bg-surface rounded-2xl p-5 border border-border animate-stagger-in" style={{ animationDelay: `${i * 50}ms` }}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="text-xs font-medium text-emerald-600 uppercase">{log.meal_type}</span>
-                        <p className="text-sm font-medium text-gray-900 mt-0.5">{log.description}</p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <span className="text-xs font-medium text-accent-text uppercase">{log.meal_type}</span>
+                        <p className="text-sm font-medium text-text-primary mt-0.5">{log.description}</p>
+                        <p className="text-xs text-text-tertiary mt-1">
                           {log.calories} cal
                           {log.protein_g && ` · ${log.protein_g}g protein`}
                           {log.carbs_g && ` · ${log.carbs_g}g carbs`}
@@ -227,7 +227,7 @@ export default function LogPage() {
                       </div>
                       <button
                         onClick={() => setDeleteTarget({ type: 'food', id: log.id })}
-                        className="text-gray-300 hover:text-red-400 transition-colors p-2.5"
+                        className="text-text-tertiary hover:text-danger-text-muted transition-colors p-2.5"
                         aria-label="Delete food log"
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -245,23 +245,23 @@ export default function LogPage() {
           {tab === 'exercise' && (
             <div className="space-y-3">
               {exerciseLogs.length === 0 ? (
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-                  <p className="text-gray-400 text-sm">No exercise logged today</p>
+                <div className="bg-surface rounded-2xl p-5 border border-border text-center">
+                  <p className="text-text-tertiary text-sm">No exercise logged today</p>
                 </div>
               ) : (
-                exerciseLogs.map((log) => (
-                  <div key={log.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 animate-fade-in">
+                exerciseLogs.map((log, i) => (
+                  <div key={log.id} className="bg-surface rounded-2xl p-5 border border-border animate-stagger-in" style={{ animationDelay: `${i * 50}ms` }}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{log.exercise_type}</p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-sm font-medium text-text-primary">{log.exercise_type}</p>
+                        <p className="text-xs text-text-tertiary mt-1">
                           {log.duration_minutes} min · {log.calories_burned} cal burned
                           {log.notes && ` · ${log.notes}`}
                         </p>
                       </div>
                       <button
                         onClick={() => setDeleteTarget({ type: 'exercise', id: log.id })}
-                        className="text-gray-300 hover:text-red-400 transition-colors p-2.5"
+                        className="text-text-tertiary hover:text-danger-text-muted transition-colors p-2.5"
                         aria-label="Delete exercise log"
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -280,7 +280,7 @@ export default function LogPage() {
       {/* Floating Add Button */}
       <button
         onClick={() => setModal(tab)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all active:scale-90 z-40"
+        className="fixed bottom-24 right-6 w-14 h-14 bg-accent hover:bg-accent-hover text-accent-fg rounded-full shadow-lg flex items-center justify-center transition-all active:scale-[0.98] z-40"
         aria-label={`Add ${tab} log`}
       >
         <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -299,12 +299,12 @@ export default function LogPage() {
 
       {/* Food Modal */}
       {modal === 'food' && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-end justify-center" onClick={() => setModal('none')}>
+        <div className="fixed inset-0 bg-overlay z-50 flex items-end justify-center" onClick={() => setModal('none')}>
           <div
-            className="bg-white w-full max-w-lg rounded-t-3xl p-6 animate-fade-in"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Add Food</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-4">Add Food</h2>
 
             <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
               {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((m) => (
@@ -314,8 +314,8 @@ export default function LogPage() {
                   className={cn(
                     'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all capitalize',
                     mealType === m
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-100 text-gray-600'
+                      ? 'bg-accent text-accent-fg'
+                      : 'bg-surface-secondary text-text-muted'
                   )}
                 >
                   {m}
@@ -347,7 +347,7 @@ export default function LogPage() {
                   min="0"
                   value={proteinG}
                   onChange={(e) => setProteinG(e.target.value)}
-                  className="px-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                   placeholder="Protein (g)"
                 />
                 <input
@@ -355,7 +355,7 @@ export default function LogPage() {
                   min="0"
                   value={carbsG}
                   onChange={(e) => setCarbsG(e.target.value)}
-                  className="px-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                   placeholder="Carbs (g)"
                 />
                 <input
@@ -363,14 +363,14 @@ export default function LogPage() {
                   min="0"
                   value={fatG}
                   onChange={(e) => setFatG(e.target.value)}
-                  className="px-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                   placeholder="Fat (g)"
                 />
               </div>
               <button
                 onClick={saveFoodLog}
                 disabled={saving || !description.trim() || !calories}
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50"
+                className="w-full py-3 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save'}
               </button>
@@ -381,12 +381,12 @@ export default function LogPage() {
 
       {/* Exercise Modal */}
       {modal === 'exercise' && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-end justify-center" onClick={() => setModal('none')}>
+        <div className="fixed inset-0 bg-overlay z-50 flex items-end justify-center" onClick={() => setModal('none')}>
           <div
-            className="bg-white w-full max-w-lg rounded-t-3xl p-6 animate-fade-in"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Add Exercise</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-4">Add Exercise</h2>
 
             <div className="space-y-3">
               <input
@@ -404,7 +404,7 @@ export default function LogPage() {
                   max="1440"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
                   placeholder="Duration (min)"
                 />
                 <input
@@ -413,7 +413,7 @@ export default function LogPage() {
                   max="20000"
                   value={caloriesBurned}
                   onChange={(e) => setCaloriesBurned(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
                   placeholder="Calories burned"
                 />
               </div>
@@ -427,7 +427,7 @@ export default function LogPage() {
               <button
                 onClick={saveExerciseLog}
                 disabled={saving || !exerciseType.trim() || !duration}
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50"
+                className="w-full py-3 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save'}
               </button>
