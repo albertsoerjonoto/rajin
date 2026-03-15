@@ -49,10 +49,61 @@ export default function ChatPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<ChatContext | null>(null);
   const shouldAutoScroll = useRef(false);
+  const initialHeight = useRef(0);
 
   const isToday = date === getToday();
+
+  // Lock body scroll & use visualViewport to handle iOS keyboard
+  useEffect(() => {
+    // Lock body so iOS can't scroll the page behind fixed elements
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.overflow = 'hidden';
+
+    initialHeight.current = window.innerHeight;
+
+    const vv = window.visualViewport;
+    if (vv && containerRef.current) {
+      const update = () => {
+        if (!containerRef.current) return;
+        // When keyboard is open, visualViewport shrinks
+        const isKeyboardOpen = vv.height < initialHeight.current - 100;
+        // When keyboard open: use full visual viewport (nav is behind keyboard)
+        // When closed: subtract nav height (64px)
+        const navH = isKeyboardOpen ? 0 : 64;
+        containerRef.current.style.height = `${vv.height - navH}px`;
+      };
+      update();
+      vv.addEventListener('resize', update);
+      vv.addEventListener('scroll', update);
+
+      return () => {
+        vv.removeEventListener('resize', update);
+        vv.removeEventListener('scroll', update);
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
 
   // Fetch messages from DB for the selected date
   const fetchMessages = useCallback(async () => {
@@ -468,7 +519,7 @@ export default function ChatPage() {
     (msg.exerciseEdits?.length ?? 0) > 0;
 
   return (
-    <div className="h-[calc(100dvh-4rem)] bg-bg overflow-hidden flex flex-col">
+    <div ref={containerRef} className="fixed inset-x-0 top-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
       <div className="max-w-lg mx-auto flex flex-col h-full w-full">
       {ToastContainer}
 
