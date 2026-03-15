@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/Toast';
-import { getToday, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { validateDOB, validateBodyStat } from '@/lib/validation';
 import type { Gender } from '@/lib/types';
 
@@ -250,13 +250,7 @@ export default function OnboardingPage() {
             )}
 
             {step === 2 && (
-              <input
-                type="date"
-                value={dateOfBirth}
-                max={getToday()}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                className={inputClass}
-              />
+              <DOBPicker value={dateOfBirth} onChange={setDateOfBirth} />
             )}
 
             {step === 3 && (
@@ -316,6 +310,184 @@ export default function OnboardingPage() {
             {step === 3 ? 'Skip for now' : 'Skip'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Custom DOB Picker: Year → Month → Day ──────────────────────────
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // Parse existing value
+  const parsed = value ? { year: +value.slice(0, 4), month: +value.slice(5, 7), day: +value.slice(8, 10) } : null;
+
+  const [pickerStep, setPickerStep] = useState<'year' | 'month' | 'day'>(parsed ? 'day' : 'year');
+  const [selectedYear, setSelectedYear] = useState<number | null>(parsed?.year ?? null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(parsed?.month ?? null);
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  const currentDay = new Date().getDate();
+
+  // Generate years from current year down to 120 years ago
+  const years: number[] = [];
+  for (let y = currentYear; y >= currentYear - 120; y--) years.push(y);
+
+  // Get available months for selected year
+  const getMonths = () => {
+    if (selectedYear === currentYear) {
+      return MONTHS.slice(0, currentMonth);
+    }
+    return MONTHS;
+  };
+
+  // Get days in selected month/year
+  const getDays = () => {
+    if (!selectedYear || !selectedMonth) return [];
+    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    let maxDay = daysInMonth;
+    if (selectedYear === currentYear && selectedMonth === currentMonth) {
+      maxDay = Math.min(daysInMonth, currentDay);
+    }
+    const days: number[] = [];
+    for (let d = 1; d <= maxDay; d++) days.push(d);
+    return days;
+  };
+
+  const handleYearSelect = (year: number) => {
+    setSelectedYear(year);
+    // If previously selected month is invalid for this year, reset
+    if (year === currentYear && selectedMonth && selectedMonth > currentMonth) {
+      setSelectedMonth(null);
+    }
+    setPickerStep('month');
+  };
+
+  const handleMonthSelect = (monthIndex: number) => {
+    const month = monthIndex + 1;
+    setSelectedMonth(month);
+    setPickerStep('day');
+  };
+
+  const handleDaySelect = (day: number) => {
+    if (!selectedYear || !selectedMonth) return;
+    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    onChange(dateStr);
+  };
+
+  // If a date is already selected, show it with an edit option
+  if (value && pickerStep === 'day' && parsed) {
+    const displayDate = new Date(value + 'T12:00:00Z');
+    const formatted = displayDate.toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'
+    });
+
+    return (
+      <div className="space-y-3">
+        <div className="bg-white rounded-2xl border border-emerald-200 p-4 flex items-center justify-between">
+          <div>
+            <p className="text-lg font-semibold text-gray-900">{formatted}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setPickerStep('year'); onChange(''); }}
+            className="text-sm text-emerald-600 font-medium hover:underline"
+          >
+            Change
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const pillClass = (isSelected: boolean) => cn(
+    'px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
+    isSelected
+      ? 'bg-emerald-500 text-white shadow-sm'
+      : 'bg-white text-gray-700 border border-gray-200 hover:border-emerald-300'
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Breadcrumb navigation */}
+      <div className="flex items-center gap-1.5 text-sm">
+        <button
+          type="button"
+          onClick={() => setPickerStep('year')}
+          className={cn(
+            'font-medium transition-colors',
+            pickerStep === 'year' ? 'text-emerald-600' : selectedYear ? 'text-gray-700 hover:text-emerald-600' : 'text-gray-400'
+          )}
+        >
+          {selectedYear ?? 'Year'}
+        </button>
+        <span className="text-gray-300">›</span>
+        <button
+          type="button"
+          onClick={() => selectedYear && setPickerStep('month')}
+          disabled={!selectedYear}
+          className={cn(
+            'font-medium transition-colors',
+            pickerStep === 'month' ? 'text-emerald-600' : selectedMonth ? 'text-gray-700 hover:text-emerald-600' : 'text-gray-400'
+          )}
+        >
+          {selectedMonth ? MONTHS[selectedMonth - 1] : 'Month'}
+        </button>
+        <span className="text-gray-300">›</span>
+        <span className="text-gray-400 font-medium">Day</span>
+      </div>
+
+      {/* Scrollable grid */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 max-h-60 overflow-y-auto scrollbar-hide">
+        {pickerStep === 'year' && (
+          <div className="grid grid-cols-4 gap-2">
+            {years.map((y) => (
+              <button
+                key={y}
+                type="button"
+                onClick={() => handleYearSelect(y)}
+                className={pillClass(y === selectedYear)}
+              >
+                {y}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {pickerStep === 'month' && (
+          <div className="grid grid-cols-3 gap-2">
+            {getMonths().map((m, i) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => handleMonthSelect(i)}
+                className={pillClass(i + 1 === selectedMonth)}
+              >
+                {m.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {pickerStep === 'day' && (
+          <div className="grid grid-cols-7 gap-2">
+            {getDays().map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => handleDaySelect(d)}
+                className={pillClass(parsed?.day === d && parsed?.month === selectedMonth && parsed?.year === selectedYear)}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
