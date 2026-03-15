@@ -7,6 +7,7 @@ import { getToday, formatDisplayDate, addDays, cn } from '@/lib/utils';
 import { computeNutritionTargets } from '@/lib/nutrition';
 import { useToast } from '@/components/Toast';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
+import EmojiPicker from '@/components/EmojiPicker';
 import type { HabitWithLog, FoodLog, ExerciseLog, Profile } from '@/lib/types';
 
 export default function DashboardPage() {
@@ -20,8 +21,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
-  const [newHabitEmoji, setNewHabitEmoji] = useState('✅');
+  const [newHabitEmoji, setNewHabitEmoji] = useState('⭐');
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmoji, setEditEmoji] = useState('');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -155,7 +160,7 @@ export default function DashboardPage() {
     const { error } = await supabase.from('habits').insert({
       user_id: user.id,
       name: newHabitName.trim(),
-      emoji: newHabitEmoji || '✅',
+      emoji: newHabitEmoji || '⭐',
       sort_order: habits.length,
     });
 
@@ -165,8 +170,44 @@ export default function DashboardPage() {
     }
 
     setNewHabitName('');
-    setNewHabitEmoji('✅');
+    setNewHabitEmoji('⭐');
     setShowAddHabit(false);
+    fetchData();
+  };
+
+  const startEditing = (habit: HabitWithLog) => {
+    setEditingId(habit.id);
+    setEditName(habit.name);
+    setEditEmoji(habit.emoji);
+  };
+
+  const saveEdit = async () => {
+    if (!user || !editingId || !editName.trim()) return;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('habits')
+      .update({ name: editName.trim(), emoji: editEmoji || '⭐' })
+      .eq('id', editingId);
+    if (error) {
+      showToast('error', 'Failed to update habit');
+      return;
+    }
+    setEditingId(null);
+    fetchData();
+  };
+
+  const deleteHabit = async (id: string) => {
+    if (!user) return;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('habits')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) {
+      showToast('error', 'Failed to delete habit');
+      return;
+    }
+    setEditingId(null);
     fetchData();
   };
 
@@ -231,21 +272,25 @@ export default function DashboardPage() {
           <section className="mb-6 animate-stagger-in" style={{ animationDelay: '0ms' }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-text-primary">Habits</h2>
-              <button onClick={() => setShowAddHabit(true)} className="text-accent-text text-sm font-medium transition-all duration-200">
-                + Add
-              </button>
+              <div className="flex items-center gap-3">
+                <button onClick={() => { setShowAddHabit(true); setEditMode(false); setEditingId(null); }} className="text-accent-text text-sm font-medium transition-all duration-200">
+                  Add
+                </button>
+                {habits.length > 0 && (
+                  <button
+                    onClick={() => { setEditMode(!editMode); setEditingId(null); }}
+                    className="text-accent-text text-sm font-medium transition-all duration-200"
+                  >
+                    {editMode ? 'Done' : 'Edit'}
+                  </button>
+                )}
+              </div>
             </div>
 
             {showAddHabit && (
               <div className="bg-surface rounded-2xl p-5 border border-border mb-3 animate-fade-in">
                 <div className="flex gap-2 mb-3">
-                  <input
-                    type="text"
-                    value={newHabitEmoji}
-                    onChange={(e) => setNewHabitEmoji(e.target.value)}
-                    className="w-12 text-center text-xl px-2 py-2 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring"
-                    placeholder="✅"
-                  />
+                  <EmojiPicker value={newHabitEmoji} onChange={setNewHabitEmoji} />
                   <input
                     type="text"
                     value={newHabitName}
@@ -268,33 +313,93 @@ export default function DashboardPage() {
 
             {habits.length === 0 && !showAddHabit ? (
               <div className="bg-surface rounded-2xl p-6 border border-border text-center">
-                <p className="text-text-tertiary text-sm">No habits yet. Tap + Add to create one!</p>
+                <p className="text-text-tertiary text-sm">No habits yet. Tap Add to create one!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {habits.map((habit) => (
-                  <button
-                    key={habit.id}
-                    onClick={() => toggleHabit(habit)}
-                    disabled={togglingId === habit.id}
-                    className={cn(
-                      'bg-surface rounded-2xl p-5 border text-left transition-all duration-200 active:scale-[0.98]',
-                      habit.completed ? 'border-positive-border bg-positive-surface' : 'border-border hover:border-border-strong',
-                      togglingId === habit.id && 'opacity-60'
-                    )}
-                  >
-                    <div className="text-2xl mb-1">
-                      {habit.completed ? (
-                        <span className="animate-checkmark inline-block">{habit.emoji}</span>
-                      ) : (
-                        <span className="opacity-40">{habit.emoji}</span>
-                      )}
+              <div className="flex flex-col gap-2">
+                {habits.map((habit) =>
+                  editingId === habit.id ? (
+                    <div
+                      key={habit.id}
+                      className="bg-surface rounded-2xl p-4 border border-accent-border animate-fade-in"
+                    >
+                      <div className="flex gap-2 mb-3">
+                        <EmojiPicker value={editEmoji} onChange={setEditEmoji} />
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="flex-1 px-3 py-2 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring text-sm"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => deleteHabit(habit.id)}
+                          className="py-2 px-3 text-sm text-danger-text rounded-xl hover:bg-danger-surface transition-all duration-200"
+                        >
+                          Delete
+                        </button>
+                        <div className="flex-1" />
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="py-2 px-3 text-sm text-text-secondary rounded-xl hover:bg-surface-hover transition-all duration-200"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveEdit}
+                          className="py-2 px-4 text-sm text-accent-fg bg-accent rounded-xl hover:bg-accent-hover transition-all duration-200 active:scale-[0.98]"
+                        >
+                          Save
+                        </button>
+                      </div>
                     </div>
-                    <p className={cn('text-sm font-medium', habit.completed ? 'text-positive-text' : 'text-text-muted')}>
-                      {habit.name}
-                    </p>
-                  </button>
-                ))}
+                  ) : (
+                    <button
+                      key={habit.id}
+                      onClick={() => editMode ? startEditing(habit) : toggleHabit(habit)}
+                      disabled={!editMode && togglingId === habit.id}
+                      className={cn(
+                        'w-full bg-surface rounded-2xl p-4 border text-left transition-all duration-200 active:scale-[0.97]',
+                        habit.completed ? 'border-positive-border bg-positive-surface' : 'border-border hover:border-border-strong',
+                        !editMode && togglingId === habit.id && 'opacity-60'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={cn('text-2xl leading-none', habit.completed && !editMode && 'animate-checkmark inline-block')}>
+                          {habit.emoji}
+                        </span>
+                        <span className={cn('text-sm font-medium flex-1 min-w-0 truncate', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
+                          {habit.name}
+                        </span>
+                        {editMode ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c-text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                            <path d="M9 18l6-6-6-6" />
+                          </svg>
+                        ) : (
+                          <svg width="22" height="22" viewBox="0 0 24 24" className="shrink-0">
+                            <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
+                            {habit.completed && (
+                              <g>
+                                <circle cx="12" cy="12" r="10" fill="var(--c-positive)" className="animate-circle-fill" />
+                                <path
+                                  d="M7 12.5l3.5 3.5 6.5-7"
+                                  fill="none"
+                                  stroke="white"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="animate-check-draw"
+                                />
+                              </g>
+                            )}
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  )
+                )}
               </div>
             )}
           </section>

@@ -183,6 +183,29 @@
   animation: glowPulse 0.6s ease-out;
 }
 
+/* Check circle fill — spring scale in */
+@keyframes circleFill {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.15); }
+  80% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+.animate-circle-fill {
+  animation: circleFill 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: center;
+}
+
+/* Checkmark stroke draw */
+@keyframes checkDraw {
+  from { stroke-dashoffset: 20; }
+  to { stroke-dashoffset: 0; }
+}
+.animate-check-draw {
+  animation: checkDraw 0.3s ease-out 0.15s forwards;
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+}
+
 /* General fade-in with slide up */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(12px); }
