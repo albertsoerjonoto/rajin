@@ -189,7 +189,7 @@ export default function ProfilePage() {
   };
 
   const inputClass =
-    'w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
+    'w-full px-4 py-3.5 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
   const errorInputClass =
     'w-full px-4 py-3.5 rounded-xl border border-danger-input-border bg-surface focus:outline-none focus:ring-1 focus:ring-danger focus:border-transparent transition-all duration-200';
 
@@ -202,7 +202,7 @@ export default function ProfilePage() {
         <PageSkeleton />
       ) : (
         <>
-          <div className="bg-surface rounded-2xl p-5 border border-border space-y-4">
+          <div className="bg-surface rounded-2xl p-5 space-y-4">
             <div>
               <label className="block text-sm font-medium text-text-label mb-1">Email</label>
               <p className="text-sm text-text-secondary px-4 py-3 bg-surface-secondary rounded-xl">{user?.email}</p>
@@ -272,7 +272,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Body Stats Card */}
-          <div className="bg-surface rounded-2xl p-5 border border-border space-y-4 mt-4">
+          <div className="bg-surface rounded-2xl p-5 space-y-4 mt-4">
             <h2 className="text-lg font-semibold text-text-primary">Body Stats</h2>
             <p className="text-xs text-text-tertiary -mt-2">Used to calculate your recommended daily intake</p>
 
@@ -376,7 +376,7 @@ export default function ProfilePage() {
 
       <button
         onClick={handleSignOut}
-        className="w-full mt-4 py-3 text-danger-text font-medium rounded-xl border border-danger-border hover:bg-danger-surface transition-all"
+        className="w-full mt-4 py-3 text-danger-text font-medium rounded-xl hover:bg-danger-surface transition-all"
       >
         Sign Out
       </button>

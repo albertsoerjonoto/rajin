@@ -496,7 +496,7 @@ export default function ChatPage() {
                   'max-w-[85%] rounded-2xl px-4 py-3 animate-bounce-in',
                   msg.role === 'user'
                     ? 'bg-accent text-accent-fg'
-                    : 'bg-surface border border-border'
+                    : 'bg-surface'
                 )}
               >
                 <p className="text-sm whitespace-pre-line">{msg.content}</p>
@@ -669,7 +669,7 @@ export default function ChatPage() {
         )}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-surface border border-border rounded-2xl px-4 py-3">
+            <div className="bg-surface rounded-2xl px-4 py-3">
               <div className="flex gap-1">
                 <div className="w-2 h-2 bg-loading-dots rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                 <div className="w-2 h-2 bg-loading-dots rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -682,24 +682,24 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="px-4 pb-4 pt-2 bg-bg">
-        <div className="flex gap-2">
+      <div className="px-4 pb-4 pt-2">
+        <div className={cn(
+          'flex items-center bg-surface-secondary rounded-2xl px-4 py-1 transition-colors',
+          !isToday && 'opacity-50'
+        )}>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
             disabled={!isToday}
-            className={cn(
-              'flex-1 px-4 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring text-sm',
-              !isToday && 'opacity-50 cursor-not-allowed'
-            )}
+            className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary disabled:cursor-not-allowed"
             placeholder={isToday ? 'Log, edit, ask, or get recommendations...' : 'Switch to today to send messages'}
           />
           <button
             onClick={sendMessage}
             disabled={loading || !input.trim() || !isToday}
-            className="px-4 py-3 bg-accent hover:bg-accent-hover text-accent-fg rounded-xl transition-all disabled:opacity-50"
+            className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
             aria-label="Send message"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

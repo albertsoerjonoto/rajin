@@ -3,11 +3,11 @@
 /* ── Light theme (default) ── */
 :root {
   --c-bg: #ffffff;
-  --c-surface: #ffffff;
+  --c-surface: #f9f9f9;
   --c-surface-secondary: #f3f4f6;
-  --c-surface-hover: #f3f4f6;
-  --c-border: #e8e8ec;
-  --c-border-strong: #d4d4d8;
+  --c-surface-hover: #f0f0f2;
+  --c-border: rgba(0, 0, 0, 0.04);
+  --c-border-strong: rgba(0, 0, 0, 0.10);
   --c-text-primary: #18181b;
   --c-text-secondary: #6b7280;
   --c-text-tertiary: #9ca3af;
@@ -43,8 +43,8 @@
   --c-skeleton-dark: #e5e7eb;
   --c-skeleton-light: #f3f4f6;
   --c-loading-dots: #d1d5db;
-  --c-nav-bg: rgba(255, 255, 255, 0.8);
-  --c-nav-border: rgba(0, 0, 0, 0.06);
+  --c-nav-bg: rgba(255, 255, 255, 0.92);
+  --c-nav-border: transparent;
   --c-nav-active: #18181b;
   --c-nav-inactive: #9ca3af;
   --c-nav-inactive-hover: #4b5563;
@@ -58,8 +58,8 @@
     --c-surface: #161618;
     --c-surface-secondary: #1e1e21;
     --c-surface-hover: #232326;
-    --c-border: #232326;
-    --c-border-strong: #2e2e32;
+    --c-border: rgba(255, 255, 255, 0.04);
+    --c-border-strong: rgba(255, 255, 255, 0.08);
     --c-text-primary: #f0f0f2;
     --c-text-secondary: #9b9ba6;
     --c-text-tertiary: #636370;
@@ -95,8 +95,8 @@
     --c-skeleton-dark: #2e2e32;
     --c-skeleton-light: #232326;
     --c-loading-dots: #4b5563;
-    --c-nav-bg: rgba(17, 17, 19, 0.8);
-    --c-nav-border: rgba(255, 255, 255, 0.06);
+    --c-nav-bg: rgba(0, 0, 0, 0.92);
+    --c-nav-border: transparent;
     --c-nav-active: #f0f0f2;
     --c-nav-inactive: #636370;
     --c-nav-inactive-hover: #a5a5b0;

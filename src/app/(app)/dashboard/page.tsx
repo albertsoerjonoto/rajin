@@ -58,7 +58,7 @@ function SortableHabitCard({ habit, onEdit }: { habit: HabitWithLog; onEdit: (h:
       {...attributes}
       {...listeners}
       onClick={() => onEdit(habit)}
-      className="bg-surface rounded-xl px-3 py-2.5 border border-border hover:border-border-strong text-left transition-colors touch-manipulation cursor-grab active:cursor-grabbing"
+      className="bg-surface rounded-xl px-3 py-2.5 text-left transition-colors touch-manipulation cursor-grab active:cursor-grabbing"
     >
       <HabitCardContent habit={habit} />
     </button>
@@ -363,14 +363,14 @@ export default function DashboardPage() {
             </div>
 
             {showAddHabit && (
-              <div className="bg-surface rounded-2xl p-5 border border-border mb-3 animate-fade-in">
+              <div className="bg-surface rounded-2xl p-5 mb-3 animate-fade-in">
                 <div className="flex gap-2 mb-3">
                   <EmojiPicker value={newHabitEmoji} onChange={setNewHabitEmoji} />
                   <input
                     type="text"
                     value={newHabitName}
                     onChange={(e) => setNewHabitName(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring"
+                    className="flex-1 px-3 py-2 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring"
                     placeholder="Habit name"
                     autoFocus
                   />
@@ -387,7 +387,7 @@ export default function DashboardPage() {
             )}
 
             {habits.length === 0 && !showAddHabit ? (
-              <div className="bg-surface rounded-2xl p-6 border border-border text-center">
+              <div className="bg-surface rounded-2xl p-6 text-center">
                 <p className="text-text-tertiary text-sm">No habits yet. Tap Add to create one!</p>
               </div>
             ) : editMode ? (
@@ -403,7 +403,7 @@ export default function DashboardPage() {
                       editingId === habit.id ? (
                         <div
                           key={habit.id}
-                          className="col-span-2 bg-surface rounded-2xl p-4 border border-accent-border animate-fade-in"
+                          className="col-span-2 bg-surface rounded-2xl p-4 animate-fade-in"
                         >
                           <div className="flex gap-2 mb-3">
                             <EmojiPicker value={editEmoji} onChange={setEditEmoji} />
@@ -411,7 +411,7 @@ export default function DashboardPage() {
                               type="text"
                               value={editName}
                               onChange={(e) => setEditName(e.target.value)}
-                              className="flex-1 px-3 py-2 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring text-sm"
+                              className="flex-1 px-3 py-2 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring text-sm"
                               autoFocus
                             />
                           </div>
@@ -445,7 +445,7 @@ export default function DashboardPage() {
                 </SortableContext>
                 <DragOverlay>
                   {activeHabit ? (
-                    <div className="bg-surface rounded-xl px-3 py-2.5 border border-accent-border shadow-lg scale-105">
+                    <div className="bg-surface rounded-xl px-3 py-2.5 shadow-lg scale-105">
                       <HabitCardContent habit={activeHabit} isDragging />
                     </div>
                   ) : null}
@@ -459,8 +459,8 @@ export default function DashboardPage() {
                     onClick={() => toggleHabit(habit)}
                     disabled={togglingId === habit.id}
                     className={cn(
-                      'bg-surface rounded-xl px-3 py-2.5 border text-left transition-all duration-200 active:scale-[0.97]',
-                      habit.completed ? 'border-positive-border bg-positive-surface' : 'border-border hover:border-border-strong',
+                      'bg-surface rounded-xl px-3 py-2.5 text-left transition-all duration-200 active:scale-[0.97]',
+                      habit.completed && 'border border-positive-border bg-positive-surface',
                       togglingId === habit.id && 'opacity-60'
                     )}
                   >
@@ -498,7 +498,7 @@ export default function DashboardPage() {
           {/* Diet Section */}
           <section className="mb-6 animate-stagger-in" style={{ animationDelay: '50ms' }}>
             <h2 className="text-lg font-semibold text-text-primary mb-3">Diet</h2>
-            <div className="bg-surface rounded-2xl p-5 border border-border">
+            <div className="bg-surface rounded-2xl p-5">
               {/* Calorie Summary */}
               {hasBodyStats ? (
                 <div className="mb-4">
@@ -573,7 +573,7 @@ export default function DashboardPage() {
 
               {/* Nutrition subsection */}
               {hasBodyStats && targets && (
-                <div className="border-t border-border mt-4 pt-4">
+                <div className="border-t border-border-strong mt-4 pt-4">
                   {!selectedMeal && (
                     <div className="flex items-baseline gap-1.5 mb-4 text-xs text-text-tertiary">
                       <span className="font-medium">TDEE ~{targets.tdee}</span>
@@ -646,7 +646,7 @@ export default function DashboardPage() {
           {/* Exercise Section */}
           <section className="mb-6 animate-stagger-in" style={{ animationDelay: '100ms' }}>
             <h2 className="text-lg font-semibold text-text-primary mb-3">Exercise</h2>
-            <div className="bg-surface rounded-2xl p-5 border border-border">
+            <div className="bg-surface rounded-2xl p-5">
               {exerciseLogs.length === 0 ? (
                 <p className="text-sm text-text-tertiary text-center">No exercise logged today</p>
               ) : (
@@ -658,7 +658,7 @@ export default function DashboardPage() {
                         <span className="text-sm font-normal text-text-tertiary ml-1">min</span>
                       </p>
                     </div>
-                    <div className="w-px h-10 bg-border" />
+                    <div className="w-px h-10 bg-border-strong" />
                     <div className="text-center flex-1">
                       <p className="text-3xl font-bold text-text-primary">
                         {totalCaloriesBurned}
@@ -666,7 +666,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="border-t border-border mt-4 pt-4 space-y-2">
+                  <div className="border-t border-border-strong mt-4 pt-4 space-y-2">
                     {exerciseLogs.map((log) => (
                       <div key={log.id} className="flex items-center justify-between">
                         <p className="text-sm font-medium text-text-primary">{log.exercise_type}</p>

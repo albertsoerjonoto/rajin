@@ -79,7 +79,7 @@ export default function DateNav({
         </button>
 
         {open && (
-          <div className="absolute top-full right-0 mt-1 bg-surface border border-border rounded-xl shadow-lg py-1 z-50 min-w-[100px]">
+          <div className="absolute top-full right-0 mt-1 bg-surface rounded-xl shadow-lg py-1 z-50 min-w-[100px]">
             {PERIODS.map((p) => (
               <button
                 key={p.value}

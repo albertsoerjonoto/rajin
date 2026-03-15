@@ -210,7 +210,7 @@ export default function LogPage() {
   };
 
   const inputClass =
-    'w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
+    'w-full px-4 py-3.5 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
@@ -244,12 +244,12 @@ export default function LogPage() {
           {tab === 'food' && (
             <div className="space-y-3">
               {foodLogs.length === 0 ? (
-                <div className="bg-surface rounded-2xl p-5 border border-border text-center">
+                <div className="bg-surface rounded-2xl p-5 text-center">
                   <p className="text-text-tertiary text-sm">No food logged today</p>
                 </div>
               ) : (
                 foodLogs.map((log, i) => (
-                  <div key={log.id} onClick={() => startEditFood(log)} className="bg-surface rounded-2xl p-5 border border-border animate-stagger-in cursor-pointer hover:border-accent-border transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
+                  <div key={log.id} onClick={() => startEditFood(log)} className="bg-surface rounded-2xl p-5 animate-stagger-in cursor-pointer hover:bg-surface-hover transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="text-xs font-medium text-accent-text uppercase">{log.meal_type === 'snack' ? 'Other' : log.meal_type}</span>
@@ -281,12 +281,12 @@ export default function LogPage() {
           {tab === 'exercise' && (
             <div className="space-y-3">
               {exerciseLogs.length === 0 ? (
-                <div className="bg-surface rounded-2xl p-5 border border-border text-center">
+                <div className="bg-surface rounded-2xl p-5 text-center">
                   <p className="text-text-tertiary text-sm">No exercise logged today</p>
                 </div>
               ) : (
                 exerciseLogs.map((log, i) => (
-                  <div key={log.id} onClick={() => startEditExercise(log)} className="bg-surface rounded-2xl p-5 border border-border animate-stagger-in cursor-pointer hover:border-accent-border transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
+                  <div key={log.id} onClick={() => startEditExercise(log)} className="bg-surface rounded-2xl p-5 animate-stagger-in cursor-pointer hover:bg-surface-hover transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-medium text-text-primary">{log.exercise_type}</p>
@@ -383,7 +383,7 @@ export default function LogPage() {
                   min="0"
                   value={proteinG}
                   onChange={(e) => setProteinG(e.target.value)}
-                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                   placeholder="Protein (g)"
                 />
                 <input
@@ -391,7 +391,7 @@ export default function LogPage() {
                   min="0"
                   value={carbsG}
                   onChange={(e) => setCarbsG(e.target.value)}
-                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                   placeholder="Carbs (g)"
                 />
                 <input
@@ -399,7 +399,7 @@ export default function LogPage() {
                   min="0"
                   value={fatG}
                   onChange={(e) => setFatG(e.target.value)}
-                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                   placeholder="Fat (g)"
                 />
               </div>
@@ -440,7 +440,7 @@ export default function LogPage() {
                   max="1440"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
-                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
+                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
                   placeholder="Duration (min)"
                 />
                 <input
@@ -449,7 +449,7 @@ export default function LogPage() {
                   max="20000"
                   value={caloriesBurned}
                   onChange={(e) => setCaloriesBurned(e.target.value)}
-                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
+                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
                   placeholder="Calories burned"
                 />
               </div>

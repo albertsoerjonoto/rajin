@@ -94,7 +94,7 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-12 h-12 flex items-center justify-center text-2xl rounded-xl border border-border-strong bg-surface hover:bg-surface-hover transition-colors"
+        className="w-12 h-12 flex items-center justify-center text-2xl rounded-xl bg-surface hover:bg-surface-hover transition-colors"
       >
         {value}
       </button>
@@ -103,7 +103,7 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
         createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] w-72 max-h-80 overflow-y-auto bg-surface border border-border rounded-2xl shadow-lg animate-fade-in scrollbar-hide"
+            className="fixed z-[9999] w-72 max-h-80 overflow-y-auto bg-surface rounded-2xl shadow-lg animate-fade-in scrollbar-hide"
             style={{ top: pos.top, left: pos.left }}
           >
             {EMOJI_CATEGORIES.map((cat) => (
