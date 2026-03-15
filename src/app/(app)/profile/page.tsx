@@ -99,7 +99,6 @@ export default function ProfilePage() {
   const saveProfile = async () => {
     if (!user) return;
 
-    // Validate all fields
     const newErrors: Record<string, string> = {};
 
     if (calorieMode !== 'maintenance') {
@@ -188,10 +187,16 @@ export default function ProfilePage() {
     }
   };
 
-  const inputClass =
-    'w-full px-4 py-3 rounded-xl bg-surface-secondary text-sm focus:outline-none focus:ring-1 focus:ring-input-ring transition-all';
-  const errorInputClass =
-    'w-full px-4 py-3 rounded-xl bg-surface-secondary text-sm focus:outline-none ring-1 ring-danger transition-all';
+  const initials = (displayName || user?.email || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  const rowClass = 'px-4 py-3.5 flex items-center justify-between';
+  const dividerClass = 'border-b border-border';
+  const inputClass = 'text-sm text-right bg-transparent focus:outline-none text-text-secondary placeholder:text-text-tertiary';
 
   return (
     <div className="max-w-lg mx-auto px-4">
@@ -204,67 +209,77 @@ export default function ProfilePage() {
         <PageSkeleton />
       ) : (
         <>
-          <div className="bg-surface rounded-2xl p-6 space-y-5">
-            <div>
-              <label className="block text-xs text-text-secondary mb-1.5">Email</label>
-              <p className="text-sm text-text-tertiary px-4 py-3 bg-surface-secondary rounded-xl">{user?.email}</p>
+          {/* Profile header */}
+          <div className="flex flex-col items-center pt-2 pb-6">
+            <div className="w-20 h-20 rounded-full bg-positive flex items-center justify-center mb-3">
+              <span className="text-2xl font-bold text-white">{initials}</span>
             </div>
+            <p className="text-xl font-semibold text-text-primary">{displayName || 'No name'}</p>
+            <p className="text-sm text-text-tertiary mt-0.5">{user?.email}</p>
+          </div>
 
-            <div>
-              <label htmlFor="displayName" className="block text-xs text-text-secondary mb-1.5">
-                Display Name
-              </label>
+          {/* Account section */}
+          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-4 mb-2">Account</p>
+          <div className="bg-surface rounded-2xl overflow-hidden">
+            {/* Display Name */}
+            <div className={`${rowClass} ${dividerClass}`}>
+              <label htmlFor="displayName" className="text-sm text-text-primary shrink-0 mr-4">Display Name</label>
               <input
                 id="displayName"
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className={inputClass}
+                className={`${inputClass} flex-1 min-w-0`}
                 placeholder="Your name"
               />
             </div>
 
-            <div>
-              <label className="block text-xs text-text-secondary mb-1.5">
-                Calorie Target
-              </label>
-              <div className="flex gap-2 mb-2">
-                {(['deficit', 'maintenance', 'surplus'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => {
-                      setCalorieMode(mode);
-                      setErrors((prev) => ({ ...prev, calorieAmount: '' }));
-                    }}
-                    className={`flex-1 py-2 rounded-xl text-sm transition-all capitalize ${
-                      calorieMode === mode
-                        ? 'bg-surface-hover text-text-primary font-semibold'
-                        : 'bg-surface-secondary text-text-muted hover:bg-surface-hover'
-                    }`}
-                  >
-                    {mode}
-                  </button>
-                ))}
+            {/* Calorie Target */}
+            <div className={calorieMode !== 'maintenance' ? dividerClass : ''}>
+              <div className={`${rowClass}`}>
+                <span className="text-sm text-text-primary shrink-0 mr-3">Calorie Target</span>
+                <div className="flex gap-1">
+                  {(['deficit', 'maintenance', 'surplus'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => {
+                        setCalorieMode(mode);
+                        setErrors((prev) => ({ ...prev, calorieAmount: '' }));
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs transition-all capitalize ${
+                        calorieMode === mode
+                          ? 'bg-surface-hover text-text-primary font-semibold'
+                          : 'text-text-muted hover:text-text-secondary'
+                      }`}
+                    >
+                      {mode === 'deficit' ? 'Deficit' : mode === 'maintenance' ? 'Maint.' : 'Surplus'}
+                    </button>
+                  ))}
+                </div>
               </div>
               {calorieMode !== 'maintenance' && (
-                <div>
-                  <input
-                    type="number"
-                    min="100"
-                    max="2000"
-                    step="50"
-                    value={calorieAmount}
-                    onChange={(e) => {
-                      setCalorieAmount(e.target.value);
-                      setErrors((prev) => ({ ...prev, calorieAmount: '' }));
-                    }}
-                    className={errors.calorieAmount ? errorInputClass : inputClass}
-                    placeholder="500"
-                  />
-                  <p className="text-xs text-text-tertiary mt-1">
-                    Calories {calorieMode === 'deficit' ? 'below' : 'above'} your TDEE
-                  </p>
+                <div className="px-4 pb-3.5 -mt-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="100"
+                      max="2000"
+                      step="50"
+                      value={calorieAmount}
+                      onChange={(e) => {
+                        setCalorieAmount(e.target.value);
+                        setErrors((prev) => ({ ...prev, calorieAmount: '' }));
+                      }}
+                      className={`w-20 text-sm text-right bg-surface-secondary rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 ${
+                        errors.calorieAmount ? 'ring-1 ring-danger' : 'focus:ring-input-ring'
+                      }`}
+                      placeholder="500"
+                    />
+                    <span className="text-xs text-text-tertiary">
+                      cal {calorieMode === 'deficit' ? 'below' : 'above'} TDEE
+                    </span>
+                  </div>
                   {errors.calorieAmount && (
                     <p className="text-xs text-danger-text mt-1">{errors.calorieAmount}</p>
                   )}
@@ -273,45 +288,43 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Body Stats Card */}
-          <div className="bg-surface rounded-2xl p-6 space-y-5 mt-6">
-            <div>
-              <h2 className="text-sm font-medium text-text-secondary uppercase tracking-wide">Body Stats</h2>
-              <p className="text-xs text-text-tertiary mt-0.5">Used to calculate your recommended daily intake</p>
-            </div>
-
-            <div>
-              <label htmlFor="dob" className="block text-xs text-text-secondary mb-1.5">
-                Date of Birth
-              </label>
-              <input
-                id="dob"
-                type="date"
-                max={getToday()}
-                value={dateOfBirth}
-                onChange={(e) => {
-                  setDateOfBirth(e.target.value);
-                  setErrors((prev) => ({ ...prev, dateOfBirth: '' }));
-                }}
-                className={`${errors.dateOfBirth ? errorInputClass : inputClass} appearance-none max-w-full`}
-              />
+          {/* Body Stats section */}
+          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">Body Stats</p>
+          <div className="bg-surface rounded-2xl overflow-hidden">
+            {/* Date of Birth */}
+            <div className={dividerClass}>
+              <div className={rowClass}>
+                <label htmlFor="dob" className="text-sm text-text-primary shrink-0 mr-4">Date of Birth</label>
+                <input
+                  id="dob"
+                  type="date"
+                  max={getToday()}
+                  value={dateOfBirth}
+                  onChange={(e) => {
+                    setDateOfBirth(e.target.value);
+                    setErrors((prev) => ({ ...prev, dateOfBirth: '' }));
+                  }}
+                  className={`${inputClass} appearance-none`}
+                />
+              </div>
               {errors.dateOfBirth && (
-                <p className="text-xs text-danger-text mt-1">{errors.dateOfBirth}</p>
+                <p className="text-xs text-danger-text px-4 pb-2 -mt-1">{errors.dateOfBirth}</p>
               )}
             </div>
 
-            <div>
-              <label className="block text-xs text-text-secondary mb-1.5">Gender</label>
-              <div className="flex gap-3">
+            {/* Gender */}
+            <div className={`${rowClass} ${dividerClass}`}>
+              <span className="text-sm text-text-primary shrink-0 mr-4">Gender</span>
+              <div className="flex gap-1">
                 {(['male', 'female'] as const).map((g) => (
                   <button
                     key={g}
                     type="button"
                     onClick={() => setGender(g)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm transition-all capitalize ${
+                    className={`px-3 py-1 rounded-lg text-xs transition-all capitalize ${
                       gender === g
                         ? 'bg-surface-hover text-text-primary font-semibold'
-                        : 'bg-surface-secondary text-text-muted hover:bg-surface-hover'
+                        : 'text-text-muted hover:text-text-secondary'
                     }`}
                   >
                     {g}
@@ -320,51 +333,62 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="height" className="block text-xs text-text-secondary mb-1.5">
-                  Height (cm)
-                </label>
-                <input
-                  id="height"
-                  type="number"
-                  min="50"
-                  max="300"
-                  step="0.1"
-                  value={heightCm}
-                  onChange={(e) => {
-                    setHeightCm(e.target.value);
-                    setErrors((prev) => ({ ...prev, heightCm: '' }));
-                  }}
-                  className={errors.heightCm ? errorInputClass : inputClass}
-                  placeholder="170"
-                />
-                {errors.heightCm && (
-                  <p className="text-xs text-danger-text mt-1">{errors.heightCm}</p>
-                )}
+            {/* Height */}
+            <div className={dividerClass}>
+              <div className={rowClass}>
+                <label htmlFor="height" className="text-sm text-text-primary shrink-0 mr-4">Height</label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    id="height"
+                    type="number"
+                    min="50"
+                    max="300"
+                    step="0.1"
+                    value={heightCm}
+                    onChange={(e) => {
+                      setHeightCm(e.target.value);
+                      setErrors((prev) => ({ ...prev, heightCm: '' }));
+                    }}
+                    className={`w-16 text-sm text-right bg-transparent focus:outline-none ${
+                      errors.heightCm ? 'text-danger-text' : 'text-text-secondary'
+                    } placeholder:text-text-tertiary`}
+                    placeholder="170"
+                  />
+                  <span className="text-xs text-text-tertiary">cm</span>
+                </div>
               </div>
-              <div>
-                <label htmlFor="weight" className="block text-xs text-text-secondary mb-1.5">
-                  Weight (kg)
-                </label>
-                <input
-                  id="weight"
-                  type="number"
-                  min="10"
-                  max="500"
-                  step="0.1"
-                  value={weightKg}
-                  onChange={(e) => {
-                    setWeightKg(e.target.value);
-                    setErrors((prev) => ({ ...prev, weightKg: '' }));
-                  }}
-                  className={errors.weightKg ? errorInputClass : inputClass}
-                  placeholder="70"
-                />
-                {errors.weightKg && (
-                  <p className="text-xs text-danger-text mt-1">{errors.weightKg}</p>
-                )}
+              {errors.heightCm && (
+                <p className="text-xs text-danger-text px-4 pb-2 -mt-1">{errors.heightCm}</p>
+              )}
+            </div>
+
+            {/* Weight */}
+            <div>
+              <div className={rowClass}>
+                <label htmlFor="weight" className="text-sm text-text-primary shrink-0 mr-4">Weight</label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    id="weight"
+                    type="number"
+                    min="10"
+                    max="500"
+                    step="0.1"
+                    value={weightKg}
+                    onChange={(e) => {
+                      setWeightKg(e.target.value);
+                      setErrors((prev) => ({ ...prev, weightKg: '' }));
+                    }}
+                    className={`w-16 text-sm text-right bg-transparent focus:outline-none ${
+                      errors.weightKg ? 'text-danger-text' : 'text-text-secondary'
+                    } placeholder:text-text-tertiary`}
+                    placeholder="70"
+                  />
+                  <span className="text-xs text-text-tertiary">kg</span>
+                </div>
               </div>
+              {errors.weightKg && (
+                <p className="text-xs text-danger-text px-4 pb-2 -mt-1">{errors.weightKg}</p>
+              )}
             </div>
           </div>
 
