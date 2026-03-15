@@ -40,6 +40,10 @@ export default function LogPage() {
 
   const [saving, setSaving] = useState(false);
 
+  // Edit state
+  const [editingFood, setEditingFood] = useState<FoodLog | null>(null);
+  const [editingExercise, setEditingExercise] = useState<ExerciseLog | null>(null);
+
   // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'food' | 'exercise'; id: string } | null>(null);
 
@@ -92,30 +96,26 @@ export default function LogPage() {
     setSaving(true);
     const supabase = createClient();
 
-    const { error } = await supabase.from('food_logs').insert({
-      user_id: user.id,
-      date,
+    const fields = {
       meal_type: mealType,
       description: description.trim(),
       calories: cal,
       protein_g: prot,
       carbs_g: carbs,
       fat_g: fat,
-      source: 'manual',
-    });
+    };
+
+    const { error } = editingFood
+      ? await supabase.from('food_logs').update(fields).eq('id', editingFood.id)
+      : await supabase.from('food_logs').insert({ ...fields, user_id: user.id, date, source: 'manual' as const });
 
     if (error) {
-      showToast('error', 'Failed to save food log');
+      showToast('error', `Failed to ${editingFood ? 'update' : 'save'} food log`);
       setSaving(false);
       return;
     }
 
-    setDescription('');
-    setCalories('');
-    setProteinG('');
-    setCarbsG('');
-    setFatG('');
-    setModal('none');
+    closeModal();
     setSaving(false);
     fetchData();
   };
@@ -137,27 +137,24 @@ export default function LogPage() {
     setSaving(true);
     const supabase = createClient();
 
-    const { error } = await supabase.from('exercise_logs').insert({
-      user_id: user.id,
-      date,
+    const fields = {
       exercise_type: exerciseType.trim(),
       duration_minutes: dur,
       calories_burned: burned,
       notes: notes.trim() || null,
-      source: 'manual',
-    });
+    };
+
+    const { error } = editingExercise
+      ? await supabase.from('exercise_logs').update(fields).eq('id', editingExercise.id)
+      : await supabase.from('exercise_logs').insert({ ...fields, user_id: user.id, date, source: 'manual' as const });
 
     if (error) {
-      showToast('error', 'Failed to save exercise log');
+      showToast('error', `Failed to ${editingExercise ? 'update' : 'save'} exercise log`);
       setSaving(false);
       return;
     }
 
-    setExerciseType('');
-    setDuration('');
-    setCaloriesBurned('');
-    setNotes('');
-    setModal('none');
+    closeModal();
     setSaving(false);
     fetchData();
   };
@@ -175,6 +172,41 @@ export default function LogPage() {
 
     setDeleteTarget(null);
     fetchData();
+  };
+
+  const startEditFood = (log: FoodLog) => {
+    setMealType(log.meal_type);
+    setDescription(log.description);
+    setCalories(String(log.calories));
+    setProteinG(log.protein_g ? String(log.protein_g) : '');
+    setCarbsG(log.carbs_g ? String(log.carbs_g) : '');
+    setFatG(log.fat_g ? String(log.fat_g) : '');
+    setEditingFood(log);
+    setModal('food');
+  };
+
+  const startEditExercise = (log: ExerciseLog) => {
+    setExerciseType(log.exercise_type);
+    setDuration(String(log.duration_minutes));
+    setCaloriesBurned(log.calories_burned ? String(log.calories_burned) : '');
+    setNotes(log.notes || '');
+    setEditingExercise(log);
+    setModal('exercise');
+  };
+
+  const closeModal = () => {
+    setModal('none');
+    setEditingFood(null);
+    setEditingExercise(null);
+    setDescription('');
+    setCalories('');
+    setProteinG('');
+    setCarbsG('');
+    setFatG('');
+    setExerciseType('');
+    setDuration('');
+    setCaloriesBurned('');
+    setNotes('');
   };
 
   const inputClass =
@@ -217,7 +249,7 @@ export default function LogPage() {
                 </div>
               ) : (
                 foodLogs.map((log, i) => (
-                  <div key={log.id} className="bg-surface rounded-2xl p-5 border border-border animate-stagger-in" style={{ animationDelay: `${i * 50}ms` }}>
+                  <div key={log.id} onClick={() => startEditFood(log)} className="bg-surface rounded-2xl p-5 border border-border animate-stagger-in cursor-pointer hover:border-accent-border transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="text-xs font-medium text-accent-text uppercase">{log.meal_type === 'snack' ? 'Other' : log.meal_type}</span>
@@ -230,7 +262,7 @@ export default function LogPage() {
                         </p>
                       </div>
                       <button
-                        onClick={() => setDeleteTarget({ type: 'food', id: log.id })}
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: 'food', id: log.id }); }}
                         className="text-text-tertiary hover:text-danger-text-muted transition-colors p-2.5"
                         aria-label="Delete food log"
                       >
@@ -254,7 +286,7 @@ export default function LogPage() {
                 </div>
               ) : (
                 exerciseLogs.map((log, i) => (
-                  <div key={log.id} className="bg-surface rounded-2xl p-5 border border-border animate-stagger-in" style={{ animationDelay: `${i * 50}ms` }}>
+                  <div key={log.id} onClick={() => startEditExercise(log)} className="bg-surface rounded-2xl p-5 border border-border animate-stagger-in cursor-pointer hover:border-accent-border transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-medium text-text-primary">{log.exercise_type}</p>
@@ -264,7 +296,7 @@ export default function LogPage() {
                         </p>
                       </div>
                       <button
-                        onClick={() => setDeleteTarget({ type: 'exercise', id: log.id })}
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: 'exercise', id: log.id }); }}
                         className="text-text-tertiary hover:text-danger-text-muted transition-colors p-2.5"
                         aria-label="Delete exercise log"
                       >
@@ -303,12 +335,12 @@ export default function LogPage() {
 
       {/* Food Modal */}
       {modal === 'food' && (
-        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={() => setModal('none')}>
+        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
           <div
             className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-text-primary mb-4">Add Diet Entry</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-4">{editingFood ? 'Edit Diet Entry' : 'Add Diet Entry'}</h2>
 
             <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
               {([['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner'], ['snack', 'Other']] as const).map(([value, label]) => (
@@ -385,12 +417,12 @@ export default function LogPage() {
 
       {/* Exercise Modal */}
       {modal === 'exercise' && (
-        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={() => setModal('none')}>
+        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
           <div
             className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-text-primary mb-4">Add Exercise</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-4">{editingExercise ? 'Edit Exercise' : 'Add Exercise'}</h2>
 
             <div className="space-y-3">
               <input
