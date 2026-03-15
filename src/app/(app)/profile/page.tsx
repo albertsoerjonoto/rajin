@@ -13,6 +13,7 @@ import {
 } from '@/lib/validation';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { compressAvatar } from '@/lib/image';
 import type { Profile, Gender } from '@/lib/types';
 
 export default function ProfilePage() {
@@ -30,13 +31,17 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const fetchedForUser = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const applyProfile = (p: Profile) => {
     setProfile(p);
     setDisplayName(p.display_name || '');
+    setAvatarUrl(p.avatar_url || null);
     const offset = p.daily_calorie_offset ?? 0;
     if (offset === 0) {
       setCalorieMode('maintenance');
@@ -187,6 +192,47 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploading(true);
+    try {
+      const compressed = await compressAvatar(file);
+      const supabase = createClient();
+      const ext = compressed.type === 'image/webp' ? 'webp' : 'jpg';
+      const path = `${user.id}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, compressed, {
+          contentType: compressed.type,
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(path);
+
+      const urlWithCacheBust = `${publicUrl}?t=${Date.now()}`;
+
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: urlWithCacheBust })
+        .eq('id', user.id);
+
+      setAvatarUrl(urlWithCacheBust);
+      showToast('success', 'Photo updated!');
+    } catch {
+      showToast('error', 'Failed to upload photo');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const initials = (displayName || user?.email || '?')
     .split(' ')
     .map((w) => w[0])
@@ -211,9 +257,38 @@ export default function ProfilePage() {
         <>
           {/* Profile header */}
           <div className="flex flex-col items-center pt-2 pb-6">
-            <div className="w-20 h-20 rounded-full bg-positive flex items-center justify-center mb-3">
-              <span className="text-2xl font-bold text-white">{initials}</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="relative w-20 h-20 rounded-full bg-positive overflow-hidden mb-3 active:scale-95 transition-transform"
+              disabled={uploading}
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-2xl font-bold text-white flex items-center justify-center w-full h-full">
+                  {initials}
+                </span>
+              )}
+              {uploading && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+              <div className="absolute bottom-0 right-0 w-6 h-6 bg-accent rounded-full flex items-center justify-center border-2 border-bg">
+                <svg className="w-3 h-3 text-accent-fg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                </svg>
+              </div>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
             <p className="text-xl font-semibold text-text-primary">{displayName || 'No name'}</p>
             <p className="text-sm text-text-tertiary mt-0.5">{user?.email}</p>
           </div>

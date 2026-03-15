@@ -30,6 +30,9 @@ export async function DELETE() {
   await admin.from('exercise_logs').delete().eq('user_id', userId);
   await admin.from('profiles').delete().eq('id', userId);
 
+  // Clean up avatar from storage
+  await admin.storage.from('avatars').remove([`${userId}/avatar.webp`, `${userId}/avatar.jpg`]);
+
   // Delete the auth user
   const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
 
