@@ -2,7 +2,7 @@
 
 /* ── Light theme (default) ── */
 :root {
-  --c-bg: #f8f8f8;
+  --c-bg: #ffffff;
   --c-surface: #ffffff;
   --c-surface-secondary: #f3f4f6;
   --c-surface-hover: #f3f4f6;
@@ -54,7 +54,7 @@
 /* ── Dark theme ── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --c-bg: #0a0a0b;
+    --c-bg: #000000;
     --c-surface: #161618;
     --c-surface-secondary: #1e1e21;
     --c-surface-hover: #232326;

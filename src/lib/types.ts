@@ -7,7 +7,7 @@ export interface Profile {
   id: string;
   email: string;
   display_name: string | null;
-  daily_calorie_goal: number;
+  daily_calorie_offset: number;
   date_of_birth: string | null;
   gender: Gender | null;
   height_cm: number | null;

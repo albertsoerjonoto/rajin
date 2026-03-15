@@ -222,7 +222,7 @@ export default function ChatPage() {
                   {msg.parsedFoods.map((food, i) => (
                     <div key={i} className="bg-surface-secondary rounded-xl p-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-accent-text uppercase">{food.meal_type}</span>
+                        <span className="text-xs font-medium text-accent-text uppercase">{food.meal_type === 'snack' ? 'Other' : food.meal_type}</span>
                         {!msg.saved && (
                           <select
                             value={food.meal_type}
@@ -232,7 +232,7 @@ export default function ChatPage() {
                             <option value="breakfast">Breakfast</option>
                             <option value="lunch">Lunch</option>
                             <option value="dinner">Dinner</option>
-                            <option value="snack">Snack</option>
+                            <option value="snack">Other</option>
                           </select>
                         )}
                       </div>

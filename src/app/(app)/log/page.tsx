@@ -195,7 +195,7 @@ export default function LogPage() {
               tab === t ? 'bg-surface text-text-primary shadow-sm' : 'text-text-secondary'
             )}
           >
-            {t === 'food' ? '🍽️ Food' : '🏃 Exercise'}
+            {t === 'food' ? '🍽️ Diet' : '🏃 Exercise'}
           </button>
         ))}
       </div>
@@ -216,7 +216,7 @@ export default function LogPage() {
                   <div key={log.id} className="bg-surface rounded-2xl p-5 border border-border animate-stagger-in" style={{ animationDelay: `${i * 50}ms` }}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="text-xs font-medium text-accent-text uppercase">{log.meal_type}</span>
+                        <span className="text-xs font-medium text-accent-text uppercase">{log.meal_type === 'snack' ? 'Other' : log.meal_type}</span>
                         <p className="text-sm font-medium text-text-primary mt-0.5">{log.description}</p>
                         <p className="text-xs text-text-tertiary mt-1">
                           {log.calories} cal
@@ -304,21 +304,21 @@ export default function LogPage() {
             className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-text-primary mb-4">Add Food</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-4">Add Diet Entry</h2>
 
             <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-              {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((m) => (
+              {([['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner'], ['snack', 'Other']] as const).map(([value, label]) => (
                 <button
-                  key={m}
-                  onClick={() => setMealType(m)}
+                  key={value}
+                  onClick={() => setMealType(value)}
                   className={cn(
-                    'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all capitalize',
-                    mealType === m
+                    'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all',
+                    mealType === value
                       ? 'bg-accent text-accent-fg'
                       : 'bg-surface-secondary text-text-muted'
                   )}
                 >
-                  {m}
+                  {label}
                 </button>
               ))}
             </div>

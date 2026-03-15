@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/Toast';
 import { getToday } from '@/lib/utils';
 import {
-  validateCalorieGoal,
+  validateCalorieOffset,
   validateDOB,
   validateBodyStat,
 } from '@/lib/validation';
@@ -21,7 +21,8 @@ export default function ProfilePage() {
   const { showToast, ToastContainer } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
-  const [calorieGoal, setCalorieGoal] = useState('2000');
+  const [calorieMode, setCalorieMode] = useState<'deficit' | 'maintenance' | 'surplus'>('maintenance');
+  const [calorieAmount, setCalorieAmount] = useState('500');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState<Gender | ''>('');
   const [heightCm, setHeightCm] = useState('');
@@ -36,7 +37,17 @@ export default function ProfilePage() {
   const applyProfile = (p: Profile) => {
     setProfile(p);
     setDisplayName(p.display_name || '');
-    setCalorieGoal(String(p.daily_calorie_goal));
+    const offset = p.daily_calorie_offset ?? 0;
+    if (offset === 0) {
+      setCalorieMode('maintenance');
+      setCalorieAmount('500');
+    } else if (offset < 0) {
+      setCalorieMode('deficit');
+      setCalorieAmount(String(Math.abs(offset)));
+    } else {
+      setCalorieMode('surplus');
+      setCalorieAmount(String(offset));
+    }
     setDateOfBirth(p.date_of_birth || '');
     setGender(p.gender || '');
     setHeightCm(p.height_cm ? String(p.height_cm) : '');
@@ -69,7 +80,7 @@ export default function ProfilePage() {
             id: user.id,
             email: user.email!,
             display_name: user.email!.split('@')[0],
-            daily_calorie_goal: 2000,
+            daily_calorie_offset: 0,
           })
           .select()
           .single();
@@ -91,8 +102,11 @@ export default function ProfilePage() {
     // Validate all fields
     const newErrors: Record<string, string> = {};
 
-    if (calorieGoal && validateCalorieGoal(calorieGoal) === null) {
-      newErrors.calorieGoal = 'Must be between 500 and 10,000';
+    if (calorieMode !== 'maintenance') {
+      const offsetVal = validateCalorieOffset(calorieAmount);
+      if (offsetVal === null || offsetVal <= 0) {
+        newErrors.calorieAmount = 'Must be between 1 and 2,000';
+      }
     }
 
     if (dateOfBirth && !validateDOB(dateOfBirth)) {
@@ -117,7 +131,9 @@ export default function ProfilePage() {
       .from('profiles')
       .update({
         display_name: displayName.trim() || null,
-        daily_calorie_goal: parseInt(calorieGoal) || 2000,
+        daily_calorie_offset: calorieMode === 'maintenance' ? 0 :
+          calorieMode === 'deficit' ? -(parseInt(calorieAmount) || 500) :
+          (parseInt(calorieAmount) || 500),
         date_of_birth: dateOfBirth || null,
         gender: gender || null,
         height_cm: heightCm ? parseFloat(heightCm) : null,
@@ -207,24 +223,50 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label htmlFor="calorieGoal" className="block text-sm font-medium text-text-label mb-1">
-                Daily Calorie Goal
+              <label className="block text-sm font-medium text-text-label mb-1">
+                Calorie Target
               </label>
-              <input
-                id="calorieGoal"
-                type="number"
-                min="500"
-                max="10000"
-                value={calorieGoal}
-                onChange={(e) => {
-                  setCalorieGoal(e.target.value);
-                  setErrors((prev) => ({ ...prev, calorieGoal: '' }));
-                }}
-                className={errors.calorieGoal ? errorInputClass : inputClass}
-                placeholder="2000"
-              />
-              {errors.calorieGoal && (
-                <p className="text-xs text-danger-text mt-1">{errors.calorieGoal}</p>
+              <div className="flex gap-2 mb-2">
+                {(['deficit', 'maintenance', 'surplus'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      setCalorieMode(mode);
+                      setErrors((prev) => ({ ...prev, calorieAmount: '' }));
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all capitalize ${
+                      calorieMode === mode
+                        ? 'bg-accent text-accent-fg'
+                        : 'bg-surface-secondary text-text-muted hover:bg-surface-hover'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+              {calorieMode !== 'maintenance' && (
+                <div>
+                  <input
+                    type="number"
+                    min="100"
+                    max="2000"
+                    step="50"
+                    value={calorieAmount}
+                    onChange={(e) => {
+                      setCalorieAmount(e.target.value);
+                      setErrors((prev) => ({ ...prev, calorieAmount: '' }));
+                    }}
+                    className={errors.calorieAmount ? errorInputClass : inputClass}
+                    placeholder="500"
+                  />
+                  <p className="text-xs text-text-tertiary mt-1">
+                    Calories {calorieMode === 'deficit' ? 'below' : 'above'} your TDEE
+                  </p>
+                  {errors.calorieAmount && (
+                    <p className="text-xs text-danger-text mt-1">{errors.calorieAmount}</p>
+                  )}
+                </div>
               )}
             </div>
           </div>

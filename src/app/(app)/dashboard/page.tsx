@@ -48,7 +48,7 @@ export default function DashboardPage() {
           id: user.id,
           email: user.email!,
           display_name: user.email!.split('@')[0],
-          daily_calorie_goal: 2000,
+          daily_calorie_offset: 0,
         })
         .select()
         .single();
@@ -215,8 +215,6 @@ export default function DashboardPage() {
   const totalProtein = foodLogs.reduce((sum, f) => sum + (f.protein_g || 0), 0);
   const totalCarbs = foodLogs.reduce((sum, f) => sum + (f.carbs_g || 0), 0);
   const totalFat = foodLogs.reduce((sum, f) => sum + (f.fat_g || 0), 0);
-  const calorieGoal = profile?.daily_calorie_goal ?? 2000;
-  const caloriePercent = Math.min((totalCalories / calorieGoal) * 100, 100);
   const totalExerciseMinutes = exerciseLogs.reduce((sum, e) => sum + e.duration_minutes, 0);
   const totalCaloriesBurned = exerciseLogs.reduce((sum, e) => sum + e.calories_burned, 0);
   const netCalories = totalCalories - totalCaloriesBurned;
@@ -229,6 +227,9 @@ export default function DashboardPage() {
   };
 
   const targets = profile ? computeNutritionTargets(profile) : null;
+  const hasBodyStats = targets?.hasData ?? false;
+  const calorieTarget = targets?.calorieTarget ?? 0;
+  const caloriePercent = calorieTarget > 0 ? Math.min((totalCalories / calorieTarget) * 100, 100) : 0;
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
@@ -404,130 +405,130 @@ export default function DashboardPage() {
             )}
           </section>
 
-          {/* Food Summary */}
+          {/* Diet Section */}
           <section className="mb-6 animate-stagger-in" style={{ animationDelay: '50ms' }}>
-            <h2 className="text-lg font-semibold text-text-primary mb-3">Food</h2>
+            <h2 className="text-lg font-semibold text-text-primary mb-3">Diet</h2>
             <div className="bg-surface rounded-2xl p-5 border border-border">
-              <div className="flex items-end justify-between mb-2">
-                <div>
-                  <p className="text-2xl font-bold text-text-primary">{totalCalories}</p>
-                  <p className="text-xs text-text-tertiary">of {calorieGoal} cal goal</p>
+              {/* Calorie Summary */}
+              {hasBodyStats ? (
+                <div className="mb-3">
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <span className="text-2xl font-bold text-text-primary">{totalCalories}</span>
+                    <span className="text-xs text-text-tertiary">
+                      of {targets!.calorieRange.min}–{targets!.calorieRange.max} cal
+                    </span>
+                  </div>
+                  <div className="w-full h-2.5 bg-surface-secondary rounded-full overflow-hidden">
+                    <div
+                      className={cn(
+                        'h-full rounded-full transition-all duration-500',
+                        totalCalories > targets!.calorieRange.max ? 'bg-warning-bar' :
+                        totalCalories >= targets!.calorieRange.min ? 'bg-positive-bar' : 'bg-accent'
+                      )}
+                      style={{ width: `${caloriePercent}%` }}
+                    />
+                  </div>
                 </div>
-                <p className={cn('text-sm font-medium', caloriePercent >= 100 ? 'text-warning' : 'text-positive-text')}>
-                  {Math.round(caloriePercent)}%
-                </p>
-              </div>
-              <div className="w-full h-3 bg-surface-secondary rounded-full overflow-hidden">
-                <div
-                  className={cn(
-                    'h-full rounded-full transition-all duration-700 animate-progress',
-                    caloriePercent >= 100 ? 'bg-warning-bar' : 'bg-positive-bar'
-                  )}
-                  style={{ width: `${caloriePercent}%` }}
-                />
-              </div>
-              <div className="grid grid-cols-4 gap-2 mt-3">
-                {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((meal) => (
-                  <div key={meal} className="text-center">
-                    <p className="text-xs text-text-tertiary capitalize">{meal}</p>
-                    <p className="text-sm font-semibold text-text-label">{mealBreakdown[meal]}</p>
+              ) : (
+                <div className="mb-3">
+                  <p className="text-2xl font-bold text-text-primary">{totalCalories}</p>
+                  <p className="text-xs text-text-tertiary">cal eaten today</p>
+                  <p className="text-[11px] text-text-tertiary mt-1">
+                    Add your stats in Profile to see your calorie range
+                  </p>
+                </div>
+              )}
+
+              {/* Meal Breakdown */}
+              <div className="grid grid-cols-4 gap-2">
+                {([['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner'], ['snack', 'Other']] as const).map(([key, label]) => (
+                  <div key={key} className="text-center">
+                    <p className="text-xs text-text-tertiary">{label}</p>
+                    <p className="text-sm font-semibold text-text-label">{mealBreakdown[key]}</p>
                   </div>
                 ))}
               </div>
+
+              {/* Nutrition subsection */}
+              {hasBodyStats && targets && (
+                <div className="border-t border-border mt-3 pt-3">
+                  <div className="flex items-baseline gap-1.5 mb-3 text-xs text-text-tertiary">
+                    <span>TDEE ~{targets.tdee}</span>
+                    <span>·</span>
+                    <span className={cn(
+                      'font-semibold',
+                      targets.calorieOffset < -50 ? 'text-info' :
+                      targets.calorieOffset > 50 ? 'text-warning' : 'text-positive-text'
+                    )}>
+                      {targets.deltaLabel}
+                    </span>
+                    {totalCaloriesBurned > 0 && (
+                      <>
+                        <span>·</span>
+                        <span>{totalCalories} in · {totalCaloriesBurned} out · {netCalories} net</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Macro Bars */}
+                  <div className="space-y-2.5">
+                    {[
+                      { ...targets.protein, eaten: totalProtein, color: 'bg-info-bar' },
+                      { ...targets.carbs, eaten: totalCarbs, color: 'bg-macro-carbs' },
+                      { ...targets.fat, eaten: totalFat, color: 'bg-macro-fat' },
+                    ].map((macro) => {
+                      const midTarget = (macro.min + macro.max) / 2;
+                      const percent = midTarget > 0 ? Math.min((macro.eaten / midTarget) * 100, 100) : 0;
+                      const macroInRange = macro.eaten >= macro.min && macro.eaten <= macro.max;
+                      const over = macro.eaten > macro.max;
+
+                      return (
+                        <div key={macro.label}>
+                          <div className="flex justify-between items-baseline mb-0.5">
+                            <span className="text-xs font-medium text-text-muted">{macro.label}</span>
+                            <span className="text-xs text-text-tertiary">
+                              <span className={cn(
+                                'font-semibold',
+                                macroInRange ? 'text-positive-text' : over ? 'text-warning' : 'text-text-label'
+                              )}>
+                                {macro.eaten}g
+                              </span>
+                              {' / '}
+                              {macro.min}–{macro.max}g
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-surface-secondary rounded-full overflow-hidden">
+                            <div
+                              className={cn(
+                                'h-full rounded-full transition-all duration-500',
+                                macroInRange ? 'bg-positive-bar' : over ? 'bg-warning-bar' : macro.color
+                              )}
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
-          {/* Nutrition Targets — only shown when body stats are filled */}
-          {targets?.hasData && (
-            <section className="mb-6 animate-stagger-in" style={{ animationDelay: '100ms' }}>
-              <h2 className="text-lg font-semibold text-text-primary mb-3">Nutrition</h2>
-              <div className="bg-surface rounded-2xl p-5 border border-border">
-                {/* TDEE & Deficit/Surplus */}
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-xs text-text-tertiary">TDEE (est.)</p>
-                    <p className="text-lg font-bold text-text-primary">{targets.tdee} cal</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-text-tertiary">Your goal</p>
-                    <p className={cn(
-                      'text-sm font-semibold',
-                      targets.calorieDelta < -50 ? 'text-info' :
-                      targets.calorieDelta > 50 ? 'text-warning' : 'text-positive-text'
-                    )}>
-                      {targets.deltaLabel}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Net calories when exercise is logged */}
-                {totalCaloriesBurned > 0 && (
-                  <div className="bg-bg rounded-xl px-3 py-2 mb-3">
-                    <div className="flex justify-between text-xs text-text-secondary">
-                      <span>Eaten: {totalCalories}</span>
-                      <span>Burned: {totalCaloriesBurned}</span>
-                      <span className="font-semibold text-text-label">Net: {netCalories} cal</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Macro Recommendations with progress bars */}
-                <div className="space-y-2.5">
-                  {[
-                    { ...targets.protein, eaten: totalProtein, color: 'bg-info-bar' },
-                    { ...targets.carbs, eaten: totalCarbs, color: 'bg-macro-carbs' },
-                    { ...targets.fat, eaten: totalFat, color: 'bg-macro-fat' },
-                  ].map((macro) => {
-                    const midTarget = (macro.min + macro.max) / 2;
-                    const percent = midTarget > 0 ? Math.min((macro.eaten / midTarget) * 100, 100) : 0;
-                    const inRange = macro.eaten >= macro.min && macro.eaten <= macro.max;
-                    const over = macro.eaten > macro.max;
-
-                    return (
-                      <div key={macro.label}>
-                        <div className="flex justify-between items-baseline mb-0.5">
-                          <span className="text-xs font-medium text-text-muted">{macro.label}</span>
-                          <span className="text-xs text-text-tertiary">
-                            <span className={cn(
-                              'font-semibold',
-                              inRange ? 'text-positive-text' : over ? 'text-warning' : 'text-text-label'
-                            )}>
-                              {macro.eaten}g
-                            </span>
-                            {' / '}
-                            {macro.min}–{macro.max}g
-                          </span>
-                        </div>
-                        <div className="w-full h-2 bg-surface-secondary rounded-full overflow-hidden">
-                          <div
-                            className={cn(
-                              'h-full rounded-full transition-all duration-500',
-                              inRange ? 'bg-positive-bar' : over ? 'bg-warning-bar' : macro.color
-                            )}
-                            style={{ width: `${percent}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Exercise Summary */}
-          <section className="mb-6 animate-stagger-in" style={{ animationDelay: '150ms' }}>
+          {/* Exercise Section */}
+          <section className="mb-6 animate-stagger-in" style={{ animationDelay: '100ms' }}>
             <h2 className="text-lg font-semibold text-text-primary mb-3">Exercise</h2>
             <div className="bg-surface rounded-2xl p-5 border border-border">
               {exerciseLogs.length === 0 ? (
-                <p className="text-text-tertiary text-sm text-center py-2">No exercise logged today</p>
+                <p className="text-sm text-text-tertiary text-center">No exercise logged today</p>
               ) : (
-                <div className="flex gap-6">
-                  <div>
+                <div className="flex items-center gap-3">
+                  <div className="text-center flex-1">
                     <p className="text-2xl font-bold text-text-primary">{totalExerciseMinutes}</p>
                     <p className="text-xs text-text-tertiary">minutes</p>
                   </div>
-                  <div>
+                  <div className="w-px h-8 bg-border" />
+                  <div className="text-center flex-1">
                     <p className="text-2xl font-bold text-text-primary">{totalCaloriesBurned}</p>
                     <p className="text-xs text-text-tertiary">cal burned</p>
                   </div>

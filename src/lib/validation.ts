@@ -27,6 +27,12 @@ export function validateCalorieGoal(val: string): number | null {
   return n;
 }
 
+export function validateCalorieOffset(val: string): number | null {
+  const n = parseInt(val, 10);
+  if (isNaN(n) || n < -2000 || n > 2000) return null;
+  return n;
+}
+
 export function validateDOB(val: string): boolean {
   if (!val) return false;
   const dob = new Date(val + 'T00:00:00');
