@@ -173,27 +173,27 @@ export default function ProfilePage() {
   };
 
   const inputClass =
-    'w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all';
+    'w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
   const errorInputClass =
-    'w-full px-4 py-3 rounded-xl border border-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all';
+    'w-full px-4 py-3.5 rounded-xl border border-danger-input-border bg-surface focus:outline-none focus:ring-1 focus:ring-danger focus:border-transparent transition-all duration-200';
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
       {ToastContainer}
-      <h1 className="text-xl font-bold text-gray-900 mb-6">Profile</h1>
+      <h1 className="text-xl font-bold text-text-primary mb-6">Profile</h1>
 
       {!profile ? (
         <PageSkeleton />
       ) : (
         <>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4">
+          <div className="bg-surface rounded-2xl p-5 border border-border space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <p className="text-sm text-gray-500 px-4 py-3 bg-gray-50 rounded-xl">{user?.email}</p>
+              <label className="block text-sm font-medium text-text-label mb-1">Email</label>
+              <p className="text-sm text-text-secondary px-4 py-3 bg-surface-secondary rounded-xl">{user?.email}</p>
             </div>
 
             <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="displayName" className="block text-sm font-medium text-text-label mb-1">
                 Display Name
               </label>
               <input
@@ -207,7 +207,7 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label htmlFor="calorieGoal" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="calorieGoal" className="block text-sm font-medium text-text-label mb-1">
                 Daily Calorie Goal
               </label>
               <input
@@ -224,18 +224,18 @@ export default function ProfilePage() {
                 placeholder="2000"
               />
               {errors.calorieGoal && (
-                <p className="text-xs text-red-500 mt-1">{errors.calorieGoal}</p>
+                <p className="text-xs text-danger-text mt-1">{errors.calorieGoal}</p>
               )}
             </div>
           </div>
 
           {/* Body Stats Card */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4 mt-4">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Body Stats</h2>
-            <p className="text-xs text-gray-400 -mt-2">Used to calculate your recommended daily intake</p>
+          <div className="bg-surface rounded-2xl p-5 border border-border space-y-4 mt-4">
+            <h2 className="text-lg font-semibold text-text-primary">Body Stats</h2>
+            <p className="text-xs text-text-tertiary -mt-2">Used to calculate your recommended daily intake</p>
 
             <div>
-              <label htmlFor="dob" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="dob" className="block text-sm font-medium text-text-label mb-1">
                 Date of Birth
               </label>
               <input
@@ -250,12 +250,12 @@ export default function ProfilePage() {
                 className={`${errors.dateOfBirth ? errorInputClass : inputClass} appearance-none max-w-full`}
               />
               {errors.dateOfBirth && (
-                <p className="text-xs text-red-500 mt-1">{errors.dateOfBirth}</p>
+                <p className="text-xs text-danger-text mt-1">{errors.dateOfBirth}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+              <label className="block text-sm font-medium text-text-label mb-1">Gender</label>
               <div className="flex gap-3">
                 {(['male', 'female'] as const).map((g) => (
                   <button
@@ -264,8 +264,8 @@ export default function ProfilePage() {
                     onClick={() => setGender(g)}
                     className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all capitalize ${
                       gender === g
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-accent text-accent-fg'
+                        : 'bg-surface-secondary text-text-muted hover:bg-surface-hover'
                     }`}
                   >
                     {g}
@@ -276,7 +276,7 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="height" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="height" className="block text-sm font-medium text-text-label mb-1">
                   Height (cm)
                 </label>
                 <input
@@ -294,11 +294,11 @@ export default function ProfilePage() {
                   placeholder="170"
                 />
                 {errors.heightCm && (
-                  <p className="text-xs text-red-500 mt-1">{errors.heightCm}</p>
+                  <p className="text-xs text-danger-text mt-1">{errors.heightCm}</p>
                 )}
               </div>
               <div>
-                <label htmlFor="weight" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="weight" className="block text-sm font-medium text-text-label mb-1">
                   Weight (kg)
                 </label>
                 <input
@@ -316,7 +316,7 @@ export default function ProfilePage() {
                   placeholder="70"
                 />
                 {errors.weightKg && (
-                  <p className="text-xs text-red-500 mt-1">{errors.weightKg}</p>
+                  <p className="text-xs text-danger-text mt-1">{errors.weightKg}</p>
                 )}
               </div>
             </div>
@@ -325,7 +325,7 @@ export default function ProfilePage() {
           <button
             onClick={saveProfile}
             disabled={saving}
-            className="w-full mt-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50"
+            className="w-full mt-4 py-3 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
           >
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
           </button>
@@ -334,14 +334,14 @@ export default function ProfilePage() {
 
       <button
         onClick={handleSignOut}
-        className="w-full mt-4 py-3 text-red-500 font-medium rounded-xl border border-red-200 hover:bg-red-50 transition-all"
+        className="w-full mt-4 py-3 text-danger-text font-medium rounded-xl border border-danger-border hover:bg-danger-surface transition-all"
       >
         Sign Out
       </button>
 
       <button
         onClick={() => setShowDeleteConfirm(true)}
-        className="w-full mt-3 py-3 text-red-400 text-sm font-medium hover:text-red-600 transition-colors"
+        className="w-full mt-3 py-3 text-danger-text-muted text-sm font-medium hover:text-danger-text transition-colors"
       >
         Delete Account
       </button>
@@ -355,7 +355,7 @@ export default function ProfilePage() {
         onCancel={() => !deleting && setShowDeleteConfirm(false)}
       />
 
-      <p className="text-center text-xs text-gray-300 mt-8 mb-4">Rajin v1.0</p>
+      <p className="text-center text-xs text-text-tertiary mt-8 mb-4">Rajin v1.0</p>
     </div>
   );
 }

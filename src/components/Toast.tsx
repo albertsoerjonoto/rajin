@@ -30,8 +30,8 @@ export function useToast() {
   const ToastContainer = toast ? (
     <div
       key={toast.id}
-      className={`fixed top-4 left-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white animate-fade-in ${
-        toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'
+      className={`fixed top-4 left-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium animate-toast ${
+        toast.type === 'error' ? 'bg-danger text-white' : 'bg-accent text-accent-fg'
       }`}
       style={{ maxWidth: '480px', margin: '0 auto' }}
     >

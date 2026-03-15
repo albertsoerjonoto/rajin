@@ -197,27 +197,27 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => setDate(addDays(date, -1))}
-          className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-xl hover:bg-surface-hover transition-all duration-200 active:scale-[0.98]"
           aria-label="Previous day"
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
           </svg>
         </button>
         <div className="text-center">
-          <h1 className="text-lg font-semibold text-gray-900">{formatDisplayDate(date)}</h1>
+          <h1 className="text-lg font-semibold text-text-primary">{formatDisplayDate(date)}</h1>
           {date !== getToday() && (
-            <button onClick={() => setDate(getToday())} className="text-xs text-emerald-600 font-medium mt-0.5">
+            <button onClick={() => setDate(getToday())} className="text-xs text-accent-text font-medium mt-0.5 transition-all duration-200">
               Go to today
             </button>
           )}
         </div>
         <button
           onClick={() => setDate(addDays(date, 1))}
-          className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-xl hover:bg-surface-hover transition-all duration-200 active:scale-[0.98]"
           aria-label="Next day"
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </button>
@@ -228,38 +228,38 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* Habits Section */}
-          <section className="mb-6">
+          <section className="mb-6 animate-stagger-in" style={{ animationDelay: '0ms' }}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Habits</h2>
-              <button onClick={() => setShowAddHabit(true)} className="text-emerald-600 text-sm font-medium">
+              <h2 className="text-lg font-semibold text-text-primary">Habits</h2>
+              <button onClick={() => setShowAddHabit(true)} className="text-accent-text text-sm font-medium transition-all duration-200">
                 + Add
               </button>
             </div>
 
             {showAddHabit && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3 animate-fade-in">
+              <div className="bg-surface rounded-2xl p-5 border border-border mb-3 animate-fade-in">
                 <div className="flex gap-2 mb-3">
                   <input
                     type="text"
                     value={newHabitEmoji}
                     onChange={(e) => setNewHabitEmoji(e.target.value)}
-                    className="w-12 text-center text-xl px-2 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-12 text-center text-xl px-2 py-2 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring"
                     placeholder="✅"
                   />
                   <input
                     type="text"
                     value={newHabitName}
                     onChange={(e) => setNewHabitName(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 px-3 py-2 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring"
                     placeholder="Habit name"
                     autoFocus
                   />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-gray-500 rounded-xl hover:bg-gray-50">
+                  <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-text-secondary rounded-xl hover:bg-surface-hover transition-all duration-200">
                     Cancel
                   </button>
-                  <button onClick={addHabit} className="flex-1 py-2 text-sm text-white bg-emerald-500 rounded-xl hover:bg-emerald-600">
+                  <button onClick={addHabit} className="flex-1 py-2 text-sm text-accent-fg bg-accent rounded-xl hover:bg-accent-hover transition-all duration-200 active:scale-[0.98]">
                     Add Habit
                   </button>
                 </div>
@@ -267,8 +267,8 @@ export default function DashboardPage() {
             )}
 
             {habits.length === 0 && !showAddHabit ? (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-                <p className="text-gray-400 text-sm">No habits yet. Tap + Add to create one!</p>
+              <div className="bg-surface rounded-2xl p-6 border border-border text-center">
+                <p className="text-text-tertiary text-sm">No habits yet. Tap + Add to create one!</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
@@ -278,8 +278,8 @@ export default function DashboardPage() {
                     onClick={() => toggleHabit(habit)}
                     disabled={togglingId === habit.id}
                     className={cn(
-                      'bg-white rounded-2xl p-4 shadow-sm border text-left transition-all active:scale-95',
-                      habit.completed ? 'border-emerald-200 bg-emerald-50' : 'border-gray-100 hover:border-gray-200',
+                      'bg-surface rounded-2xl p-5 border text-left transition-all duration-200 active:scale-[0.98]',
+                      habit.completed ? 'border-positive-border bg-positive-surface' : 'border-border hover:border-border-strong',
                       togglingId === habit.id && 'opacity-60'
                     )}
                   >
@@ -290,7 +290,7 @@ export default function DashboardPage() {
                         <span className="opacity-40">{habit.emoji}</span>
                       )}
                     </div>
-                    <p className={cn('text-sm font-medium', habit.completed ? 'text-emerald-700' : 'text-gray-600')}>
+                    <p className={cn('text-sm font-medium', habit.completed ? 'text-positive-text' : 'text-text-muted')}>
                       {habit.name}
                     </p>
                   </button>
@@ -300,23 +300,23 @@ export default function DashboardPage() {
           </section>
 
           {/* Food Summary */}
-          <section className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Food</h2>
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <section className="mb-6 animate-stagger-in" style={{ animationDelay: '50ms' }}>
+            <h2 className="text-lg font-semibold text-text-primary mb-3">Food</h2>
+            <div className="bg-surface rounded-2xl p-5 border border-border">
               <div className="flex items-end justify-between mb-2">
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{totalCalories}</p>
-                  <p className="text-xs text-gray-400">of {calorieGoal} cal goal</p>
+                  <p className="text-2xl font-bold text-text-primary">{totalCalories}</p>
+                  <p className="text-xs text-text-tertiary">of {calorieGoal} cal goal</p>
                 </div>
-                <p className={cn('text-sm font-medium', caloriePercent >= 100 ? 'text-orange-500' : 'text-emerald-600')}>
+                <p className={cn('text-sm font-medium', caloriePercent >= 100 ? 'text-warning' : 'text-positive-text')}>
                   {Math.round(caloriePercent)}%
                 </p>
               </div>
-              <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div className="w-full h-3 bg-surface-secondary rounded-full overflow-hidden">
                 <div
                   className={cn(
                     'h-full rounded-full transition-all duration-700 animate-progress',
-                    caloriePercent >= 100 ? 'bg-orange-400' : 'bg-emerald-400'
+                    caloriePercent >= 100 ? 'bg-warning-bar' : 'bg-positive-bar'
                   )}
                   style={{ width: `${caloriePercent}%` }}
                 />
@@ -324,8 +324,8 @@ export default function DashboardPage() {
               <div className="grid grid-cols-4 gap-2 mt-3">
                 {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((meal) => (
                   <div key={meal} className="text-center">
-                    <p className="text-xs text-gray-400 capitalize">{meal}</p>
-                    <p className="text-sm font-semibold text-gray-700">{mealBreakdown[meal]}</p>
+                    <p className="text-xs text-text-tertiary capitalize">{meal}</p>
+                    <p className="text-sm font-semibold text-text-label">{mealBreakdown[meal]}</p>
                   </div>
                 ))}
               </div>
@@ -334,21 +334,21 @@ export default function DashboardPage() {
 
           {/* Nutrition Targets — only shown when body stats are filled */}
           {targets?.hasData && (
-            <section className="mb-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Nutrition</h2>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <section className="mb-6 animate-stagger-in" style={{ animationDelay: '100ms' }}>
+              <h2 className="text-lg font-semibold text-text-primary mb-3">Nutrition</h2>
+              <div className="bg-surface rounded-2xl p-5 border border-border">
                 {/* TDEE & Deficit/Surplus */}
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-xs text-gray-400">TDEE (est.)</p>
-                    <p className="text-lg font-bold text-gray-900">{targets.tdee} cal</p>
+                    <p className="text-xs text-text-tertiary">TDEE (est.)</p>
+                    <p className="text-lg font-bold text-text-primary">{targets.tdee} cal</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-400">Your goal</p>
+                    <p className="text-xs text-text-tertiary">Your goal</p>
                     <p className={cn(
                       'text-sm font-semibold',
-                      targets.calorieDelta < -50 ? 'text-blue-600' :
-                      targets.calorieDelta > 50 ? 'text-orange-500' : 'text-emerald-600'
+                      targets.calorieDelta < -50 ? 'text-info' :
+                      targets.calorieDelta > 50 ? 'text-warning' : 'text-positive-text'
                     )}>
                       {targets.deltaLabel}
                     </p>
@@ -357,11 +357,11 @@ export default function DashboardPage() {
 
                 {/* Net calories when exercise is logged */}
                 {totalCaloriesBurned > 0 && (
-                  <div className="bg-gray-50 rounded-xl px-3 py-2 mb-3">
-                    <div className="flex justify-between text-xs text-gray-500">
+                  <div className="bg-bg rounded-xl px-3 py-2 mb-3">
+                    <div className="flex justify-between text-xs text-text-secondary">
                       <span>Eaten: {totalCalories}</span>
                       <span>Burned: {totalCaloriesBurned}</span>
-                      <span className="font-semibold text-gray-700">Net: {netCalories} cal</span>
+                      <span className="font-semibold text-text-label">Net: {netCalories} cal</span>
                     </div>
                   </div>
                 )}
@@ -369,9 +369,9 @@ export default function DashboardPage() {
                 {/* Macro Recommendations with progress bars */}
                 <div className="space-y-2.5">
                   {[
-                    { ...targets.protein, eaten: totalProtein, color: 'bg-blue-400' },
-                    { ...targets.carbs, eaten: totalCarbs, color: 'bg-amber-400' },
-                    { ...targets.fat, eaten: totalFat, color: 'bg-rose-400' },
+                    { ...targets.protein, eaten: totalProtein, color: 'bg-info-bar' },
+                    { ...targets.carbs, eaten: totalCarbs, color: 'bg-macro-carbs' },
+                    { ...targets.fat, eaten: totalFat, color: 'bg-macro-fat' },
                   ].map((macro) => {
                     const midTarget = (macro.min + macro.max) / 2;
                     const percent = midTarget > 0 ? Math.min((macro.eaten / midTarget) * 100, 100) : 0;
@@ -381,11 +381,11 @@ export default function DashboardPage() {
                     return (
                       <div key={macro.label}>
                         <div className="flex justify-between items-baseline mb-0.5">
-                          <span className="text-xs font-medium text-gray-600">{macro.label}</span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs font-medium text-text-muted">{macro.label}</span>
+                          <span className="text-xs text-text-tertiary">
                             <span className={cn(
                               'font-semibold',
-                              inRange ? 'text-emerald-600' : over ? 'text-orange-500' : 'text-gray-700'
+                              inRange ? 'text-positive-text' : over ? 'text-warning' : 'text-text-label'
                             )}>
                               {macro.eaten}g
                             </span>
@@ -393,11 +393,11 @@ export default function DashboardPage() {
                             {macro.min}–{macro.max}g
                           </span>
                         </div>
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-surface-secondary rounded-full overflow-hidden">
                           <div
                             className={cn(
                               'h-full rounded-full transition-all duration-500',
-                              inRange ? 'bg-emerald-400' : over ? 'bg-orange-400' : macro.color
+                              inRange ? 'bg-positive-bar' : over ? 'bg-warning-bar' : macro.color
                             )}
                             style={{ width: `${percent}%` }}
                           />
@@ -411,20 +411,20 @@ export default function DashboardPage() {
           )}
 
           {/* Exercise Summary */}
-          <section className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Exercise</h2>
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <section className="mb-6 animate-stagger-in" style={{ animationDelay: '150ms' }}>
+            <h2 className="text-lg font-semibold text-text-primary mb-3">Exercise</h2>
+            <div className="bg-surface rounded-2xl p-5 border border-border">
               {exerciseLogs.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-2">No exercise logged today</p>
+                <p className="text-text-tertiary text-sm text-center py-2">No exercise logged today</p>
               ) : (
                 <div className="flex gap-6">
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">{totalExerciseMinutes}</p>
-                    <p className="text-xs text-gray-400">minutes</p>
+                    <p className="text-2xl font-bold text-text-primary">{totalExerciseMinutes}</p>
+                    <p className="text-xs text-text-tertiary">minutes</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">{totalCaloriesBurned}</p>
-                    <p className="text-xs text-gray-400">cal burned</p>
+                    <p className="text-2xl font-bold text-text-primary">{totalCaloriesBurned}</p>
+                    <p className="text-xs text-text-tertiary">cal burned</p>
                   </div>
                 </div>
               )}

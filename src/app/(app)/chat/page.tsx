@@ -208,10 +208,10 @@ export default function ChatPage() {
           <div key={msg.id} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
             <div
               className={cn(
-                'max-w-[85%] rounded-2xl px-4 py-3 animate-fade-in',
+                'max-w-[85%] rounded-2xl px-4 py-3 animate-bounce-in',
                 msg.role === 'user'
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-white border border-gray-100 shadow-sm'
+                  ? 'bg-accent text-accent-fg'
+                  : 'bg-surface border border-border'
               )}
             >
               <p className="text-sm">{msg.content}</p>
@@ -220,14 +220,14 @@ export default function ChatPage() {
               {msg.parsedFoods && msg.parsedFoods.length > 0 && (
                 <div className="mt-3 space-y-2">
                   {msg.parsedFoods.map((food, i) => (
-                    <div key={i} className="bg-gray-50 rounded-xl p-3">
+                    <div key={i} className="bg-surface-secondary rounded-xl p-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-emerald-600 uppercase">{food.meal_type}</span>
+                        <span className="text-xs font-medium text-accent-text uppercase">{food.meal_type}</span>
                         {!msg.saved && (
                           <select
                             value={food.meal_type}
                             onChange={(e) => updateFood(msg.id, i, 'meal_type', e.target.value as MealType)}
-                            className="text-xs bg-white border rounded-lg px-1.5 py-0.5"
+                            className="text-xs bg-surface border border-border-strong rounded-lg px-1.5 py-0.5"
                           >
                             <option value="breakfast">Breakfast</option>
                             <option value="lunch">Lunch</option>
@@ -236,8 +236,8 @@ export default function ChatPage() {
                           </select>
                         )}
                       </div>
-                      <p className="text-sm font-medium text-gray-900">{food.description}</p>
-                      <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                      <p className="text-sm font-medium text-text-primary">{food.description}</p>
+                      <div className="flex gap-3 mt-1 text-xs text-text-secondary">
                         <span>{food.calories} cal</span>
                         {food.protein_g ? <span>{food.protein_g}g P</span> : null}
                         {food.carbs_g ? <span>{food.carbs_g}g C</span> : null}
@@ -252,9 +252,9 @@ export default function ChatPage() {
               {msg.parsedExercises && msg.parsedExercises.length > 0 && (
                 <div className="mt-3 space-y-2">
                   {msg.parsedExercises.map((ex, i) => (
-                    <div key={i} className="bg-blue-50 rounded-xl p-3">
-                      <p className="text-sm font-medium text-gray-900">{ex.exercise_type}</p>
-                      <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                    <div key={i} className="bg-exercise-surface rounded-xl p-3">
+                      <p className="text-sm font-medium text-text-primary">{ex.exercise_type}</p>
+                      <div className="flex gap-3 mt-1 text-xs text-text-secondary">
                         <span>{ex.duration_minutes} min</span>
                         <span>{ex.calories_burned} cal burned</span>
                       </div>
@@ -268,23 +268,23 @@ export default function ChatPage() {
                 <button
                   onClick={() => saveResults(msg.id, msg.parsedFoods || [], msg.parsedExercises || [])}
                   disabled={savingId === msg.id}
-                  className="mt-3 w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl transition-all disabled:opacity-50"
+                  className="mt-3 w-full py-2 bg-accent hover:bg-accent-hover text-accent-fg text-sm font-medium rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
                 >
                   {savingId === msg.id ? 'Saving...' : 'Save to Log'}
                 </button>
               ) : msg.saved ? (
-                <p className="mt-2 text-xs text-emerald-600 font-medium text-center">Saved!</p>
+                <p className="mt-2 text-xs text-positive-text font-medium text-center">Saved!</p>
               ) : null}
             </div>
           </div>
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-white border border-gray-100 shadow-sm rounded-2xl px-4 py-3">
+            <div className="bg-surface border border-border rounded-2xl px-4 py-3">
               <div className="flex gap-1">
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="w-2 h-2 bg-loading-dots rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-loading-dots rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-loading-dots rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -293,20 +293,20 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="px-4 pb-4 pt-2 bg-gray-50">
+      <div className="px-4 pb-4 pt-2 bg-bg">
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+            className="flex-1 px-4 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring text-sm"
             placeholder="What did you eat or do today?"
           />
           <button
             onClick={sendMessage}
             disabled={loading || !input.trim()}
-            className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all disabled:opacity-50"
+            className="px-4 py-3 bg-accent hover:bg-accent-hover text-accent-fg rounded-xl transition-all disabled:opacity-50"
             aria-label="Send message"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

@@ -1,7 +1,158 @@
 @import "tailwindcss";
 
+/* ── Light theme (default) ── */
+:root {
+  --c-bg: #f8f8f8;
+  --c-surface: #ffffff;
+  --c-surface-secondary: #f3f4f6;
+  --c-surface-hover: #f3f4f6;
+  --c-border: #e8e8ec;
+  --c-border-strong: #d4d4d8;
+  --c-text-primary: #18181b;
+  --c-text-secondary: #6b7280;
+  --c-text-tertiary: #9ca3af;
+  --c-text-label: #374151;
+  --c-text-muted: #4b5563;
+  --c-accent: #18181b;
+  --c-accent-hover: #27272a;
+  --c-accent-fg: #ffffff;
+  --c-accent-text: #18181b;
+  --c-accent-surface: #f4f4f5;
+  --c-accent-border: #d4d4d8;
+  --c-positive: #10b981;
+  --c-positive-text: #059669;
+  --c-positive-surface: #ecfdf5;
+  --c-positive-border: #a7f3d0;
+  --c-positive-bar: #34d399;
+  --c-danger: #ef4444;
+  --c-danger-hover: #dc2626;
+  --c-danger-text: #ef4444;
+  --c-danger-text-muted: #f87171;
+  --c-danger-border: #fecaca;
+  --c-danger-surface: #fef2f2;
+  --c-danger-input-border: #fca5a5;
+  --c-warning: #f97316;
+  --c-warning-bar: #fb923c;
+  --c-info: #2563eb;
+  --c-info-bar: #60a5fa;
+  --c-macro-carbs: #fbbf24;
+  --c-macro-fat: #fb7185;
+  --c-exercise-surface: #eff6ff;
+  --c-overlay: rgb(0 0 0 / 0.3);
+  --c-overlay-dialog: rgb(0 0 0 / 0.4);
+  --c-skeleton-dark: #e5e7eb;
+  --c-skeleton-light: #f3f4f6;
+  --c-loading-dots: #d1d5db;
+  --c-nav-bg: rgba(255, 255, 255, 0.8);
+  --c-nav-border: rgba(0, 0, 0, 0.06);
+  --c-nav-active: #18181b;
+  --c-nav-inactive: #9ca3af;
+  --c-nav-inactive-hover: #4b5563;
+  --c-input-ring: #18181b;
+}
+
+/* ── Dark theme ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-bg: #0a0a0b;
+    --c-surface: #161618;
+    --c-surface-secondary: #1e1e21;
+    --c-surface-hover: #232326;
+    --c-border: #232326;
+    --c-border-strong: #2e2e32;
+    --c-text-primary: #f0f0f2;
+    --c-text-secondary: #9b9ba6;
+    --c-text-tertiary: #636370;
+    --c-text-label: #c5c5cd;
+    --c-text-muted: #a5a5b0;
+    --c-accent: #f0f0f2;
+    --c-accent-hover: #d4d4d8;
+    --c-accent-fg: #18181b;
+    --c-accent-text: #f0f0f2;
+    --c-accent-surface: #27272a;
+    --c-accent-border: #3f3f46;
+    --c-positive: #34d399;
+    --c-positive-text: #6ee7b7;
+    --c-positive-surface: #052e1c;
+    --c-positive-border: #065f3a;
+    --c-positive-bar: #10b981;
+    --c-danger: #f87171;
+    --c-danger-hover: #ef4444;
+    --c-danger-text: #fca5a5;
+    --c-danger-text-muted: #fca5a5;
+    --c-danger-border: #7f1d1d;
+    --c-danger-surface: #2a1215;
+    --c-danger-input-border: #b91c1c;
+    --c-warning: #fb923c;
+    --c-warning-bar: #f97316;
+    --c-info: #60a5fa;
+    --c-info-bar: #3b82f6;
+    --c-macro-carbs: #f59e0b;
+    --c-macro-fat: #f43f5e;
+    --c-exercise-surface: #172035;
+    --c-overlay: rgb(0 0 0 / 0.5);
+    --c-overlay-dialog: rgb(0 0 0 / 0.6);
+    --c-skeleton-dark: #2e2e32;
+    --c-skeleton-light: #232326;
+    --c-loading-dots: #4b5563;
+    --c-nav-bg: rgba(17, 17, 19, 0.8);
+    --c-nav-border: rgba(255, 255, 255, 0.06);
+    --c-nav-active: #f0f0f2;
+    --c-nav-inactive: #636370;
+    --c-nav-inactive-hover: #a5a5b0;
+    --c-input-ring: #f0f0f2;
+  }
+}
+
 @theme inline {
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-geist-sans);
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface-secondary: var(--c-surface-secondary);
+  --color-surface-hover: var(--c-surface-hover);
+  --color-border: var(--c-border);
+  --color-border-strong: var(--c-border-strong);
+  --color-text-primary: var(--c-text-primary);
+  --color-text-secondary: var(--c-text-secondary);
+  --color-text-tertiary: var(--c-text-tertiary);
+  --color-text-label: var(--c-text-label);
+  --color-text-muted: var(--c-text-muted);
+  --color-accent: var(--c-accent);
+  --color-accent-hover: var(--c-accent-hover);
+  --color-accent-fg: var(--c-accent-fg);
+  --color-accent-text: var(--c-accent-text);
+  --color-accent-surface: var(--c-accent-surface);
+  --color-accent-border: var(--c-accent-border);
+  --color-positive: var(--c-positive);
+  --color-positive-text: var(--c-positive-text);
+  --color-positive-surface: var(--c-positive-surface);
+  --color-positive-border: var(--c-positive-border);
+  --color-positive-bar: var(--c-positive-bar);
+  --color-danger: var(--c-danger);
+  --color-danger-hover: var(--c-danger-hover);
+  --color-danger-text: var(--c-danger-text);
+  --color-danger-text-muted: var(--c-danger-text-muted);
+  --color-danger-border: var(--c-danger-border);
+  --color-danger-surface: var(--c-danger-surface);
+  --color-danger-input-border: var(--c-danger-input-border);
+  --color-warning: var(--c-warning);
+  --color-warning-bar: var(--c-warning-bar);
+  --color-info: var(--c-info);
+  --color-info-bar: var(--c-info-bar);
+  --color-macro-carbs: var(--c-macro-carbs);
+  --color-macro-fat: var(--c-macro-fat);
+  --color-exercise-surface: var(--c-exercise-surface);
+  --color-overlay: var(--c-overlay);
+  --color-overlay-dialog: var(--c-overlay-dialog);
+  --color-skeleton-dark: var(--c-skeleton-dark);
+  --color-skeleton-light: var(--c-skeleton-light);
+  --color-loading-dots: var(--c-loading-dots);
+  --color-nav-bg: var(--c-nav-bg);
+  --color-nav-border: var(--c-nav-border);
+  --color-nav-active: var(--c-nav-active);
+  --color-nav-inactive: var(--c-nav-inactive);
+  --color-nav-inactive-hover: var(--c-nav-inactive-hover);
+  --color-input-ring: var(--c-input-ring);
 }
 
 /* iOS safe area support */
@@ -9,33 +160,97 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Smooth transitions for habit toggles */
+/* ── Animations ── */
+
+/* Habit completion — spring bounce with checkmark pop */
 @keyframes checkmark {
-  0% { transform: scale(0.8); opacity: 0; }
-  50% { transform: scale(1.1); }
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  80% { transform: scale(0.95); }
   100% { transform: scale(1); opacity: 1; }
 }
-
 .animate-checkmark {
-  animation: checkmark 0.3s ease-out;
+  animation: checkmark 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Habit card glow pulse on completion */
+@keyframes glowPulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+.animate-glow-pulse {
+  animation: glowPulse 0.6s ease-out;
+}
+
+/* General fade-in with slide up */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
+}
+
+/* Staggered card entrance */
+@keyframes staggerIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-stagger-in {
+  animation: staggerIn 0.4s ease-out both;
+}
+
+/* Modal bottom sheet slide up */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Chat message bounce-in */
+@keyframes bounceIn {
+  0% { opacity: 0; transform: translateY(20px) scale(0.96); }
+  60% { opacity: 1; transform: translateY(-4px) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-bounce-in {
+  animation: bounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Toast slide down from top */
+@keyframes toastSlideDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-toast {
+  animation: toastSlideDown 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Progress bar animation */
 @keyframes progressGrow {
   from { width: 0%; }
 }
-
 .animate-progress {
   animation: progressGrow 0.8s ease-out;
+}
+
+/* Skeleton shimmer sweep */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--c-skeleton-light) 25%,
+    var(--c-skeleton-dark) 50%,
+    var(--c-skeleton-light) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
 
 /* Onboarding step slide animations */
@@ -53,6 +268,8 @@
 .animate-slide-in-left {
   animation: slideInLeft 0.25s ease-out;
 }
+
+/* ── Utilities ── */
 
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide {

@@ -21,25 +21,25 @@ export default function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay-dialog px-6 animate-fade-in"
       onClick={onCancel}
     >
       <div
-        className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl"
+        className="bg-surface rounded-2xl p-5 w-full max-w-sm shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">{title}</h3>
-        <p className="text-sm text-gray-500 mb-5">{message}</p>
+        <h3 className="text-lg font-semibold text-text-primary mb-1">{title}</h3>
+        <p className="text-sm text-text-secondary mb-5">{message}</p>
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+            className="flex-1 py-2.5 text-sm font-medium text-text-muted bg-surface-secondary rounded-xl hover:bg-surface-hover transition-colors duration-200"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 py-2.5 text-sm font-medium text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors"
+            className="flex-1 py-2.5 text-sm font-medium text-white bg-danger rounded-xl hover:bg-danger-hover transition-colors duration-200"
           >
             {confirmLabel}
           </button>

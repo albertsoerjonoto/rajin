@@ -50,14 +50,14 @@ export default function SignupPage() {
 
   if (emailSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-sm text-center">
+      <div className="min-h-screen flex items-center justify-center bg-bg px-4">
+        <div className="w-full max-w-sm text-center animate-fade-in">
           <div className="text-5xl mb-4">📧</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h1>
-          <p className="text-gray-500 mb-6">
-            We sent a confirmation link to <span className="font-medium text-gray-700">{email}</span>. Click it to activate your account.
+          <h1 className="text-2xl font-bold text-text-primary mb-2">Check your email</h1>
+          <p className="text-text-secondary mb-6">
+            We sent a confirmation link to <span className="font-medium text-text-label">{email}</span>. Click it to activate your account.
           </p>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-text-tertiary">
             Didn&apos;t get it? Check your spam folder.
           </p>
         </div>
@@ -66,22 +66,22 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center bg-bg px-4">
+      <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Rajin</h1>
-          <p className="text-gray-500 mt-2">Start tracking your daily progress</p>
+          <h1 className="text-3xl font-bold text-text-primary">Rajin</h1>
+          <p className="text-text-secondary mt-2">Start tracking your daily progress</p>
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl">
+            <div className="bg-danger-surface text-danger-text text-sm p-3 rounded-xl">
               {error}
             </div>
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-text-label mb-1">
               Email
             </label>
             <input
@@ -90,13 +90,13 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-text-label mb-1">
               Password
             </label>
             <input
@@ -105,13 +105,13 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
               placeholder="••••••••"
             />
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-label mb-1">
               Confirm Password
             </label>
             <input
@@ -120,7 +120,7 @@ export default function SignupPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
               placeholder="••••••••"
             />
           </div>
@@ -128,15 +128,15 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-text-secondary mt-6">
           Already have an account?{' '}
-          <Link href="/login" className="text-emerald-600 font-medium hover:underline">
+          <Link href="/login" className="text-accent-text font-medium hover:underline">
             Sign in
           </Link>
         </p>
