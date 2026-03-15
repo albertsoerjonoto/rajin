@@ -29,6 +29,19 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  // If a confirmation code lands on root, redirect to the callback route
+  const code = request.nextUrl.searchParams.get('code');
+  if (code && request.nextUrl.pathname === '/') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/auth/callback';
+    return NextResponse.redirect(url);
+  }
+
+  // Allow auth callback route through without checks
+  if (request.nextUrl.pathname.startsWith('/auth/callback')) {
+    return supabaseResponse;
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
