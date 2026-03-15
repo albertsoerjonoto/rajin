@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, cn } from '@/lib/utils';
+import { useToast } from '@/components/Toast';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { PageSkeleton } from '@/components/LoadingSkeleton';
+import { validateCalories, validateDuration, validateMacro } from '@/lib/validation';
 import type { FoodLog, ExerciseLog, MealType } from '@/lib/types';
 
 type Tab = 'food' | 'exercise';
@@ -11,10 +15,12 @@ type Modal = 'none' | 'food' | 'exercise';
 
 export default function LogPage() {
   const { user } = useAuth();
+  const { showToast, ToastContainer } = useToast();
   const [tab, setTab] = useState<Tab>('food');
   const [modal, setModal] = useState<Modal>('none');
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Food form state
   const [mealType, setMealType] = useState<MealType>('lunch');
@@ -32,48 +38,76 @@ export default function LogPage() {
 
   const [saving, setSaving] = useState(false);
 
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'food' | 'exercise'; id: string } | null>(null);
+
   const fetchData = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     const supabase = createClient();
     const today = getToday();
 
-    const { data: food } = await supabase
+    const { data: food, error: foodError } = await supabase
       .from('food_logs')
       .select('*')
       .eq('user_id', user.id)
       .eq('date', today)
       .order('created_at', { ascending: false });
+    if (foodError) showToast('error', 'Failed to load food logs');
     if (food) setFoodLogs(food);
 
-    const { data: exercise } = await supabase
+    const { data: exercise, error: exerciseError } = await supabase
       .from('exercise_logs')
       .select('*')
       .eq('user_id', user.id)
       .eq('date', today)
       .order('created_at', { ascending: false });
+    if (exerciseError) showToast('error', 'Failed to load exercise logs');
     if (exercise) setExerciseLogs(exercise);
-  }, [user]);
+    setLoading(false);
+  }, [user, showToast]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const saveFoodLog = async () => {
-    if (!user || !description.trim() || !calories) return;
+    if (!user || !description.trim()) return;
+
+    const cal = validateCalories(calories);
+    if (cal === null) {
+      showToast('error', 'Calories must be between 0 and 20,000');
+      return;
+    }
+    const prot = proteinG ? validateMacro(proteinG) : null;
+    const carbs = carbsG ? validateMacro(carbsG) : null;
+    const fat = fatG ? validateMacro(fatG) : null;
+
+    if ((proteinG && prot === null) || (carbsG && carbs === null) || (fatG && fat === null)) {
+      showToast('error', 'Macros must be between 0 and 5,000g');
+      return;
+    }
+
     setSaving(true);
     const supabase = createClient();
 
-    await supabase.from('food_logs').insert({
+    const { error } = await supabase.from('food_logs').insert({
       user_id: user.id,
       date: getToday(),
       meal_type: mealType,
       description: description.trim(),
-      calories: parseInt(calories),
-      protein_g: proteinG ? parseInt(proteinG) : null,
-      carbs_g: carbsG ? parseInt(carbsG) : null,
-      fat_g: fatG ? parseInt(fatG) : null,
+      calories: cal,
+      protein_g: prot,
+      carbs_g: carbs,
+      fat_g: fat,
       source: 'manual',
     });
+
+    if (error) {
+      showToast('error', 'Failed to save food log');
+      setSaving(false);
+      return;
+    }
 
     setDescription('');
     setCalories('');
@@ -86,19 +120,37 @@ export default function LogPage() {
   };
 
   const saveExerciseLog = async () => {
-    if (!user || !exerciseType.trim() || !duration) return;
+    if (!user || !exerciseType.trim()) return;
+
+    const dur = validateDuration(duration);
+    if (dur === null) {
+      showToast('error', 'Duration must be between 0 and 1,440 minutes');
+      return;
+    }
+    const burned = caloriesBurned ? validateCalories(caloriesBurned) : 0;
+    if (burned === null) {
+      showToast('error', 'Calories burned must be between 0 and 20,000');
+      return;
+    }
+
     setSaving(true);
     const supabase = createClient();
 
-    await supabase.from('exercise_logs').insert({
+    const { error } = await supabase.from('exercise_logs').insert({
       user_id: user.id,
       date: getToday(),
       exercise_type: exerciseType.trim(),
-      duration_minutes: parseInt(duration),
-      calories_burned: caloriesBurned ? parseInt(caloriesBurned) : 0,
+      duration_minutes: dur,
+      calories_burned: burned,
       notes: notes.trim() || null,
       source: 'manual',
     });
+
+    if (error) {
+      showToast('error', 'Failed to save exercise log');
+      setSaving(false);
+      return;
+    }
 
     setExerciseType('');
     setDuration('');
@@ -109,20 +161,27 @@ export default function LogPage() {
     fetchData();
   };
 
-  const deleteFoodLog = async (id: string) => {
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     const supabase = createClient();
-    await supabase.from('food_logs').delete().eq('id', id);
+
+    const table = deleteTarget.type === 'food' ? 'food_logs' : 'exercise_logs';
+    const { error } = await supabase.from(table).delete().eq('id', deleteTarget.id);
+
+    if (error) {
+      showToast('error', `Failed to delete ${deleteTarget.type} log`);
+    }
+
+    setDeleteTarget(null);
     fetchData();
   };
 
-  const deleteExerciseLog = async (id: string) => {
-    const supabase = createClient();
-    await supabase.from('exercise_logs').delete().eq('id', id);
-    fetchData();
-  };
+  const inputClass =
+    'w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500';
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
+      {ToastContainer}
       <h1 className="text-xl font-bold text-gray-900 mb-4">Log</h1>
 
       {/* Tab Switcher */}
@@ -141,84 +200,102 @@ export default function LogPage() {
         ))}
       </div>
 
-      {/* Food Tab */}
-      {tab === 'food' && (
-        <div className="space-y-3">
-          {foodLogs.length === 0 ? (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-              <p className="text-gray-400 text-sm">No food logged today</p>
-            </div>
-          ) : (
-            foodLogs.map((log) => (
-              <div key={log.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 animate-fade-in">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs font-medium text-emerald-600 uppercase">{log.meal_type}</span>
-                    <p className="text-sm font-medium text-gray-900 mt-0.5">{log.description}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {log.calories} cal
-                      {log.protein_g && ` · ${log.protein_g}g protein`}
-                      {log.carbs_g && ` · ${log.carbs_g}g carbs`}
-                      {log.fat_g && ` · ${log.fat_g}g fat`}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => deleteFoodLog(log.id)}
-                    className="text-gray-300 hover:text-red-400 transition-colors p-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+      {loading ? (
+        <PageSkeleton />
+      ) : (
+        <>
+          {/* Food Tab */}
+          {tab === 'food' && (
+            <div className="space-y-3">
+              {foodLogs.length === 0 ? (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+                  <p className="text-gray-400 text-sm">No food logged today</p>
                 </div>
-              </div>
-            ))
+              ) : (
+                foodLogs.map((log) => (
+                  <div key={log.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 animate-fade-in">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-xs font-medium text-emerald-600 uppercase">{log.meal_type}</span>
+                        <p className="text-sm font-medium text-gray-900 mt-0.5">{log.description}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {log.calories} cal
+                          {log.protein_g && ` · ${log.protein_g}g protein`}
+                          {log.carbs_g && ` · ${log.carbs_g}g carbs`}
+                          {log.fat_g && ` · ${log.fat_g}g fat`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setDeleteTarget({ type: 'food', id: log.id })}
+                        className="text-gray-300 hover:text-red-400 transition-colors p-2.5"
+                        aria-label="Delete food log"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      {/* Exercise Tab */}
-      {tab === 'exercise' && (
-        <div className="space-y-3">
-          {exerciseLogs.length === 0 ? (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-              <p className="text-gray-400 text-sm">No exercise logged today</p>
-            </div>
-          ) : (
-            exerciseLogs.map((log) => (
-              <div key={log.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 animate-fade-in">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{log.exercise_type}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {log.duration_minutes} min · {log.calories_burned} cal burned
-                      {log.notes && ` · ${log.notes}`}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => deleteExerciseLog(log.id)}
-                    className="text-gray-300 hover:text-red-400 transition-colors p-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+          {/* Exercise Tab */}
+          {tab === 'exercise' && (
+            <div className="space-y-3">
+              {exerciseLogs.length === 0 ? (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+                  <p className="text-gray-400 text-sm">No exercise logged today</p>
                 </div>
-              </div>
-            ))
+              ) : (
+                exerciseLogs.map((log) => (
+                  <div key={log.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 animate-fade-in">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{log.exercise_type}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {log.duration_minutes} min · {log.calories_burned} cal burned
+                          {log.notes && ` · ${log.notes}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setDeleteTarget({ type: 'exercise', id: log.id })}
+                        className="text-gray-300 hover:text-red-400 transition-colors p-2.5"
+                        aria-label="Delete exercise log"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Floating Add Button */}
       <button
         onClick={() => setModal(tab)}
         className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all active:scale-90 z-40"
+        aria-label={`Add ${tab} log`}
       >
         <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
       </button>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete log"
+        message="Are you sure? This cannot be undone."
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
 
       {/* Food Modal */}
       {modal === 'food' && (
@@ -251,20 +328,23 @@ export default function LogPage() {
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={inputClass}
                 placeholder="What did you eat?"
                 autoFocus
               />
               <input
                 type="number"
+                min="0"
+                max="20000"
                 value={calories}
                 onChange={(e) => setCalories(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={inputClass}
                 placeholder="Calories"
               />
               <div className="grid grid-cols-3 gap-2">
                 <input
                   type="number"
+                  min="0"
                   value={proteinG}
                   onChange={(e) => setProteinG(e.target.value)}
                   className="px-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
@@ -272,6 +352,7 @@ export default function LogPage() {
                 />
                 <input
                   type="number"
+                  min="0"
                   value={carbsG}
                   onChange={(e) => setCarbsG(e.target.value)}
                   className="px-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
@@ -279,6 +360,7 @@ export default function LogPage() {
                 />
                 <input
                   type="number"
+                  min="0"
                   value={fatG}
                   onChange={(e) => setFatG(e.target.value)}
                   className="px-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
@@ -311,13 +393,15 @@ export default function LogPage() {
                 type="text"
                 value={exerciseType}
                 onChange={(e) => setExerciseType(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={inputClass}
                 placeholder="Exercise type (e.g., Running)"
                 autoFocus
               />
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="number"
+                  min="0"
+                  max="1440"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -325,6 +409,8 @@ export default function LogPage() {
                 />
                 <input
                   type="number"
+                  min="0"
+                  max="20000"
                   value={caloriesBurned}
                   onChange={(e) => setCaloriesBurned(e.target.value)}
                   className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -335,7 +421,7 @@ export default function LogPage() {
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={inputClass}
                 placeholder="Notes (optional)"
               />
               <button

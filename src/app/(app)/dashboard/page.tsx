@@ -5,21 +5,27 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, formatDisplayDate, addDays, cn } from '@/lib/utils';
 import { computeNutritionTargets } from '@/lib/nutrition';
+import { useToast } from '@/components/Toast';
+import { PageSkeleton } from '@/components/LoadingSkeleton';
 import type { HabitWithLog, FoodLog, ExerciseLog, Profile } from '@/lib/types';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { showToast, ToastContainer } = useToast();
   const [date, setDate] = useState(getToday());
   const [habits, setHabits] = useState<HabitWithLog[]>([]);
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitEmoji, setNewHabitEmoji] = useState('✅');
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     const supabase = createClient();
 
     const { data: profileData, error: profileError } = await supabase
@@ -31,7 +37,6 @@ export default function DashboardPage() {
     if (profileData) {
       setProfile(profileData);
     } else if (profileError?.code === 'PGRST116') {
-      // Only auto-create when the row truly doesn't exist — never on transient errors
       const { data: newProfile } = await supabase
         .from('profiles')
         .insert({
@@ -45,12 +50,16 @@ export default function DashboardPage() {
       if (newProfile) setProfile(newProfile);
     }
 
-    const { data: habitsData } = await supabase
+    const { data: habitsData, error: habitsError } = await supabase
       .from('habits')
       .select('*')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('sort_order');
+
+    if (habitsError) {
+      showToast('error', 'Failed to load habits');
+    }
 
     const { data: logsData } = await supabase
       .from('habit_logs')
@@ -66,58 +75,94 @@ export default function DashboardPage() {
       setHabits(habitsWithLogs);
     }
 
-    const { data: foodData } = await supabase
+    const { data: foodData, error: foodError } = await supabase
       .from('food_logs')
       .select('*')
       .eq('user_id', user.id)
       .eq('date', date)
       .order('created_at');
+    if (foodError) showToast('error', 'Failed to load food logs');
     if (foodData) setFoodLogs(foodData);
 
-    const { data: exerciseData } = await supabase
+    const { data: exerciseData, error: exerciseError } = await supabase
       .from('exercise_logs')
       .select('*')
       .eq('user_id', user.id)
       .eq('date', date)
       .order('created_at');
+    if (exerciseError) showToast('error', 'Failed to load exercise logs');
     if (exerciseData) setExerciseLogs(exerciseData);
-  }, [user, date]);
+
+    setLoading(false);
+  }, [user, date, showToast]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const toggleHabit = async (habit: HabitWithLog) => {
-    if (!user) return;
+    if (!user || togglingId) return;
+    setTogglingId(habit.id);
     const supabase = createClient();
 
+    // Optimistic update
+    const wasCompleted = habit.completed;
     setHabits((prev) =>
       prev.map((h) => (h.id === habit.id ? { ...h, completed: !h.completed } : h))
     );
 
-    if (habit.completed && habit.log_id) {
-      await supabase.from('habit_logs').delete().eq('id', habit.log_id);
-    } else {
-      await supabase.from('habit_logs').insert({
-        habit_id: habit.id,
-        user_id: user.id,
-        date: date,
-        completed: true,
-      });
+    try {
+      if (wasCompleted && habit.log_id) {
+        const { error } = await supabase.from('habit_logs').delete().eq('id', habit.log_id);
+        if (error) throw error;
+        // Clear the log_id locally
+        setHabits((prev) =>
+          prev.map((h) => (h.id === habit.id ? { ...h, log_id: undefined } : h))
+        );
+      } else {
+        const { data, error } = await supabase
+          .from('habit_logs')
+          .insert({
+            habit_id: habit.id,
+            user_id: user.id,
+            date: date,
+            completed: true,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        // Store the new log_id locally
+        if (data) {
+          setHabits((prev) =>
+            prev.map((h) => (h.id === habit.id ? { ...h, log_id: data.id } : h))
+          );
+        }
+      }
+    } catch {
+      // Revert optimistic update on error
+      setHabits((prev) =>
+        prev.map((h) => (h.id === habit.id ? { ...h, completed: wasCompleted } : h))
+      );
+      showToast('error', 'Failed to update habit');
     }
-    fetchData();
+    setTogglingId(null);
   };
 
   const addHabit = async () => {
     if (!user || !newHabitName.trim()) return;
     const supabase = createClient();
 
-    await supabase.from('habits').insert({
+    const { error } = await supabase.from('habits').insert({
       user_id: user.id,
       name: newHabitName.trim(),
       emoji: newHabitEmoji || '✅',
       sort_order: habits.length,
     });
+
+    if (error) {
+      showToast('error', 'Failed to add habit');
+      return;
+    }
 
     setNewHabitName('');
     setNewHabitEmoji('✅');
@@ -146,11 +191,14 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
+      {ToastContainer}
+
       {/* Date Navigator */}
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => setDate(addDays(date, -1))}
           className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+          aria-label="Previous day"
         >
           <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -167,6 +215,7 @@ export default function DashboardPage() {
         <button
           onClick={() => setDate(addDays(date, 1))}
           className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+          aria-label="Next day"
         >
           <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -174,207 +223,215 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* Habits Section */}
-      <section className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Habits</h2>
-          <button onClick={() => setShowAddHabit(true)} className="text-emerald-600 text-sm font-medium">
-            + Add
-          </button>
-        </div>
-
-        {showAddHabit && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3 animate-fade-in">
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={newHabitEmoji}
-                onChange={(e) => setNewHabitEmoji(e.target.value)}
-                className="w-12 text-center text-xl px-2 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="✅"
-              />
-              <input
-                type="text"
-                value={newHabitName}
-                onChange={(e) => setNewHabitName(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Habit name"
-                autoFocus
-              />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-gray-500 rounded-xl hover:bg-gray-50">
-                Cancel
-              </button>
-              <button onClick={addHabit} className="flex-1 py-2 text-sm text-white bg-emerald-500 rounded-xl hover:bg-emerald-600">
-                Add Habit
-              </button>
-            </div>
-          </div>
-        )}
-
-        {habits.length === 0 && !showAddHabit ? (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-            <p className="text-gray-400 text-sm">No habits yet. Tap + Add to create one!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {habits.map((habit) => (
-              <button
-                key={habit.id}
-                onClick={() => toggleHabit(habit)}
-                className={cn(
-                  'bg-white rounded-2xl p-4 shadow-sm border text-left transition-all active:scale-95',
-                  habit.completed ? 'border-emerald-200 bg-emerald-50' : 'border-gray-100 hover:border-gray-200'
-                )}
-              >
-                <div className="text-2xl mb-1">
-                  {habit.completed ? (
-                    <span className="animate-checkmark inline-block">{habit.emoji}</span>
-                  ) : (
-                    <span className="opacity-40">{habit.emoji}</span>
-                  )}
-                </div>
-                <p className={cn('text-sm font-medium', habit.completed ? 'text-emerald-700' : 'text-gray-600')}>
-                  {habit.name}
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Food Summary */}
-      <section className="mb-6">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Food</h2>
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-end justify-between mb-2">
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{totalCalories}</p>
-              <p className="text-xs text-gray-400">of {calorieGoal} cal goal</p>
-            </div>
-            <p className={cn('text-sm font-medium', caloriePercent >= 100 ? 'text-orange-500' : 'text-emerald-600')}>
-              {Math.round(caloriePercent)}%
-            </p>
-          </div>
-          <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={cn(
-                'h-full rounded-full transition-all duration-700 animate-progress',
-                caloriePercent >= 100 ? 'bg-orange-400' : 'bg-emerald-400'
-              )}
-              style={{ width: `${caloriePercent}%` }}
-            />
-          </div>
-          <div className="grid grid-cols-4 gap-2 mt-3">
-            {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((meal) => (
-              <div key={meal} className="text-center">
-                <p className="text-xs text-gray-400 capitalize">{meal}</p>
-                <p className="text-sm font-semibold text-gray-700">{mealBreakdown[meal]}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Nutrition Targets — only shown when body stats are filled */}
-      {targets?.hasData && (
-        <section className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Nutrition</h2>
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            {/* TDEE & Deficit/Surplus */}
+      {loading ? (
+        <PageSkeleton />
+      ) : (
+        <>
+          {/* Habits Section */}
+          <section className="mb-6">
             <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-xs text-gray-400">TDEE (est.)</p>
-                <p className="text-lg font-bold text-gray-900">{targets.tdee} cal</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400">Your goal</p>
-                <p className={cn(
-                  'text-sm font-semibold',
-                  targets.calorieDelta < -50 ? 'text-blue-600' :
-                  targets.calorieDelta > 50 ? 'text-orange-500' : 'text-emerald-600'
-                )}>
-                  {targets.deltaLabel}
-                </p>
-              </div>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Habits</h2>
+              <button onClick={() => setShowAddHabit(true)} className="text-emerald-600 text-sm font-medium">
+                + Add
+              </button>
             </div>
 
-            {/* Net calories when exercise is logged */}
-            {totalCaloriesBurned > 0 && (
-              <div className="bg-gray-50 rounded-xl px-3 py-2 mb-3">
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Eaten: {totalCalories}</span>
-                  <span>Burned: {totalCaloriesBurned}</span>
-                  <span className="font-semibold text-gray-700">Net: {netCalories} cal</span>
+            {showAddHabit && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3 animate-fade-in">
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newHabitEmoji}
+                    onChange={(e) => setNewHabitEmoji(e.target.value)}
+                    className="w-12 text-center text-xl px-2 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="✅"
+                  />
+                  <input
+                    type="text"
+                    value={newHabitName}
+                    onChange={(e) => setNewHabitName(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="Habit name"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-gray-500 rounded-xl hover:bg-gray-50">
+                    Cancel
+                  </button>
+                  <button onClick={addHabit} className="flex-1 py-2 text-sm text-white bg-emerald-500 rounded-xl hover:bg-emerald-600">
+                    Add Habit
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Macro Recommendations with progress bars */}
-            <div className="space-y-2.5">
-              {[
-                { ...targets.protein, eaten: totalProtein, color: 'bg-blue-400' },
-                { ...targets.carbs, eaten: totalCarbs, color: 'bg-amber-400' },
-                { ...targets.fat, eaten: totalFat, color: 'bg-rose-400' },
-              ].map((macro) => {
-                const midTarget = (macro.min + macro.max) / 2;
-                const percent = midTarget > 0 ? Math.min((macro.eaten / midTarget) * 100, 100) : 0;
-                const inRange = macro.eaten >= macro.min && macro.eaten <= macro.max;
-                const over = macro.eaten > macro.max;
-
-                return (
-                  <div key={macro.label}>
-                    <div className="flex justify-between items-baseline mb-0.5">
-                      <span className="text-xs font-medium text-gray-600">{macro.label}</span>
-                      <span className="text-xs text-gray-400">
-                        <span className={cn(
-                          'font-semibold',
-                          inRange ? 'text-emerald-600' : over ? 'text-orange-500' : 'text-gray-700'
-                        )}>
-                          {macro.eaten}g
-                        </span>
-                        {' / '}
-                        {macro.min}–{macro.max}g
-                      </span>
+            {habits.length === 0 && !showAddHabit ? (
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+                <p className="text-gray-400 text-sm">No habits yet. Tap + Add to create one!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {habits.map((habit) => (
+                  <button
+                    key={habit.id}
+                    onClick={() => toggleHabit(habit)}
+                    disabled={togglingId === habit.id}
+                    className={cn(
+                      'bg-white rounded-2xl p-4 shadow-sm border text-left transition-all active:scale-95',
+                      habit.completed ? 'border-emerald-200 bg-emerald-50' : 'border-gray-100 hover:border-gray-200',
+                      togglingId === habit.id && 'opacity-60'
+                    )}
+                  >
+                    <div className="text-2xl mb-1">
+                      {habit.completed ? (
+                        <span className="animate-checkmark inline-block">{habit.emoji}</span>
+                      ) : (
+                        <span className="opacity-40">{habit.emoji}</span>
+                      )}
                     </div>
-                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          'h-full rounded-full transition-all duration-500',
-                          inRange ? 'bg-emerald-400' : over ? 'bg-orange-400' : macro.color
-                        )}
-                        style={{ width: `${percent}%` }}
-                      />
+                    <p className={cn('text-sm font-medium', habit.completed ? 'text-emerald-700' : 'text-gray-600')}>
+                      {habit.name}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Food Summary */}
+          <section className="mb-6">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Food</h2>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-end justify-between mb-2">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{totalCalories}</p>
+                  <p className="text-xs text-gray-400">of {calorieGoal} cal goal</p>
+                </div>
+                <p className={cn('text-sm font-medium', caloriePercent >= 100 ? 'text-orange-500' : 'text-emerald-600')}>
+                  {Math.round(caloriePercent)}%
+                </p>
+              </div>
+              <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-700 animate-progress',
+                    caloriePercent >= 100 ? 'bg-orange-400' : 'bg-emerald-400'
+                  )}
+                  style={{ width: `${caloriePercent}%` }}
+                />
+              </div>
+              <div className="grid grid-cols-4 gap-2 mt-3">
+                {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((meal) => (
+                  <div key={meal} className="text-center">
+                    <p className="text-xs text-gray-400 capitalize">{meal}</p>
+                    <p className="text-sm font-semibold text-gray-700">{mealBreakdown[meal]}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Nutrition Targets — only shown when body stats are filled */}
+          {targets?.hasData && (
+            <section className="mb-6">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Nutrition</h2>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                {/* TDEE & Deficit/Surplus */}
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-xs text-gray-400">TDEE (est.)</p>
+                    <p className="text-lg font-bold text-gray-900">{targets.tdee} cal</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400">Your goal</p>
+                    <p className={cn(
+                      'text-sm font-semibold',
+                      targets.calorieDelta < -50 ? 'text-blue-600' :
+                      targets.calorieDelta > 50 ? 'text-orange-500' : 'text-emerald-600'
+                    )}>
+                      {targets.deltaLabel}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Net calories when exercise is logged */}
+                {totalCaloriesBurned > 0 && (
+                  <div className="bg-gray-50 rounded-xl px-3 py-2 mb-3">
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Eaten: {totalCalories}</span>
+                      <span>Burned: {totalCaloriesBurned}</span>
+                      <span className="font-semibold text-gray-700">Net: {netCalories} cal</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
+                )}
 
-      {/* Exercise Summary */}
-      <section className="mb-6">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Exercise</h2>
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          {exerciseLogs.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-2">No exercise logged today</p>
-          ) : (
-            <div className="flex gap-6">
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{totalExerciseMinutes}</p>
-                <p className="text-xs text-gray-400">minutes</p>
+                {/* Macro Recommendations with progress bars */}
+                <div className="space-y-2.5">
+                  {[
+                    { ...targets.protein, eaten: totalProtein, color: 'bg-blue-400' },
+                    { ...targets.carbs, eaten: totalCarbs, color: 'bg-amber-400' },
+                    { ...targets.fat, eaten: totalFat, color: 'bg-rose-400' },
+                  ].map((macro) => {
+                    const midTarget = (macro.min + macro.max) / 2;
+                    const percent = midTarget > 0 ? Math.min((macro.eaten / midTarget) * 100, 100) : 0;
+                    const inRange = macro.eaten >= macro.min && macro.eaten <= macro.max;
+                    const over = macro.eaten > macro.max;
+
+                    return (
+                      <div key={macro.label}>
+                        <div className="flex justify-between items-baseline mb-0.5">
+                          <span className="text-xs font-medium text-gray-600">{macro.label}</span>
+                          <span className="text-xs text-gray-400">
+                            <span className={cn(
+                              'font-semibold',
+                              inRange ? 'text-emerald-600' : over ? 'text-orange-500' : 'text-gray-700'
+                            )}>
+                              {macro.eaten}g
+                            </span>
+                            {' / '}
+                            {macro.min}–{macro.max}g
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              'h-full rounded-full transition-all duration-500',
+                              inRange ? 'bg-emerald-400' : over ? 'bg-orange-400' : macro.color
+                            )}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{totalCaloriesBurned}</p>
-                <p className="text-xs text-gray-400">cal burned</p>
-              </div>
-            </div>
+            </section>
           )}
-        </div>
-      </section>
+
+          {/* Exercise Summary */}
+          <section className="mb-6">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Exercise</h2>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              {exerciseLogs.length === 0 ? (
+                <p className="text-gray-400 text-sm text-center py-2">No exercise logged today</p>
+              ) : (
+                <div className="flex gap-6">
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">{totalExerciseMinutes}</p>
+                    <p className="text-xs text-gray-400">minutes</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">{totalCaloriesBurned}</p>
+                    <p className="text-xs text-gray-400">cal burned</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { createClient } from '@/lib/supabase/server';
+import { clamp } from '@/lib/validation';
 
 const SYSTEM_PROMPT = `You are a nutrition and exercise assistant for an Indonesian user. Parse the user's natural language input and extract:
 
@@ -59,10 +61,29 @@ If the input doesn't contain food or exercise info, return empty arrays. Never i
 
 export async function POST(request: NextRequest) {
   try {
+    // --- Auth check ---
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // --- Input validation ---
     const { message } = await request.json();
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+
+    if (message.length > 1000) {
+      return NextResponse.json(
+        { error: 'Message too long (max 1000 characters)' },
+        { status: 400 }
+      );
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -70,6 +91,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Gemini API key not configured' }, { status: 500 });
     }
 
+    // --- Call Gemini ---
     const ai = new GoogleGenAI({ apiKey });
 
     const response = await ai.models.generateContent({
@@ -93,7 +115,30 @@ export async function POST(request: NextRequest) {
 
     const parsed = JSON.parse(jsonStr);
 
-    return NextResponse.json(parsed);
+    // --- Validate and clamp parsed output ---
+    const foods = Array.isArray(parsed.foods)
+      ? parsed.foods.map((f: Record<string, unknown>) => ({
+          description: typeof f.description === 'string' ? f.description : 'Unknown food',
+          meal_type: ['breakfast', 'lunch', 'dinner', 'snack'].includes(f.meal_type as string)
+            ? f.meal_type
+            : 'lunch',
+          calories: clamp(Number(f.calories) || 0, 0, 20000),
+          protein_g: clamp(Number(f.protein_g) || 0, 0, 5000),
+          carbs_g: clamp(Number(f.carbs_g) || 0, 0, 5000),
+          fat_g: clamp(Number(f.fat_g) || 0, 0, 5000),
+        }))
+      : [];
+
+    const exercises = Array.isArray(parsed.exercises)
+      ? parsed.exercises.map((e: Record<string, unknown>) => ({
+          exercise_type: typeof e.exercise_type === 'string' ? e.exercise_type : 'Exercise',
+          duration_minutes: clamp(Number(e.duration_minutes) || 0, 0, 1440),
+          calories_burned: clamp(Number(e.calories_burned) || 0, 0, 20000),
+          notes: typeof e.notes === 'string' ? e.notes : '',
+        }))
+      : [];
+
+    return NextResponse.json({ foods, exercises });
   } catch (error) {
     console.error('Parse error:', error);
     return NextResponse.json(

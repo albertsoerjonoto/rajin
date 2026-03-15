@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, cn } from '@/lib/utils';
+import { useToast } from '@/components/Toast';
 import type { ParsedFood, ParsedExercise, MealType } from '@/lib/types';
 
 interface Message {
@@ -15,8 +16,14 @@ interface Message {
   saved?: boolean;
 }
 
+let msgCounter = 0;
+function nextMsgId() {
+  return `msg-${Date.now()}-${++msgCounter}`;
+}
+
 export default function ChatPage() {
   const { user } = useAuth();
+  const { showToast, ToastContainer } = useToast();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -26,12 +33,24 @@ export default function ChatPage() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom on new messages or loading change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
 
+    if (input.trim().length > 1000) {
+      showToast('error', 'Message too long (max 1,000 characters)');
+      return;
+    }
+
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: nextMsgId(),
       role: 'user',
       content: input.trim(),
     };
@@ -48,6 +67,19 @@ export default function ChatPage() {
       });
 
       const data = await res.json();
+
+      if (!res.ok) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: nextMsgId(),
+            role: 'assistant',
+            content: data.error || 'Sorry, something went wrong. Please try again.',
+          },
+        ]);
+        setLoading(false);
+        return;
+      }
 
       const foods: ParsedFood[] = data.foods || [];
       const exercises: ParsedExercise[] = data.exercises || [];
@@ -67,7 +99,7 @@ export default function ChatPage() {
       }
 
       const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: nextMsgId(),
         role: 'assistant',
         content: responseText,
         parsedFoods: foods,
@@ -80,7 +112,7 @@ export default function ChatPage() {
       setMessages((prev) => [
         ...prev,
         {
-          id: (Date.now() + 1).toString(),
+          id: nextMsgId(),
           role: 'assistant',
           content: 'Sorry, something went wrong. Please try again.',
         },
@@ -91,13 +123,15 @@ export default function ChatPage() {
   };
 
   const saveResults = async (msgId: string, foods: ParsedFood[], exercises: ParsedExercise[]) => {
-    if (!user) return;
+    if (!user || savingId) return;
+    setSavingId(msgId);
     const supabase = createClient();
     const today = getToday();
+    let hasError = false;
 
     // Save food logs
     if (foods.length > 0) {
-      await supabase.from('food_logs').insert(
+      const { error } = await supabase.from('food_logs').insert(
         foods.map((f) => ({
           user_id: user.id,
           date: today,
@@ -110,11 +144,12 @@ export default function ChatPage() {
           source: 'chat' as const,
         }))
       );
+      if (error) hasError = true;
     }
 
     // Save exercise logs
     if (exercises.length > 0) {
-      await supabase.from('exercise_logs').insert(
+      const { error } = await supabase.from('exercise_logs').insert(
         exercises.map((e) => ({
           user_id: user.id,
           date: today,
@@ -125,12 +160,20 @@ export default function ChatPage() {
           source: 'chat' as const,
         }))
       );
+      if (error) hasError = true;
+    }
+
+    if (hasError) {
+      showToast('error', 'Failed to save some entries. Please try again.');
+      setSavingId(null);
+      return;
     }
 
     // Mark as saved
     setMessages((prev) =>
       prev.map((m) => (m.id === msgId ? { ...m, saved: true } : m))
     );
+    setSavingId(null);
   };
 
   const updateFood = (msgId: string, index: number, field: keyof ParsedFood, value: string | number) => {
@@ -157,6 +200,8 @@ export default function ChatPage() {
 
   return (
     <div className="max-w-lg mx-auto flex flex-col h-[calc(100vh-4rem)]">
+      {ToastContainer}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 pt-6 pb-4 space-y-4 scrollbar-hide">
         {messages.map((msg) => (
@@ -194,9 +239,9 @@ export default function ChatPage() {
                       <p className="text-sm font-medium text-gray-900">{food.description}</p>
                       <div className="flex gap-3 mt-1 text-xs text-gray-500">
                         <span>{food.calories} cal</span>
-                        {food.protein_g && <span>{food.protein_g}g P</span>}
-                        {food.carbs_g && <span>{food.carbs_g}g C</span>}
-                        {food.fat_g && <span>{food.fat_g}g F</span>}
+                        {food.protein_g ? <span>{food.protein_g}g P</span> : null}
+                        {food.carbs_g ? <span>{food.carbs_g}g C</span> : null}
+                        {food.fat_g ? <span>{food.fat_g}g F</span> : null}
                       </div>
                     </div>
                   ))}
@@ -222,9 +267,10 @@ export default function ChatPage() {
               {(msg.parsedFoods?.length || msg.parsedExercises?.length) && !msg.saved ? (
                 <button
                   onClick={() => saveResults(msg.id, msg.parsedFoods || [], msg.parsedExercises || [])}
-                  className="mt-3 w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl transition-all"
+                  disabled={savingId === msg.id}
+                  className="mt-3 w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl transition-all disabled:opacity-50"
                 >
-                  Save to Log
+                  {savingId === msg.id ? 'Saving...' : 'Save to Log'}
                 </button>
               ) : msg.saved ? (
                 <p className="mt-2 text-xs text-emerald-600 font-medium text-center">Saved!</p>
@@ -243,6 +289,7 @@ export default function ChatPage() {
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
@@ -260,6 +307,7 @@ export default function ChatPage() {
             onClick={sendMessage}
             disabled={loading || !input.trim()}
             className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all disabled:opacity-50"
+            aria-label="Send message"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

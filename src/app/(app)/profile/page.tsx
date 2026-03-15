@@ -4,11 +4,19 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/Toast';
+import { getToday } from '@/lib/utils';
+import {
+  validateCalorieGoal,
+  validateDOB,
+  validateBodyStat,
+} from '@/lib/validation';
 import type { Profile, Gender } from '@/lib/types';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const router = useRouter();
+  const { showToast, ToastContainer } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [calorieGoal, setCalorieGoal] = useState('2000');
@@ -18,7 +26,7 @@ export default function ProfilePage() {
   const [weightKg, setWeightKg] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const fetchedForUser = useRef<string | null>(null);
 
   const applyProfile = (p: Profile) => {
@@ -63,7 +71,7 @@ export default function ProfilePage() {
           .single();
 
         if (insertError) {
-          console.error('Create profile error:', JSON.stringify(insertError));
+          showToast('error', 'Failed to create profile');
           return;
         }
         if (newProfile) applyProfile(newProfile);
@@ -71,12 +79,34 @@ export default function ProfilePage() {
     };
 
     fetchOrCreateProfile();
-  }, [user]);
+  }, [user, showToast]);
 
   const saveProfile = async () => {
     if (!user) return;
+
+    // Validate all fields
+    const newErrors: Record<string, string> = {};
+
+    if (calorieGoal && validateCalorieGoal(calorieGoal) === null) {
+      newErrors.calorieGoal = 'Must be between 500 and 10,000';
+    }
+
+    if (dateOfBirth && !validateDOB(dateOfBirth)) {
+      newErrors.dateOfBirth = 'Must be a valid past date (age 1–120)';
+    }
+
+    if (heightCm && validateBodyStat(heightCm, 50, 300) === null) {
+      newErrors.heightCm = 'Must be between 50 and 300 cm';
+    }
+
+    if (weightKg && validateBodyStat(weightKg, 10, 500) === null) {
+      newErrors.weightKg = 'Must be between 10 and 500 kg';
+    }
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
     setSaving(true);
-    setError('');
 
     const supabase = createClient();
     const { error: updateError } = await supabase
@@ -92,8 +122,7 @@ export default function ProfilePage() {
       .eq('id', user.id);
 
     if (updateError) {
-      console.error('Update profile error:', JSON.stringify(updateError));
-      setError('Failed to save. Please try again.');
+      showToast('error', 'Failed to save. Please try again.');
       setSaving(false);
       return;
     }
@@ -107,6 +136,7 @@ export default function ProfilePage() {
 
     setSaving(false);
     setSaved(true);
+    showToast('success', 'Profile saved!');
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -117,10 +147,14 @@ export default function ProfilePage() {
     router.refresh();
   };
 
-  const inputClass = 'w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all';
+  const inputClass =
+    'w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all';
+  const errorInputClass =
+    'w-full px-4 py-3 rounded-xl border border-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all';
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
+      {ToastContainer}
       <h1 className="text-xl font-bold text-gray-900 mb-6">Profile</h1>
 
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4">
@@ -150,11 +184,19 @@ export default function ProfilePage() {
           <input
             id="calorieGoal"
             type="number"
+            min="500"
+            max="10000"
             value={calorieGoal}
-            onChange={(e) => setCalorieGoal(e.target.value)}
-            className={inputClass}
+            onChange={(e) => {
+              setCalorieGoal(e.target.value);
+              setErrors((prev) => ({ ...prev, calorieGoal: '' }));
+            }}
+            className={errors.calorieGoal ? errorInputClass : inputClass}
             placeholder="2000"
           />
+          {errors.calorieGoal && (
+            <p className="text-xs text-red-500 mt-1">{errors.calorieGoal}</p>
+          )}
         </div>
       </div>
 
@@ -170,10 +212,17 @@ export default function ProfilePage() {
           <input
             id="dob"
             type="date"
+            max={getToday()}
             value={dateOfBirth}
-            onChange={(e) => setDateOfBirth(e.target.value)}
-            className={inputClass}
+            onChange={(e) => {
+              setDateOfBirth(e.target.value);
+              setErrors((prev) => ({ ...prev, dateOfBirth: '' }));
+            }}
+            className={errors.dateOfBirth ? errorInputClass : inputClass}
           />
+          {errors.dateOfBirth && (
+            <p className="text-xs text-red-500 mt-1">{errors.dateOfBirth}</p>
+          )}
         </div>
 
         <div>
@@ -204,12 +253,20 @@ export default function ProfilePage() {
             <input
               id="height"
               type="number"
+              min="50"
+              max="300"
               step="0.1"
               value={heightCm}
-              onChange={(e) => setHeightCm(e.target.value)}
-              className={inputClass}
+              onChange={(e) => {
+                setHeightCm(e.target.value);
+                setErrors((prev) => ({ ...prev, heightCm: '' }));
+              }}
+              className={errors.heightCm ? errorInputClass : inputClass}
               placeholder="170"
             />
+            {errors.heightCm && (
+              <p className="text-xs text-red-500 mt-1">{errors.heightCm}</p>
+            )}
           </div>
           <div>
             <label htmlFor="weight" className="block text-sm font-medium text-gray-700 mb-1">
@@ -218,21 +275,23 @@ export default function ProfilePage() {
             <input
               id="weight"
               type="number"
+              min="10"
+              max="500"
               step="0.1"
               value={weightKg}
-              onChange={(e) => setWeightKg(e.target.value)}
-              className={inputClass}
+              onChange={(e) => {
+                setWeightKg(e.target.value);
+                setErrors((prev) => ({ ...prev, weightKg: '' }));
+              }}
+              className={errors.weightKg ? errorInputClass : inputClass}
               placeholder="70"
             />
+            {errors.weightKg && (
+              <p className="text-xs text-red-500 mt-1">{errors.weightKg}</p>
+            )}
           </div>
         </div>
       </div>
-
-      {error && (
-        <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl mt-4">
-          {error}
-        </div>
-      )}
 
       <button
         onClick={saveProfile}
