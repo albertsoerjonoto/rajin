@@ -38,6 +38,22 @@
   animation: progressGrow 0.8s ease-out;
 }
 
+/* Onboarding step slide animations */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.25s ease-out;
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.25s ease-out;
+}
+
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;

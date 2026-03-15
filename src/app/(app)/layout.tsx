@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { createClient } from '@/lib/supabase/client';
 import { ServiceWorkerRegister } from './sw-register';
 
 const tabs = [
@@ -14,6 +17,39 @@ const tabs = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [ready, setReady] = useState(false);
+  const checkedRef = useRef(false);
+
+  // Check if the user has completed onboarding
+  useEffect(() => {
+    if (authLoading || !user || checkedRef.current) return;
+    checkedRef.current = true;
+
+    const checkOnboarding = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .single();
+
+      if (data && data.onboarding_completed === false) {
+        router.replace('/onboarding');
+        return;
+      }
+
+      setReady(true);
+    };
+
+    checkOnboarding();
+  }, [user, authLoading, router]);
+
+  // Show blank screen while checking (prevents flash of dashboard)
+  if (!ready) {
+    return <div className="min-h-screen bg-gray-50" />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
