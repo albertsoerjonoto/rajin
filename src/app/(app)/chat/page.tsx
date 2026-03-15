@@ -52,56 +52,33 @@ export default function ChatPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<ChatContext | null>(null);
   const shouldAutoScroll = useRef(false);
-  const initialHeight = useRef(0);
 
   const isToday = date === getToday();
 
-  // Lock body scroll & use visualViewport to handle iOS keyboard
+  // Use visualViewport API to handle iOS keyboard
   useEffect(() => {
-    // Lock body so iOS can't scroll the page behind fixed elements
-    const scrollY = window.scrollY;
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    document.body.style.overflow = 'hidden';
-
-    initialHeight.current = window.innerHeight;
-
     const vv = window.visualViewport;
-    if (vv && containerRef.current) {
-      const update = () => {
-        if (!containerRef.current) return;
-        // When keyboard is open, visualViewport shrinks
-        const isKeyboardOpen = vv.height < initialHeight.current - 100;
-        // When keyboard open: use full visual viewport (nav is behind keyboard)
-        // When closed: subtract nav height (64px)
-        const navH = isKeyboardOpen ? 0 : 64;
-        containerRef.current.style.height = `${vv.height - navH}px`;
-      };
-      update();
-      vv.addEventListener('resize', update);
-      vv.addEventListener('scroll', update);
+    if (!vv) return;
 
-      return () => {
-        vv.removeEventListener('resize', update);
-        vv.removeEventListener('scroll', update);
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.left = '';
-        document.body.style.right = '';
-        document.body.style.overflow = '';
-        window.scrollTo(0, scrollY);
-      };
-    }
+    const update = () => {
+      if (!containerRef.current) return;
+      // Detect keyboard: visual viewport shrinks when keyboard opens
+      const isKeyboardOpen = window.innerHeight - vv.height > 100;
+      // When keyboard open: nav is behind keyboard, use full visual viewport
+      // When closed: subtract nav height (64px)
+      const navH = isKeyboardOpen ? 0 : 64;
+      containerRef.current.style.height = `${vv.height - navH}px`;
+      // Follow iOS scroll position so container stays in visible area
+      containerRef.current.style.top = `${vv.offsetTop}px`;
+    };
+
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
 
     return () => {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
-      document.body.style.right = '';
-      document.body.style.overflow = '';
-      window.scrollTo(0, scrollY);
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
     };
   }, []);
 
