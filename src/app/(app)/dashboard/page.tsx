@@ -22,13 +22,16 @@ export default function DashboardPage() {
     if (!user) return;
     const supabase = createClient();
 
-    let { data: profileData } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
 
-    if (!profileData) {
+    if (profileData) {
+      setProfile(profileData);
+    } else if (profileError?.code === 'PGRST116') {
+      // Only auto-create when the row truly doesn't exist — never on transient errors
       const { data: newProfile } = await supabase
         .from('profiles')
         .insert({
@@ -39,9 +42,8 @@ export default function DashboardPage() {
         })
         .select()
         .single();
-      profileData = newProfile;
+      if (newProfile) setProfile(newProfile);
     }
-    if (profileData) setProfile(profileData);
 
     const { data: habitsData } = await supabase
       .from('habits')
