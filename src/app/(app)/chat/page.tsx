@@ -56,42 +56,37 @@ export default function ChatPage() {
 
   const isToday = date === getToday();
 
-  // Prevent iOS page scroll & resize chat to visual viewport
+  // Resize chat container to visual viewport (handles keyboard height)
   useEffect(() => {
-    // Lock scroll so iOS can't push the fixed container off-screen
-    const preventScroll = () => window.scrollTo(0, 0);
-    window.addEventListener('scroll', preventScroll, { passive: false });
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-
     const vv = window.visualViewport;
-    if (vv) {
-      const update = () => {
-        if (!containerRef.current) return;
-        const isKb = window.innerHeight - vv.height > 100;
-        containerRef.current.style.height = `${vv.height}px`;
-        setKeyboardVisible(isKb);
-        // Always force scroll to top so fixed container stays visible
-        window.scrollTo(0, 0);
-      };
-      update();
-      vv.addEventListener('resize', update);
-      vv.addEventListener('scroll', update);
+    if (!vv) return;
 
-      return () => {
-        vv.removeEventListener('resize', update);
-        vv.removeEventListener('scroll', update);
-        window.removeEventListener('scroll', preventScroll);
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-      };
-    }
-
-    return () => {
-      window.removeEventListener('scroll', preventScroll);
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
+    const update = () => {
+      if (!containerRef.current) return;
+      const isKb = window.innerHeight - vv.height > 100;
+      containerRef.current.style.height = `${vv.height}px`;
+      setKeyboardVisible(isKb);
     };
+
+    update();
+    vv.addEventListener('resize', update);
+    return () => vv.removeEventListener('resize', update);
+  }, []);
+
+  // Lock body on input focus to prevent iOS from scrolling page
+  const handleInputFocus = useCallback(() => {
+    document.body.style.position = 'fixed';
+    document.body.style.top = '0';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+  }, []);
+
+  const handleInputBlur = useCallback(() => {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    window.scrollTo(0, 0);
   }, []);
 
   // Fetch messages from DB for the selected date
@@ -732,6 +727,8 @@ export default function ChatPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
             disabled={!isToday}
             className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary disabled:cursor-not-allowed"
             placeholder={isToday ? 'Log, edit, ask, or get recommendations...' : 'Switch to today to send messages'}
