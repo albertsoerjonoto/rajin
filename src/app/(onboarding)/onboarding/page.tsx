@@ -60,6 +60,12 @@ export default function OnboardingPage() {
         setDateOfBirth(data.date_of_birth || '');
         setHeightCm(data.height_cm ? String(data.height_cm) : '');
         setWeightKg(data.weight_kg ? String(data.weight_kg) : '');
+
+        // Resume from saved step
+        const savedStep = data.onboarding_step ?? 0;
+        if (savedStep > 0 && savedStep < TOTAL_STEPS) {
+          setStep(savedStep);
+        }
       }
 
       setReady(true);
@@ -88,25 +94,27 @@ export default function OnboardingPage() {
     if (saving) return;
 
     // Validate and save based on current step
+    const nextStep = step + 1;
+
     if (step === 0) {
-      const ok = await saveStep({ display_name: displayName.trim() || null });
+      const ok = await saveStep({ display_name: displayName.trim() || null, onboarding_step: nextStep });
       if (!ok) return;
     } else if (step === 1) {
-      if (gender) {
-        const ok = await saveStep({ gender });
-        if (!ok) return;
-      }
+      const fields: Record<string, unknown> = { onboarding_step: nextStep };
+      if (gender) fields.gender = gender;
+      const ok = await saveStep(fields);
+      if (!ok) return;
     } else if (step === 2) {
-      if (dateOfBirth) {
-        if (!validateDOB(dateOfBirth)) {
-          showToast('error', 'Please enter a valid date of birth');
-          return;
-        }
-        const ok = await saveStep({ date_of_birth: dateOfBirth });
-        if (!ok) return;
+      if (dateOfBirth && !validateDOB(dateOfBirth)) {
+        showToast('error', 'Please enter a valid date of birth');
+        return;
       }
+      const fields: Record<string, unknown> = { onboarding_step: nextStep };
+      if (dateOfBirth) fields.date_of_birth = dateOfBirth;
+      const ok = await saveStep(fields);
+      if (!ok) return;
     } else if (step === 3) {
-      const fields: Record<string, unknown> = { onboarding_completed: true };
+      const fields: Record<string, unknown> = { onboarding_completed: true, onboarding_step: nextStep };
 
       if (heightCm) {
         const h = validateBodyStat(heightCm, 50, 300);
@@ -133,27 +141,32 @@ export default function OnboardingPage() {
 
     // Advance step
     setDirection('forward');
-    setStep((s) => s + 1);
+    setStep(nextStep);
   };
 
   const handleGenderContinue = async (g: Gender) => {
     if (saving) return;
-    const ok = await saveStep({ gender: g });
+    const nextStep = step + 1;
+    const ok = await saveStep({ gender: g, onboarding_step: nextStep });
     if (!ok) return;
     setDirection('forward');
-    setStep((s) => s + 1);
+    setStep(nextStep);
   };
 
   const handleSkip = async () => {
+    const nextStep = step + 1;
     if (step === 3) {
       // Final step — mark onboarding as complete even when skipping
-      const ok = await saveStep({ onboarding_completed: true });
+      const ok = await saveStep({ onboarding_completed: true, onboarding_step: nextStep });
       if (!ok) return;
       router.replace('/dashboard');
       return;
     }
+    // Save step progress even when skipping
+    const ok = await saveStep({ onboarding_step: nextStep });
+    if (!ok) return;
     setDirection('forward');
-    setStep((s) => s + 1);
+    setStep(nextStep);
   };
 
   const handleBack = () => {

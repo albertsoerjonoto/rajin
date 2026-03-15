@@ -13,6 +13,7 @@ export interface Profile {
   height_cm: number | null;
   weight_kg: number | null;
   onboarding_completed: boolean;
+  onboarding_step: number;
   created_at: string;
 }
 
