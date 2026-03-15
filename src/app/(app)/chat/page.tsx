@@ -468,7 +468,8 @@ export default function ChatPage() {
     (msg.exerciseEdits?.length ?? 0) > 0;
 
   return (
-    <div className="max-w-lg mx-auto flex flex-col h-[calc(100dvh-5rem)] overflow-hidden">
+    <div className="fixed inset-0 bottom-16 bg-bg overflow-hidden z-10">
+      <div className="max-w-lg mx-auto flex flex-col h-full">
       {ToastContainer}
 
       {/* Header */}
@@ -706,6 +707,7 @@ export default function ChatPage() {
             </svg>
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
