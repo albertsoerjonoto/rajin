@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +25,32 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    let email = identifier.trim();
+
+    // If no @, treat as username and look up the email
+    if (!email.includes('@')) {
+      try {
+        const res = await fetch('/api/login-username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: email }),
+        });
+
+        if (!res.ok) {
+          setError('Username not found');
+          setLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        email = data.email;
+      } catch {
+        setError('Something went wrong. Please try again.');
+        setLoading(false);
+        return;
+      }
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -38,6 +64,9 @@ export default function LoginPage() {
       router.refresh();
     }
   };
+
+  const inputClass =
+    'w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg px-4">
@@ -55,17 +84,19 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-text-label mb-1">
-              Email
+            <label htmlFor="identifier" className="block text-sm font-medium text-text-label mb-1">
+              Username or email
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="identifier"
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
-              className="w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
-              placeholder="you@example.com"
+              className={inputClass}
+              placeholder="username or email"
+              autoCapitalize="none"
+              autoCorrect="off"
             />
           </div>
 
@@ -79,7 +110,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
+              className={inputClass}
               placeholder="••••••••"
             />
           </div>

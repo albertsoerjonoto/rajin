@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const { showToast, ToastContainer } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [calorieMode, setCalorieMode] = useState<'deficit' | 'maintenance' | 'surplus'>('maintenance');
   const [calorieAmount, setCalorieAmount] = useState('500');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -41,6 +42,7 @@ export default function ProfilePage() {
   const applyProfile = (p: Profile) => {
     setProfile(p);
     setDisplayName(p.display_name || '');
+    setUsername(p.username || '');
     setAvatarUrl(p.avatar_url || null);
     const offset = p.daily_calorie_offset ?? 0;
     if (offset === 0) {
@@ -125,6 +127,10 @@ export default function ProfilePage() {
       newErrors.weightKg = 'Must be between 10 and 500 kg';
     }
 
+    if (username && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      newErrors.username = '3-20 chars, letters, numbers, underscores';
+    }
+
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
@@ -135,6 +141,7 @@ export default function ProfilePage() {
       .from('profiles')
       .update({
         display_name: displayName.trim() || null,
+        username: username.trim().toLowerCase() || null,
         daily_calorie_offset: calorieMode === 'maintenance' ? 0 :
           calorieMode === 'deficit' ? -(parseInt(calorieAmount) || 500) :
           (parseInt(calorieAmount) || 500),
@@ -292,7 +299,9 @@ export default function ProfilePage() {
               onChange={handleAvatarUpload}
             />
             <p className="text-xl font-semibold text-text-primary">{displayName || 'No name'}</p>
-            <p className="text-sm text-text-tertiary mt-0.5">{user?.email}</p>
+            {username && (
+              <p className="text-sm text-text-tertiary mt-0.5">@{username}</p>
+            )}
           </div>
 
           {/* Account section */}
@@ -310,6 +319,37 @@ export default function ProfilePage() {
                 placeholder="Your name"
               />
             </div>
+
+            {/* Username */}
+            <div className={dividerClass}>
+              <div className={rowClass}>
+                <label htmlFor="username" className="text-sm text-text-primary shrink-0 mr-4">Username</label>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''));
+                    setErrors((prev) => ({ ...prev, username: '' }));
+                  }}
+                  maxLength={20}
+                  className={`${inputClass} flex-1 min-w-0`}
+                  placeholder="your_username"
+                  autoCapitalize="none"
+                />
+              </div>
+              {errors.username && (
+                <p className="text-xs text-danger-text px-4 pb-2 -mt-1">{errors.username}</p>
+              )}
+            </div>
+
+            {/* Email (read-only, only show real emails) */}
+            {user?.email && !user.email.endsWith('@rajin.app') && (
+              <div className={`${rowClass} ${dividerClass}`}>
+                <span className="text-sm text-text-primary shrink-0 mr-4">Email</span>
+                <span className="text-sm text-text-tertiary truncate">{user.email}</span>
+              </div>
+            )}
 
             {/* Calorie Target */}
             <div className={calorieMode !== 'maintenance' ? dividerClass : ''}>
