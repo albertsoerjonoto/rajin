@@ -56,34 +56,41 @@ export default function ChatPage() {
 
   const isToday = date === getToday();
 
-  // Use visualViewport API to handle iOS keyboard
+  // Prevent iOS page scroll & resize chat to visual viewport
   useEffect(() => {
+    // Lock scroll so iOS can't push the fixed container off-screen
+    const preventScroll = () => window.scrollTo(0, 0);
+    window.addEventListener('scroll', preventScroll, { passive: false });
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
     const vv = window.visualViewport;
-    if (!vv) return;
-
-    const update = () => {
-      if (!containerRef.current) return;
-      const isKeyboardOpen = window.innerHeight - vv.height > 100;
-      // Always use full visual viewport height
-      containerRef.current.style.height = `${vv.height}px`;
-
-      if (isKeyboardOpen) {
-        containerRef.current.style.top = `${vv.offsetTop}px`;
-      } else {
-        containerRef.current.style.top = '0px';
+    if (vv) {
+      const update = () => {
+        if (!containerRef.current) return;
+        const isKb = window.innerHeight - vv.height > 100;
+        containerRef.current.style.height = `${vv.height}px`;
+        setKeyboardVisible(isKb);
+        // Always force scroll to top so fixed container stays visible
         window.scrollTo(0, 0);
-      }
+      };
+      update();
+      vv.addEventListener('resize', update);
+      vv.addEventListener('scroll', update);
 
-      setKeyboardVisible(isKeyboardOpen);
-    };
-
-    update();
-    vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
+      return () => {
+        vv.removeEventListener('resize', update);
+        vv.removeEventListener('scroll', update);
+        window.removeEventListener('scroll', preventScroll);
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      };
+    }
 
     return () => {
-      vv.removeEventListener('resize', update);
-      vv.removeEventListener('scroll', update);
+      window.removeEventListener('scroll', preventScroll);
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
     };
   }, []);
 
@@ -501,7 +508,7 @@ export default function ChatPage() {
     (msg.exerciseEdits?.length ?? 0) > 0;
 
   return (
-    <div ref={containerRef} className="fixed inset-x-0 top-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: '100vh' }}>
+    <div ref={containerRef} className="fixed top-0 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: '100vh' }}>
       <div className="max-w-lg mx-auto flex flex-col h-full w-full">
       {ToastContainer}
 
