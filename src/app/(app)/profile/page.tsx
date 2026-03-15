@@ -189,9 +189,9 @@ export default function ProfilePage() {
   };
 
   const inputClass =
-    'w-full px-4 py-3.5 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
+    'w-full px-4 py-3 rounded-xl bg-surface-secondary text-sm focus:outline-none focus:ring-1 focus:ring-input-ring transition-all';
   const errorInputClass =
-    'w-full px-4 py-3.5 rounded-xl border border-danger-input-border bg-surface focus:outline-none focus:ring-1 focus:ring-danger focus:border-transparent transition-all duration-200';
+    'w-full px-4 py-3 rounded-xl bg-surface-secondary text-sm focus:outline-none ring-1 ring-danger transition-all';
 
   return (
     <div className="max-w-lg mx-auto px-4">
@@ -204,14 +204,14 @@ export default function ProfilePage() {
         <PageSkeleton />
       ) : (
         <>
-          <div className="bg-surface rounded-2xl p-5 space-y-4">
+          <div className="bg-surface rounded-2xl p-6 space-y-5">
             <div>
-              <label className="block text-sm font-medium text-text-label mb-1">Email</label>
-              <p className="text-sm text-text-secondary px-4 py-3 bg-surface-secondary rounded-xl">{user?.email}</p>
+              <label className="block text-xs text-text-secondary mb-1.5">Email</label>
+              <p className="text-sm text-text-tertiary px-4 py-3 bg-surface-secondary rounded-xl">{user?.email}</p>
             </div>
 
             <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-text-label mb-1">
+              <label htmlFor="displayName" className="block text-xs text-text-secondary mb-1.5">
                 Display Name
               </label>
               <input
@@ -225,7 +225,7 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-label mb-1">
+              <label className="block text-xs text-text-secondary mb-1.5">
                 Calorie Target
               </label>
               <div className="flex gap-2 mb-2">
@@ -237,9 +237,9 @@ export default function ProfilePage() {
                       setCalorieMode(mode);
                       setErrors((prev) => ({ ...prev, calorieAmount: '' }));
                     }}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all capitalize ${
+                    className={`flex-1 py-2 rounded-xl text-sm transition-all capitalize ${
                       calorieMode === mode
-                        ? 'bg-accent text-accent-fg'
+                        ? 'bg-surface-hover text-text-primary font-semibold'
                         : 'bg-surface-secondary text-text-muted hover:bg-surface-hover'
                     }`}
                   >
@@ -274,12 +274,14 @@ export default function ProfilePage() {
           </div>
 
           {/* Body Stats Card */}
-          <div className="bg-surface rounded-2xl p-5 space-y-4 mt-4">
-            <h2 className="text-lg font-semibold text-text-primary">Body Stats</h2>
-            <p className="text-xs text-text-tertiary -mt-2">Used to calculate your recommended daily intake</p>
+          <div className="bg-surface rounded-2xl p-6 space-y-5 mt-6">
+            <div>
+              <h2 className="text-sm font-medium text-text-secondary uppercase tracking-wide">Body Stats</h2>
+              <p className="text-xs text-text-tertiary mt-0.5">Used to calculate your recommended daily intake</p>
+            </div>
 
             <div>
-              <label htmlFor="dob" className="block text-sm font-medium text-text-label mb-1">
+              <label htmlFor="dob" className="block text-xs text-text-secondary mb-1.5">
                 Date of Birth
               </label>
               <input
@@ -299,16 +301,16 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-label mb-1">Gender</label>
+              <label className="block text-xs text-text-secondary mb-1.5">Gender</label>
               <div className="flex gap-3">
                 {(['male', 'female'] as const).map((g) => (
                   <button
                     key={g}
                     type="button"
                     onClick={() => setGender(g)}
-                    className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all capitalize ${
+                    className={`flex-1 py-2.5 rounded-xl text-sm transition-all capitalize ${
                       gender === g
-                        ? 'bg-accent text-accent-fg'
+                        ? 'bg-surface-hover text-text-primary font-semibold'
                         : 'bg-surface-secondary text-text-muted hover:bg-surface-hover'
                     }`}
                   >
@@ -320,7 +322,7 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="height" className="block text-sm font-medium text-text-label mb-1">
+                <label htmlFor="height" className="block text-xs text-text-secondary mb-1.5">
                   Height (cm)
                 </label>
                 <input
@@ -342,7 +344,7 @@ export default function ProfilePage() {
                 )}
               </div>
               <div>
-                <label htmlFor="weight" className="block text-sm font-medium text-text-label mb-1">
+                <label htmlFor="weight" className="block text-xs text-text-secondary mb-1.5">
                   Weight (kg)
                 </label>
                 <input
@@ -369,7 +371,7 @@ export default function ProfilePage() {
           <button
             onClick={saveProfile}
             disabled={saving}
-            className="w-full mt-4 py-3 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
+            className="w-full mt-6 py-3 bg-accent hover:bg-accent-hover text-accent-fg font-medium rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
           >
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
           </button>
@@ -378,14 +380,14 @@ export default function ProfilePage() {
 
       <button
         onClick={handleSignOut}
-        className="w-full mt-4 py-3 text-danger-text font-medium rounded-xl hover:bg-danger-surface transition-all"
+        className="w-full mt-10 py-3 text-text-secondary hover:text-danger-text font-medium rounded-xl hover:bg-danger-surface transition-all"
       >
         Sign Out
       </button>
 
       <button
         onClick={() => setShowDeleteConfirm(true)}
-        className="w-full mt-3 py-3 text-danger-text-muted text-sm font-medium hover:text-danger-text transition-colors"
+        className="w-full mt-2 py-3 text-text-tertiary text-xs hover:text-danger-text transition-colors"
       >
         Delete Account
       </button>
@@ -399,7 +401,7 @@ export default function ProfilePage() {
         onCancel={() => !deleting && setShowDeleteConfirm(false)}
       />
 
-      <p className="text-center text-xs text-text-tertiary mt-8 mb-4">Rajin v1.0</p>
+      <p className="text-center text-xs text-text-tertiary mt-12 mb-6">Rajin v1.0</p>
     </div>
   );
 }
