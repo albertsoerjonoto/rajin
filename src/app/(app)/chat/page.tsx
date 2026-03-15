@@ -468,7 +468,7 @@ export default function ChatPage() {
     (msg.exerciseEdits?.length ?? 0) > 0;
 
   return (
-    <div className="max-w-lg mx-auto flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="max-w-lg mx-auto flex flex-col h-[calc(100dvh-5rem)] overflow-hidden">
       {ToastContainer}
 
       {/* Header */}
