@@ -316,12 +316,12 @@ export default function DashboardPage() {
                 <p className="text-text-tertiary text-sm">No habits yet. Tap Add to create one!</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {habits.map((habit) =>
                   editingId === habit.id ? (
                     <div
                       key={habit.id}
-                      className="bg-surface rounded-2xl p-4 border border-accent-border animate-fade-in"
+                      className="col-span-2 bg-surface rounded-2xl p-4 border border-accent-border animate-fade-in"
                     >
                       <div className="flex gap-2 mb-3">
                         <EmojiPicker value={editEmoji} onChange={setEditEmoji} />
@@ -361,24 +361,24 @@ export default function DashboardPage() {
                       onClick={() => editMode ? startEditing(habit) : toggleHabit(habit)}
                       disabled={!editMode && togglingId === habit.id}
                       className={cn(
-                        'w-full bg-surface rounded-2xl p-4 border text-left transition-all duration-200 active:scale-[0.97]',
+                        'bg-surface rounded-xl px-3 py-2.5 border text-left transition-all duration-200 active:scale-[0.97]',
                         habit.completed ? 'border-positive-border bg-positive-surface' : 'border-border hover:border-border-strong',
                         !editMode && togglingId === habit.id && 'opacity-60'
                       )}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className={cn('text-2xl leading-none', habit.completed && !editMode && 'animate-checkmark inline-block')}>
+                      <div className="flex items-center gap-2">
+                        <span className={cn('text-base leading-none shrink-0', habit.completed && !editMode && 'animate-checkmark inline-block')}>
                           {habit.emoji}
                         </span>
-                        <span className={cn('text-sm font-medium flex-1 min-w-0 truncate', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
+                        <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
                           {habit.name}
                         </span>
                         {editMode ? (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c-text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
                             <path d="M9 18l6-6-6-6" />
                           </svg>
                         ) : (
-                          <svg width="22" height="22" viewBox="0 0 24 24" className="shrink-0">
+                          <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
                             <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
                             {habit.completed && (
                               <g>

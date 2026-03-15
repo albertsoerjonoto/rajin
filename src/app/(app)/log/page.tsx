@@ -299,9 +299,9 @@ export default function LogPage() {
 
       {/* Food Modal */}
       {modal === 'food' && (
-        <div className="fixed inset-0 bg-overlay z-50 flex items-end justify-center" onClick={() => setModal('none')}>
+        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={() => setModal('none')}>
           <div
-            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 animate-slide-up"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">Add Food</h2>
@@ -381,9 +381,9 @@ export default function LogPage() {
 
       {/* Exercise Modal */}
       {modal === 'exercise' && (
-        <div className="fixed inset-0 bg-overlay z-50 flex items-end justify-center" onClick={() => setModal('none')}>
+        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={() => setModal('none')}>
           <div
-            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 animate-slide-up"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">Add Exercise</h2>
