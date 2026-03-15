@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, formatDisplayDate, addDays, cn } from '@/lib/utils';
+import { computeNutritionTargets } from '@/lib/nutrition';
 import type { HabitWithLog, FoodLog, ExerciseLog, Profile } from '@/lib/types';
 
 export default function DashboardPage() {
@@ -21,7 +22,6 @@ export default function DashboardPage() {
     if (!user) return;
     const supabase = createClient();
 
-    // Fetch profile (auto-create if missing for pre-migration users)
     let { data: profileData } = await supabase
       .from('profiles')
       .select('*')
@@ -43,7 +43,6 @@ export default function DashboardPage() {
     }
     if (profileData) setProfile(profileData);
 
-    // Fetch habits with logs for the date
     const { data: habitsData } = await supabase
       .from('habits')
       .select('*')
@@ -60,16 +59,11 @@ export default function DashboardPage() {
     if (habitsData) {
       const habitsWithLogs: HabitWithLog[] = habitsData.map((habit) => {
         const log = logsData?.find((l) => l.habit_id === habit.id);
-        return {
-          ...habit,
-          completed: log?.completed ?? false,
-          log_id: log?.id,
-        };
+        return { ...habit, completed: log?.completed ?? false, log_id: log?.id };
       });
       setHabits(habitsWithLogs);
     }
 
-    // Fetch food logs
     const { data: foodData } = await supabase
       .from('food_logs')
       .select('*')
@@ -78,7 +72,6 @@ export default function DashboardPage() {
       .order('created_at');
     if (foodData) setFoodLogs(foodData);
 
-    // Fetch exercise logs
     const { data: exerciseData } = await supabase
       .from('exercise_logs')
       .select('*')
@@ -96,18 +89,13 @@ export default function DashboardPage() {
     if (!user) return;
     const supabase = createClient();
 
-    // Optimistic update
     setHabits((prev) =>
-      prev.map((h) =>
-        h.id === habit.id ? { ...h, completed: !h.completed } : h
-      )
+      prev.map((h) => (h.id === habit.id ? { ...h, completed: !h.completed } : h))
     );
 
     if (habit.completed && habit.log_id) {
-      // Un-complete: delete the log
       await supabase.from('habit_logs').delete().eq('id', habit.log_id);
     } else {
-      // Complete: insert a log
       await supabase.from('habit_logs').insert({
         habit_id: habit.id,
         user_id: user.id,
@@ -115,7 +103,6 @@ export default function DashboardPage() {
         completed: true,
       });
     }
-
     fetchData();
   };
 
@@ -137,10 +124,14 @@ export default function DashboardPage() {
   };
 
   const totalCalories = foodLogs.reduce((sum, f) => sum + f.calories, 0);
+  const totalProtein = foodLogs.reduce((sum, f) => sum + (f.protein_g || 0), 0);
+  const totalCarbs = foodLogs.reduce((sum, f) => sum + (f.carbs_g || 0), 0);
+  const totalFat = foodLogs.reduce((sum, f) => sum + (f.fat_g || 0), 0);
   const calorieGoal = profile?.daily_calorie_goal ?? 2000;
   const caloriePercent = Math.min((totalCalories / calorieGoal) * 100, 100);
   const totalExerciseMinutes = exerciseLogs.reduce((sum, e) => sum + e.duration_minutes, 0);
   const totalCaloriesBurned = exerciseLogs.reduce((sum, e) => sum + e.calories_burned, 0);
+  const netCalories = totalCalories - totalCaloriesBurned;
 
   const mealBreakdown = {
     breakfast: foodLogs.filter((f) => f.meal_type === 'breakfast').reduce((s, f) => s + f.calories, 0),
@@ -148,6 +139,8 @@ export default function DashboardPage() {
     dinner: foodLogs.filter((f) => f.meal_type === 'dinner').reduce((s, f) => s + f.calories, 0),
     snack: foodLogs.filter((f) => f.meal_type === 'snack').reduce((s, f) => s + f.calories, 0),
   };
+
+  const targets = profile ? computeNutritionTargets(profile) : null;
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6">
@@ -164,10 +157,7 @@ export default function DashboardPage() {
         <div className="text-center">
           <h1 className="text-lg font-semibold text-gray-900">{formatDisplayDate(date)}</h1>
           {date !== getToday() && (
-            <button
-              onClick={() => setDate(getToday())}
-              className="text-xs text-emerald-600 font-medium mt-0.5"
-            >
+            <button onClick={() => setDate(getToday())} className="text-xs text-emerald-600 font-medium mt-0.5">
               Go to today
             </button>
           )}
@@ -186,10 +176,7 @@ export default function DashboardPage() {
       <section className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Habits</h2>
-          <button
-            onClick={() => setShowAddHabit(true)}
-            className="text-emerald-600 text-sm font-medium"
-          >
+          <button onClick={() => setShowAddHabit(true)} className="text-emerald-600 text-sm font-medium">
             + Add
           </button>
         </div>
@@ -214,16 +201,10 @@ export default function DashboardPage() {
               />
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowAddHabit(false)}
-                className="flex-1 py-2 text-sm text-gray-500 rounded-xl hover:bg-gray-50"
-              >
+              <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-gray-500 rounded-xl hover:bg-gray-50">
                 Cancel
               </button>
-              <button
-                onClick={addHabit}
-                className="flex-1 py-2 text-sm text-white bg-emerald-500 rounded-xl hover:bg-emerald-600"
-              >
+              <button onClick={addHabit} className="flex-1 py-2 text-sm text-white bg-emerald-500 rounded-xl hover:bg-emerald-600">
                 Add Habit
               </button>
             </div>
@@ -242,9 +223,7 @@ export default function DashboardPage() {
                 onClick={() => toggleHabit(habit)}
                 className={cn(
                   'bg-white rounded-2xl p-4 shadow-sm border text-left transition-all active:scale-95',
-                  habit.completed
-                    ? 'border-emerald-200 bg-emerald-50'
-                    : 'border-gray-100 hover:border-gray-200'
+                  habit.completed ? 'border-emerald-200 bg-emerald-50' : 'border-gray-100 hover:border-gray-200'
                 )}
               >
                 <div className="text-2xl mb-1">
@@ -254,10 +233,7 @@ export default function DashboardPage() {
                     <span className="opacity-40">{habit.emoji}</span>
                   )}
                 </div>
-                <p className={cn(
-                  'text-sm font-medium',
-                  habit.completed ? 'text-emerald-700' : 'text-gray-600'
-                )}>
+                <p className={cn('text-sm font-medium', habit.completed ? 'text-emerald-700' : 'text-gray-600')}>
                   {habit.name}
                 </p>
               </button>
@@ -275,10 +251,7 @@ export default function DashboardPage() {
               <p className="text-2xl font-bold text-gray-900">{totalCalories}</p>
               <p className="text-xs text-gray-400">of {calorieGoal} cal goal</p>
             </div>
-            <p className={cn(
-              'text-sm font-medium',
-              caloriePercent >= 100 ? 'text-orange-500' : 'text-emerald-600'
-            )}>
+            <p className={cn('text-sm font-medium', caloriePercent >= 100 ? 'text-orange-500' : 'text-emerald-600')}>
               {Math.round(caloriePercent)}%
             </p>
           </div>
@@ -301,6 +274,84 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {/* Nutrition Targets — only shown when body stats are filled */}
+      {targets?.hasData && (
+        <section className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Nutrition</h2>
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            {/* TDEE & Deficit/Surplus */}
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs text-gray-400">TDEE (est.)</p>
+                <p className="text-lg font-bold text-gray-900">{targets.tdee} cal</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-400">Your goal</p>
+                <p className={cn(
+                  'text-sm font-semibold',
+                  targets.calorieDelta < -50 ? 'text-blue-600' :
+                  targets.calorieDelta > 50 ? 'text-orange-500' : 'text-emerald-600'
+                )}>
+                  {targets.deltaLabel}
+                </p>
+              </div>
+            </div>
+
+            {/* Net calories when exercise is logged */}
+            {totalCaloriesBurned > 0 && (
+              <div className="bg-gray-50 rounded-xl px-3 py-2 mb-3">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Eaten: {totalCalories}</span>
+                  <span>Burned: {totalCaloriesBurned}</span>
+                  <span className="font-semibold text-gray-700">Net: {netCalories} cal</span>
+                </div>
+              </div>
+            )}
+
+            {/* Macro Recommendations with progress bars */}
+            <div className="space-y-2.5">
+              {[
+                { ...targets.protein, eaten: totalProtein, color: 'bg-blue-400' },
+                { ...targets.carbs, eaten: totalCarbs, color: 'bg-amber-400' },
+                { ...targets.fat, eaten: totalFat, color: 'bg-rose-400' },
+              ].map((macro) => {
+                const midTarget = (macro.min + macro.max) / 2;
+                const percent = midTarget > 0 ? Math.min((macro.eaten / midTarget) * 100, 100) : 0;
+                const inRange = macro.eaten >= macro.min && macro.eaten <= macro.max;
+                const over = macro.eaten > macro.max;
+
+                return (
+                  <div key={macro.label}>
+                    <div className="flex justify-between items-baseline mb-0.5">
+                      <span className="text-xs font-medium text-gray-600">{macro.label}</span>
+                      <span className="text-xs text-gray-400">
+                        <span className={cn(
+                          'font-semibold',
+                          inRange ? 'text-emerald-600' : over ? 'text-orange-500' : 'text-gray-700'
+                        )}>
+                          {macro.eaten}g
+                        </span>
+                        {' / '}
+                        {macro.min}–{macro.max}g
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          'h-full rounded-full transition-all duration-500',
+                          inRange ? 'bg-emerald-400' : over ? 'bg-orange-400' : macro.color
+                        )}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Exercise Summary */}
       <section className="mb-6">
