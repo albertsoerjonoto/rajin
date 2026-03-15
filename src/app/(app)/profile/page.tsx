@@ -247,7 +247,7 @@ export default function ProfilePage() {
                   setDateOfBirth(e.target.value);
                   setErrors((prev) => ({ ...prev, dateOfBirth: '' }));
                 }}
-                className={errors.dateOfBirth ? errorInputClass : inputClass}
+                className={`${errors.dateOfBirth ? errorInputClass : inputClass} appearance-none max-w-full`}
               />
               {errors.dateOfBirth && (
                 <p className="text-xs text-red-500 mt-1">{errors.dateOfBirth}</p>
