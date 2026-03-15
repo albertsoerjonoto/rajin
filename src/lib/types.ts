@@ -89,3 +89,41 @@ export interface ParseResult {
   foods: ParsedFood[];
   exercises: ParsedExercise[];
 }
+
+// Chat edit types
+export interface FoodEdit {
+  log_id: string;
+  original: { description: string; meal_type: MealType; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null };
+  updated: Partial<ParsedFood>;
+}
+
+export interface ExerciseEdit {
+  log_id: string;
+  original: { exercise_type: string; duration_minutes: number; calories_burned: number };
+  updated: Partial<ParsedExercise>;
+}
+
+export interface ChatContext {
+  todayFoodLogs: { index: number; id: string; description: string; meal_type: MealType; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
+  todayExerciseLogs: { index: number; id: string; exercise_type: string; duration_minutes: number; calories_burned: number }[];
+  profile: { display_name: string | null; calorieTarget: number; tdee: number; proteinTarget: string; carbsTarget: string; fatTarget: string } | null;
+  totalCalories: number;
+  totalCaloriesBurned: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  user_id: string;
+  date: string;
+  role: 'user' | 'assistant';
+  content: string;
+  parsed_foods: ParsedFood[] | null;
+  parsed_exercises: ParsedExercise[] | null;
+  food_edits: FoodEdit[] | null;
+  exercise_edits: ExerciseEdit[] | null;
+  saved: boolean;
+  created_at: string;
+}
