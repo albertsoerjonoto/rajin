@@ -324,7 +324,7 @@ export async function POST(request: NextRequest) {
     const isTimeout = errorMsg.includes('timeout') || errorMsg.includes('ETIMEDOUT') || errorMsg.includes('deadline');
     const isRateLimit = errorMsg.includes('429') || errorMsg.includes('rate limit') || errorMsg.includes('quota') || errorMsg.includes('RESOURCE_EXHAUSTED');
 
-    let userMessage = 'Sorry, something went wrong. Please try again.';
+    let userMessage = `Sorry, something went wrong. Please try again. (Debug: ${errorMsg.substring(0, 200)})`;
     if (isTimeout) userMessage = 'The request took too long. Please try a shorter message.';
     if (isRateLimit) userMessage = "I've hit my usage limit. Please wait a minute and try again, or try a shorter message.";
 
