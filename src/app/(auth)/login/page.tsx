@@ -96,7 +96,7 @@ export default function LoginPage() {
               onChange={(e) => setIdentifier(e.target.value)}
               required
               className={inputClass}
-              placeholder="username or email"
+              placeholder={t('login.usernamePlaceholder')}
               autoCapitalize="none"
               autoCorrect="off"
             />

@@ -176,6 +176,7 @@ export const translations: Translations = {
   'auth.loginSubtitle': { id: 'Lacak kebiasaan, makanan & olahraga kamu', en: 'Track your habits, food & exercise' },
   'auth.signupSubtitle': { id: 'Mulai lacak kemajuan harian kamu', en: 'Start tracking your daily progress' },
   'auth.usernameOrEmail': { id: 'Username atau email', en: 'Username or email' },
+  'login.usernamePlaceholder': { id: 'username atau email', en: 'username or email' },
   'auth.password': { id: 'Password', en: 'Password' },
   'auth.confirmPassword': { id: 'Konfirmasi Password', en: 'Confirm Password' },
   'auth.signIn': { id: 'Masuk', en: 'Sign In' },
