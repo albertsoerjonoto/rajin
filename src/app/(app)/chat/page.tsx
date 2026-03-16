@@ -70,22 +70,24 @@ export default function ChatPage() {
         containerRef.current.style.height = `${vv.height}px`;
         containerRef.current.style.transform = `translateY(${vv.offsetTop}px)`;
       } else {
-        // Keyboard closed: reset everything
-        containerRef.current.style.height = '';
+        // Keyboard closed: restore full height and reset position
+        containerRef.current.style.height = '100vh';
         containerRef.current.style.transform = 'none';
-        if (window.scrollY > 0) window.scrollTo(0, 0);
+        window.scrollTo(0, 0);
       }
 
       setKeyboardVisible(isKb);
     };
 
-    update();
+    // Don't run update() on mount — React's inline style is already correct
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
 
     return () => {
       vv.removeEventListener('resize', update);
       vv.removeEventListener('scroll', update);
+      // Reset scroll when navigating away from chat
+      window.scrollTo(0, 0);
     };
   }, []);
 
