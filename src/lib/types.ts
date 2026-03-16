@@ -1,5 +1,6 @@
 export type Frequency = 'daily' | 'weekly';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type DrinkType = 'water' | 'coffee' | 'tea' | 'juice' | 'soda' | 'milk' | 'other';
 export type LogSource = 'manual' | 'chat';
 export type Gender = 'male' | 'female';
 export type Locale = 'id' | 'en';
@@ -17,6 +18,7 @@ export interface Profile {
   avatar_url: string | null;
   onboarding_completed: boolean;
   onboarding_step: number;
+  daily_water_goal_ml: number;
   locale: Locale;
   created_at: string;
 }
@@ -67,6 +69,21 @@ export interface ExerciseLog {
   created_at: string;
 }
 
+export interface DrinkLog {
+  id: string;
+  user_id: string;
+  date: string;
+  drink_type: DrinkType;
+  description: string;
+  volume_ml: number;
+  calories: number;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  source: LogSource;
+  created_at: string;
+}
+
 export interface HabitWithLog extends Habit {
   completed: boolean;
   log_id?: string;
@@ -89,9 +106,20 @@ export interface ParsedExercise {
   notes: string | null;
 }
 
+export interface ParsedDrink {
+  description: string;
+  drink_type: DrinkType;
+  volume_ml: number;
+  calories: number;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+}
+
 export interface ParseResult {
   foods: ParsedFood[];
   exercises: ParsedExercise[];
+  drinks: ParsedDrink[];
 }
 
 // Chat edit types
@@ -107,12 +135,22 @@ export interface ExerciseEdit {
   updated: Partial<ParsedExercise>;
 }
 
+export interface DrinkEdit {
+  log_id: string;
+  original: { drink_type: DrinkType; description: string; volume_ml: number; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null };
+  updated: Partial<ParsedDrink>;
+}
+
 export interface ChatContext {
   todayFoodLogs: { index: number; id: string; description: string; meal_type: MealType; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
   todayExerciseLogs: { index: number; id: string; exercise_type: string; duration_minutes: number; calories_burned: number }[];
+  todayDrinkLogs: { index: number; id: string; drink_type: DrinkType; description: string; volume_ml: number; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
   profile: { display_name: string | null; calorieTarget: number; tdee: number; proteinTarget: string; carbsTarget: string; fatTarget: string } | null;
   totalCalories: number;
   totalCaloriesBurned: number;
+  totalDrinkCalories: number;
+  totalWaterMl: number;
+  waterGoalMl: number;
   totalProtein: number;
   totalCarbs: number;
   totalFat: number;
@@ -127,8 +165,10 @@ export interface ChatMessage {
   image_url: string | null;
   parsed_foods: ParsedFood[] | null;
   parsed_exercises: ParsedExercise[] | null;
+  parsed_drinks: ParsedDrink[] | null;
   food_edits: FoodEdit[] | null;
   exercise_edits: ExerciseEdit[] | null;
+  drink_edits: DrinkEdit[] | null;
   saved: boolean;
   created_at: string;
 }
