@@ -54,8 +54,6 @@ export const translations: Translations = {
   'dashboard.netCal': { id: 'Bersih', en: 'Net' },
   'dashboard.remaining': { id: 'tersisa', en: 'remaining' },
   'dashboard.over': { id: 'melebihi', en: 'over' },
-  'dashboard.underBudget': { id: 'di bawah target', en: 'under budget' },
-  'dashboard.overBudget': { id: 'melebihi target', en: 'over budget' },
   'dashboard.failedLoadHabits': { id: 'Gagal memuat kebiasaan', en: 'Failed to load habits' },
   'dashboard.failedLoadFood': { id: 'Gagal memuat log makanan', en: 'Failed to load food logs' },
   'dashboard.failedLoadExercise': { id: 'Gagal memuat log olahraga', en: 'Failed to load exercise logs' },
