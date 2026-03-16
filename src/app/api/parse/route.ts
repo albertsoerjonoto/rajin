@@ -306,9 +306,21 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Parse error:', error);
-    return NextResponse.json(
-      { error: 'Failed to parse input', foods: [], exercises: [], message: null, food_edits: [], exercise_edits: [] },
-      { status: 500 }
-    );
+    // Return a friendly message instead of a cryptic error
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    const isTimeout = errorMsg.includes('timeout') || errorMsg.includes('ETIMEDOUT') || errorMsg.includes('deadline');
+    const isRateLimit = errorMsg.includes('429') || errorMsg.includes('rate') || errorMsg.includes('quota');
+
+    let userMessage = 'Sorry, something went wrong. Please try again.';
+    if (isTimeout) userMessage = 'The request took too long. Please try a shorter message.';
+    if (isRateLimit) userMessage = "I'm getting too many requests right now. Please wait a moment and try again.";
+
+    return NextResponse.json({
+      message: userMessage,
+      foods: [],
+      exercises: [],
+      food_edits: [],
+      exercise_edits: [],
+    });
   }
 }
