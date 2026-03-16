@@ -371,7 +371,7 @@ export default function ChatPage() {
       const kbOpen = window.innerHeight - vv.height > 100;
       containerRef.current.style.height = kbOpen
         ? `${vv.height}px`
-        : `calc(100% - 4rem)`;
+        : '100%';
     };
 
     vv.addEventListener('resize', onResize);
@@ -676,7 +676,7 @@ export default function ChatPage() {
   }, [handleSaveAndApply, confirmEdits, saveResults]);
 
   return (
-    <div ref={containerRef} className="fixed top-0 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: 'calc(100% - 4rem)' }}>
+    <div ref={containerRef} className="fixed top-0 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: '100%' }}>
       <div className="max-w-lg mx-auto flex flex-col h-full w-full">
       {ToastContainer}
 

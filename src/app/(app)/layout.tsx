@@ -51,11 +51,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <div className="min-h-screen bg-bg" />;
   }
 
+  const isChat = pathname === '/chat';
+
   return (
-    <div className="min-h-screen bg-bg pb-20">
+    <div className={cn('min-h-screen bg-bg', !isChat && 'pb-20')}>
       <ServiceWorkerRegister />
       {children}
-      <nav className="fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl safe-area-bottom z-50">
+      {!isChat && <nav className="fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl safe-area-bottom z-50">
         <div className="max-w-lg mx-auto flex justify-around items-center h-16">
           {tabs.map((tab) => {
             const isActive = pathname === tab.href;
@@ -74,7 +76,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </div>
-      </nav>
+      </nav>}
     </div>
   );
 }
