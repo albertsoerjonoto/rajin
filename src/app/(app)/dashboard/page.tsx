@@ -316,7 +316,7 @@ export default function DashboardPage() {
   };
 
   const filteredLogs = selectedMeal ? foodLogs.filter((f) => f.meal_type === selectedMeal) : foodLogs;
-  const displayCalories = selectedMeal ? mealBreakdown[selectedMeal as keyof typeof mealBreakdown] : totalCalories;
+  const displayCalories = selectedMeal ? mealBreakdown[selectedMeal as keyof typeof mealBreakdown] : netCalories;
   const displayProtein = filteredLogs.reduce((sum, f) => sum + (f.protein_g || 0), 0);
   const displayCarbs = filteredLogs.reduce((sum, f) => sum + (f.carbs_g || 0), 0);
   const displayFat = filteredLogs.reduce((sum, f) => sum + (f.fat_g || 0), 0);
@@ -324,7 +324,9 @@ export default function DashboardPage() {
   const targets = profile ? computeNutritionTargets(profile) : null;
   const hasBodyStats = targets?.hasData ?? false;
   const calorieTarget = targets?.calorieTarget ?? 0;
-  const caloriePercent = calorieTarget > 0 ? Math.min((displayCalories / calorieTarget) * 100, 100) : 0;
+  const caloriePercent = calorieTarget > 0 ? Math.min((Math.max(displayCalories, 0) / calorieTarget) * 100, 100) : 0;
+  const isOverBudget = !selectedMeal && calorieTarget > 0 && netCalories > calorieTarget;
+  const remainingCalories = calorieTarget - netCalories;
 
   const mealKeys = [
     { key: 'breakfast', labelKey: 'meal.breakfast' },
@@ -521,7 +523,10 @@ export default function DashboardPage() {
                 <div className="mb-4">
                   <div className="flex items-baseline justify-between mb-2">
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-3xl font-bold text-text-primary transition-all duration-300">{displayCalories}</span>
+                      <span className={cn(
+                        'text-3xl font-bold transition-all duration-300',
+                        selectedMeal ? 'text-text-primary' : isOverBudget ? 'text-warning' : 'text-text-primary'
+                      )}>{displayCalories}</span>
                       <span className="text-sm text-text-tertiary">{t('common.cal')}</span>
                     </div>
                     {selectedMeal ? (
@@ -529,22 +534,34 @@ export default function DashboardPage() {
                         {t(`meal.${selectedMeal === 'snack' ? 'other' : selectedMeal}`)} {t('dashboard.only')}
                       </span>
                     ) : (
-                      <span className="text-xs text-text-tertiary">
-                        {t('dashboard.of')} {targets!.calorieRange.min}–{targets!.calorieRange.max}
+                      <span className={cn('text-xs font-medium', isOverBudget ? 'text-warning' : 'text-positive-text')}>
+                        {isOverBudget
+                          ? `${Math.abs(remainingCalories)} ${t('common.cal')} ${t('dashboard.over')}`
+                          : `${remainingCalories} ${t('common.cal')} ${t('dashboard.remaining')}`
+                        }
                       </span>
                     )}
                   </div>
                   {!selectedMeal && (
-                    <div className="w-full h-3 bg-surface-secondary rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          'h-full rounded-full transition-all duration-500',
-                          totalCalories > targets!.calorieRange.max ? 'bg-warning-bar' :
-                          totalCalories >= targets!.calorieRange.min ? 'bg-positive-bar' : 'bg-accent'
-                        )}
-                        style={{ width: `${caloriePercent}%` }}
-                      />
-                    </div>
+                    <>
+                      <div className="w-full h-3 bg-surface-secondary rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-all duration-500',
+                            netCalories > targets!.calorieRange.max ? 'bg-warning-bar' :
+                            netCalories >= targets!.calorieRange.min ? 'bg-positive-bar' : 'bg-accent'
+                          )}
+                          style={{ width: `${caloriePercent}%` }}
+                        />
+                      </div>
+                      {totalCaloriesBurned > 0 && (
+                        <div className="flex items-center justify-between mt-2 text-xs text-text-tertiary">
+                          <span>{t('dashboard.eaten')}: {totalCalories}</span>
+                          <span>{t('dashboard.burned')}: -{totalCaloriesBurned}</span>
+                          <span className="font-semibold text-text-secondary">{t('dashboard.netCal')}: {netCalories}</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ) : (
@@ -559,7 +576,15 @@ export default function DashboardPage() {
                     </p>
                   ) : (
                     <>
-                      <p className="text-xs text-text-tertiary mt-0.5">{t('dashboard.eatenToday')}</p>
+                      {totalCaloriesBurned > 0 ? (
+                        <div className="flex items-center gap-3 mt-1 text-xs text-text-tertiary">
+                          <span>{t('dashboard.eaten')}: {totalCalories}</span>
+                          <span>{t('dashboard.burned')}: -{totalCaloriesBurned}</span>
+                          <span className="font-semibold text-text-secondary">{t('dashboard.netCal')}: {netCalories}</span>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-text-tertiary mt-0.5">{t('dashboard.eatenToday')}</p>
+                      )}
                       <p className="text-[11px] text-text-tertiary mt-1">
                         {t('dashboard.addStatsHint')}
                       </p>
@@ -602,12 +627,6 @@ export default function DashboardPage() {
                       )}>
                         {deltaLabel}
                       </span>
-                      {totalCaloriesBurned > 0 && (
-                        <>
-                          <span>·</span>
-                          <span>{totalCalories} {t('dashboard.in')} · {totalCaloriesBurned} {t('dashboard.out')} · {netCalories} {t('dashboard.net')}</span>
-                        </>
-                      )}
                     </div>
                   )}
 
