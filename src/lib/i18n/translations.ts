@@ -129,6 +129,8 @@ export const translations: Translations = {
   'chat.reviewAndTap': { id: 'Periksa lalu ketuk', en: 'Review and tap' },
   'chat.toConfirm': { id: 'untuk konfirmasi.', en: 'to confirm.' },
   'chat.and': { id: 'dan', en: 'and' },
+  'chat.viewingHistory': { id: 'Melihat riwayat chat untuk {date}', en: 'Viewing chat history for {date}' },
+  'chat.noHistory': { id: 'Tidak ada chat pada tanggal ini', en: 'No chat messages on this date' },
 
   // ── Profile page ──
   'profile.title': { id: 'Profil', en: 'Profile' },

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, memo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { getToday, cn } from '@/lib/utils';
+import { getToday, cn, formatDisplayDate } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 import { computeNutritionTargets } from '@/lib/nutrition';
 import DateNav from '@/components/DateNav';
@@ -343,6 +343,7 @@ export default function ChatPage() {
   const shouldAutoScroll = useRef(false);
 
   const isToday = date === getToday();
+  const [hasHistoryMessages, setHasHistoryMessages] = useState(false);
 
   // Prevent body scroll while on chat page (fixes scroll leak to other pages)
   useEffect(() => {
@@ -365,8 +366,10 @@ export default function ChatPage() {
 
     if (data && data.length > 0) {
       setMessages(data.map((row: ChatMessage) => dbRowToMessage(row)));
+      setHasHistoryMessages(true);
     } else {
-      setMessages([welcomeMessage]);
+      setMessages(date === getToday() ? [welcomeMessage] : []);
+      setHasHistoryMessages(false);
     }
     setLoadingMessages(false);
   }, [user, date, welcomeMessage]);
@@ -880,6 +883,15 @@ export default function ChatPage() {
         <DateNav date={date} onDateChange={setDate} />
       </div>
 
+      {/* History banner for past dates */}
+      {!isToday && !loadingMessages && (
+        <div className="mx-4 mb-2 px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
+          <p className="text-xs text-amber-700 dark:text-amber-400 text-center font-medium">
+            {t('chat.viewingHistory').replace('{date}', formatDisplayDate(date, locale))}
+          </p>
+        </div>
+      )}
+
       {/* Messages */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 scrollbar-hide">
         {loadingMessages ? (
@@ -889,6 +901,10 @@ export default function ChatPage() {
               <div className="w-2 h-2 bg-loading-dots rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
               <div className="w-2 h-2 bg-loading-dots rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
+          </div>
+        ) : !isToday && !hasHistoryMessages ? (
+          <div className="flex justify-center py-12">
+            <p className="text-sm text-text-tertiary">{t('chat.noHistory')}</p>
           </div>
         ) : (
           messages.map((msg) => (
@@ -916,7 +932,8 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* Input — only visible for today */}
+      {isToday && (
       <div className="px-4 pt-2 pb-4">
         {/* Image preview */}
         {imagePreview && (
@@ -931,10 +948,7 @@ export default function ChatPage() {
             </button>
           </div>
         )}
-        <div className={cn(
-          'flex items-center bg-surface-secondary rounded-2xl px-4 py-1 transition-colors',
-          !isToday && 'opacity-50'
-        )}>
+        <div className="flex items-center bg-surface-secondary rounded-2xl px-4 py-1">
           <input
             ref={fileInputRef}
             type="file"
@@ -944,7 +958,7 @@ export default function ChatPage() {
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={!isToday || loading}
+            disabled={loading}
             className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
             aria-label="Attach photo"
           >
@@ -958,13 +972,12 @@ export default function ChatPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            disabled={!isToday}
-            className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary disabled:cursor-not-allowed"
-            placeholder={isToday ? t('chat.placeholder') : t('chat.placeholderPastDate')}
+            className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary"
+            placeholder={t('chat.placeholder')}
           />
           <button
             onClick={sendMessage}
-            disabled={loading || (!input.trim() && !imageFile) || !isToday}
+            disabled={loading || (!input.trim() && !imageFile)}
             className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
             aria-label="Send message"
           >
@@ -974,6 +987,7 @@ export default function ChatPage() {
           </button>
         </div>
       </div>
+      )}
       </div>
     </div>
   );
