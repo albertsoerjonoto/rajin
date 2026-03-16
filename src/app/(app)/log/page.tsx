@@ -74,6 +74,7 @@ export default function LogPage() {
 
   useEffect(() => {
     fetchData();
+    window.scrollTo(0, 0);
   }, [fetchData]);
 
   const saveFoodLog = async () => {
