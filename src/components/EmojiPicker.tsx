@@ -3,36 +3,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
+import { useLocale } from '@/lib/i18n';
 
 const EMOJI_CATEGORIES = [
-  {
-    name: 'Fitness',
-    emojis: ['💪', '🏃', '🚴', '🏋️', '🧘', '🤸', '⛹️', '🏊', '🥊', '🎯'],
-  },
-  {
-    name: 'Health',
-    emojis: ['💤', '💧', '🧠', '❤️', '🫁', '🦷', '💊', '🩺', '🌡️', '🧬'],
-  },
-  {
-    name: 'Food',
-    emojis: ['🥗', '🍎', '🥦', '🍳', '🥤', '☕', '🍵', '🫖', '🥛', '🍌'],
-  },
-  {
-    name: 'Mind',
-    emojis: ['📖', '✍️', '🎵', '🧩', '🎨', '📝', '🙏', '😌', '🌅', '🌙'],
-  },
-  {
-    name: 'Productivity',
-    emojis: ['⭐', '🚀', '💻', '📚', '🗂️', '⏰', '📧', '🔔', '✅', '🏆'],
-  },
-  {
-    name: 'Social',
-    emojis: ['👋', '🤝', '💬', '📞', '👨‍👩‍👧', '❤️‍🔥', '🎉', '🎂', '📸', '🌍'],
-  },
-  {
-    name: 'Nature',
-    emojis: ['🌳', '🌿', '🌸', '☀️', '🌊', '🐕', '🐈', '🦅', '🌻', '🍃'],
-  },
+  { nameKey: 'emoji.fitness', emojis: ['💪', '🏃', '🚴', '🏋️', '🧘', '🤸', '⛹️', '🏊', '🥊', '🎯'] },
+  { nameKey: 'emoji.health', emojis: ['💤', '💧', '🧠', '❤️', '🫁', '🦷', '💊', '🩺', '🌡️', '🧬'] },
+  { nameKey: 'emoji.food', emojis: ['🥗', '🍎', '🥦', '🍳', '🥤', '☕', '🍵', '🫖', '🥛', '🍌'] },
+  { nameKey: 'emoji.mind', emojis: ['📖', '✍️', '🎵', '🧩', '🎨', '📝', '🙏', '😌', '🌅', '🌙'] },
+  { nameKey: 'emoji.productivity', emojis: ['⭐', '🚀', '💻', '📚', '🗂️', '⏰', '📧', '🔔', '✅', '🏆'] },
+  { nameKey: 'emoji.social', emojis: ['👋', '🤝', '💬', '📞', '👨‍👩‍👧', '❤️‍🔥', '🎉', '🎂', '📸', '🌍'] },
+  { nameKey: 'emoji.nature', emojis: ['🌳', '🌿', '🌸', '☀️', '🌊', '🐕', '🐈', '🦅', '🌻', '🍃'] },
 ];
 
 interface EmojiPickerProps {
@@ -41,6 +21,7 @@ interface EmojiPickerProps {
 }
 
 export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -107,9 +88,9 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
             style={{ top: pos.top, left: pos.left }}
           >
             {EMOJI_CATEGORIES.map((cat) => (
-              <div key={cat.name} className="px-3 pt-3 pb-1">
+              <div key={cat.nameKey} className="px-3 pt-3 pb-1">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
-                  {cat.name}
+                  {t(cat.nameKey)}
                 </p>
                 <div className="grid grid-cols-7 gap-0.5">
                   {cat.emojis.map((emoji) => (

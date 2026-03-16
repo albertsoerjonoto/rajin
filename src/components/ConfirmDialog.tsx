@@ -7,6 +7,7 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   confirmLabel?: string;
+  cancelLabel?: string;
 }
 
 export default function ConfirmDialog({
@@ -16,6 +17,7 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   confirmLabel = 'Delete',
+  cancelLabel = 'Cancel',
 }: ConfirmDialogProps) {
   if (!open) return null;
 
@@ -35,7 +37,7 @@ export default function ConfirmDialog({
             onClick={onCancel}
             className="flex-1 py-2.5 text-sm font-medium text-text-muted bg-surface-secondary rounded-xl hover:bg-surface-hover transition-colors duration-200"
           >
-            Cancel
+            {cancelLabel}
           </button>
           <button
             onClick={onConfirm}

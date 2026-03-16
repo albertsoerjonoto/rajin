@@ -10,6 +10,7 @@ import {
   getToday,
 } from '@/lib/utils';
 import type { Period } from '@/lib/utils';
+import { useLocale } from '@/lib/i18n';
 
 interface DateNavProps {
   date: string;
@@ -19,22 +20,6 @@ interface DateNavProps {
   showPeriodPicker?: boolean;
 }
 
-const PERIODS: { value: Period; label: string }[] = [
-  { value: 'day', label: 'Day' },
-  { value: 'week', label: 'Week' },
-  { value: 'month', label: 'Month' },
-  { value: 'year', label: 'Year' },
-];
-
-function getLabel(date: string, period: Period): string {
-  switch (period) {
-    case 'day': return formatDisplayDate(date);
-    case 'week': return formatWeekLabel(date);
-    case 'month': return formatMonthLabel(date);
-    case 'year': return formatYearLabel(date);
-  }
-}
-
 export default function DateNav({
   date,
   onDateChange,
@@ -42,8 +27,16 @@ export default function DateNav({
   onPeriodChange,
   showPeriodPicker = false,
 }: DateNavProps) {
+  const { t, locale } = useLocale();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const periods: { value: Period; labelKey: string }[] = [
+    { value: 'day', labelKey: 'date.day' },
+    { value: 'week', labelKey: 'date.week' },
+    { value: 'month', labelKey: 'date.month' },
+    { value: 'year', labelKey: 'date.year' },
+  ];
 
   useEffect(() => {
     if (!open) return;
@@ -53,6 +46,15 @@ export default function DateNav({
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
+
+  function getLabel(dateStr: string, p: Period): string {
+    switch (p) {
+      case 'day': return formatDisplayDate(dateStr, locale);
+      case 'week': return formatWeekLabel(dateStr, locale);
+      case 'month': return formatMonthLabel(dateStr, locale);
+      case 'year': return formatYearLabel(dateStr);
+    }
+  }
 
   const label = getLabel(date, period);
 
@@ -80,7 +82,7 @@ export default function DateNav({
 
         {open && (
           <div className="absolute top-full right-0 mt-1 bg-surface rounded-xl shadow-lg py-1 z-50 min-w-[100px]">
-            {PERIODS.map((p) => (
+            {periods.map((p) => (
               <button
                 key={p.value}
                 onClick={() => {
@@ -94,7 +96,7 @@ export default function DateNav({
                     : 'text-text-primary hover:bg-surface-hover'
                 }`}
               >
-                {p.label}
+                {t(p.labelKey)}
               </button>
             ))}
           </div>

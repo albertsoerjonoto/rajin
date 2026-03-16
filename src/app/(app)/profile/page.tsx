@@ -14,12 +14,14 @@ import {
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { compressAvatar } from '@/lib/image';
-import type { Profile, Gender } from '@/lib/types';
+import { useLocale } from '@/lib/i18n';
+import type { Profile, Gender, Locale } from '@/lib/types';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const router = useRouter();
   const { showToast, ToastContainer } = useToast();
+  const { t, locale, setLocale } = useLocale();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
@@ -93,7 +95,7 @@ export default function ProfilePage() {
           .single();
 
         if (insertError) {
-          showToast('error', 'Failed to create profile');
+          showToast('error', t('profile.failedCreate'));
           return;
         }
         if (newProfile) applyProfile(newProfile);
@@ -101,7 +103,7 @@ export default function ProfilePage() {
     };
 
     fetchOrCreateProfile();
-  }, [user, showToast]);
+  }, [user, showToast, t]);
 
   const saveProfile = async () => {
     if (!user) return;
@@ -111,24 +113,24 @@ export default function ProfilePage() {
     if (calorieMode !== 'maintenance') {
       const offsetVal = validateCalorieOffset(calorieAmount);
       if (offsetVal === null || offsetVal <= 0) {
-        newErrors.calorieAmount = 'Must be between 1 and 2,000';
+        newErrors.calorieAmount = t('profile.calorieError');
       }
     }
 
     if (dateOfBirth && !validateDOB(dateOfBirth)) {
-      newErrors.dateOfBirth = 'Must be a valid past date (age 1–120)';
+      newErrors.dateOfBirth = t('profile.dobError');
     }
 
     if (heightCm && validateBodyStat(heightCm, 50, 300) === null) {
-      newErrors.heightCm = 'Must be between 50 and 300 cm';
+      newErrors.heightCm = t('profile.heightError');
     }
 
     if (weightKg && validateBodyStat(weightKg, 10, 500) === null) {
-      newErrors.weightKg = 'Must be between 10 and 500 kg';
+      newErrors.weightKg = t('profile.weightError');
     }
 
     if (username && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      newErrors.username = '3-20 chars, letters, numbers, underscores';
+      newErrors.username = t('profile.usernameHint');
     }
 
     setErrors(newErrors);
@@ -149,11 +151,12 @@ export default function ProfilePage() {
         gender: gender || null,
         height_cm: heightCm ? parseFloat(heightCm) : null,
         weight_kg: weightKg ? parseFloat(weightKg) : null,
+        locale,
       })
       .eq('id', user.id);
 
     if (updateError) {
-      showToast('error', 'Failed to save. Please try again.');
+      showToast('error', t('profile.failedSave'));
       setSaving(false);
       return;
     }
@@ -167,7 +170,7 @@ export default function ProfilePage() {
 
     setSaving(false);
     setSaved(true);
-    showToast('success', 'Profile saved!');
+    showToast('success', t('profile.savedSuccess'));
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -183,7 +186,7 @@ export default function ProfilePage() {
     try {
       const res = await fetch('/api/delete-account', { method: 'DELETE' });
       if (!res.ok) {
-        showToast('error', 'Failed to delete account. Please try again.');
+        showToast('error', t('profile.failedDelete'));
         setDeleting(false);
         setShowDeleteConfirm(false);
         return;
@@ -193,7 +196,7 @@ export default function ProfilePage() {
       router.push('/login');
       router.refresh();
     } catch {
-      showToast('error', 'Failed to delete account. Please try again.');
+      showToast('error', t('profile.failedDelete'));
       setDeleting(false);
       setShowDeleteConfirm(false);
     }
@@ -231,9 +234,9 @@ export default function ProfilePage() {
         .eq('id', user.id);
 
       setAvatarUrl(urlWithCacheBust);
-      showToast('success', 'Photo updated!');
+      showToast('success', t('profile.photoUpdated'));
     } catch {
-      showToast('error', 'Failed to upload photo');
+      showToast('error', t('profile.failedUpload'));
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -255,7 +258,7 @@ export default function ProfilePage() {
     <div className="max-w-lg mx-auto px-4">
       {ToastContainer}
       <div className="sticky top-0 z-20 bg-bg pb-4 -mx-4 px-4 pt-6">
-        <h1 className="text-xl font-bold text-text-primary">Profile</h1>
+        <h1 className="text-xl font-bold text-text-primary">{t('profile.title')}</h1>
       </div>
 
       {!profile ? (
@@ -298,32 +301,56 @@ export default function ProfilePage() {
               className="hidden"
               onChange={handleAvatarUpload}
             />
-            <p className="text-xl font-semibold text-text-primary">{displayName || 'No name'}</p>
+            <p className="text-xl font-semibold text-text-primary">{displayName || t('common.noName')}</p>
             {username && (
               <p className="text-sm text-text-tertiary mt-0.5">@{username}</p>
             )}
           </div>
 
+          {/* Language section */}
+          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-4 mb-2">{t('profile.language')}</p>
+          <div className="bg-surface rounded-2xl overflow-hidden">
+            <div className={rowClass}>
+              <span className="text-sm text-text-primary shrink-0 mr-3">{t('profile.language')}</span>
+              <div className="flex gap-1">
+                {([['id', 'Bahasa'], ['en', 'English']] as const).map(([code, label]) => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => setLocale(code as Locale)}
+                    className={`px-2.5 py-1 rounded-lg text-xs transition-all ${
+                      locale === code
+                        ? 'bg-surface-hover text-text-primary font-semibold'
+                        : 'text-text-muted hover:text-text-secondary'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Account section */}
-          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-4 mb-2">Account</p>
+          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">{t('profile.account')}</p>
           <div className="bg-surface rounded-2xl overflow-hidden">
             {/* Display Name */}
             <div className={`${rowClass} ${dividerClass}`}>
-              <label htmlFor="displayName" className="text-sm text-text-primary shrink-0 mr-4">Display Name</label>
+              <label htmlFor="displayName" className="text-sm text-text-primary shrink-0 mr-4">{t('profile.displayName')}</label>
               <input
                 id="displayName"
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className={`${inputClass} flex-1 min-w-0`}
-                placeholder="Your name"
+                placeholder={t('profile.displayNamePlaceholder')}
               />
             </div>
 
             {/* Username */}
             <div className={dividerClass}>
               <div className={rowClass}>
-                <label htmlFor="username" className="text-sm text-text-primary shrink-0 mr-4">Username</label>
+                <label htmlFor="username" className="text-sm text-text-primary shrink-0 mr-4">{t('profile.username')}</label>
                 <input
                   id="username"
                   type="text"
@@ -334,7 +361,7 @@ export default function ProfilePage() {
                   }}
                   maxLength={20}
                   className={`${inputClass} flex-1 min-w-0`}
-                  placeholder="your_username"
+                  placeholder={t('profile.usernamePlaceholder')}
                   autoCapitalize="none"
                 />
               </div>
@@ -346,7 +373,7 @@ export default function ProfilePage() {
             {/* Email (read-only, only show real emails) */}
             {user?.email && !user.email.endsWith('@rajin.app') && (
               <div className={`${rowClass} ${dividerClass}`}>
-                <span className="text-sm text-text-primary shrink-0 mr-4">Email</span>
+                <span className="text-sm text-text-primary shrink-0 mr-4">{t('profile.email')}</span>
                 <span className="text-sm text-text-tertiary truncate">{user.email}</span>
               </div>
             )}
@@ -354,7 +381,7 @@ export default function ProfilePage() {
             {/* Calorie Target */}
             <div className={calorieMode !== 'maintenance' ? dividerClass : ''}>
               <div className={`${rowClass}`}>
-                <span className="text-sm text-text-primary shrink-0 mr-3">Calorie Target</span>
+                <span className="text-sm text-text-primary shrink-0 mr-3">{t('profile.calorieTarget')}</span>
                 <div className="flex gap-1">
                   {(['deficit', 'maintenance', 'surplus'] as const).map((mode) => (
                     <button
@@ -370,7 +397,7 @@ export default function ProfilePage() {
                           : 'text-text-muted hover:text-text-secondary'
                       }`}
                     >
-                      {mode === 'deficit' ? 'Deficit' : mode === 'maintenance' ? 'Maint.' : 'Surplus'}
+                      {mode === 'deficit' ? t('profile.deficit') : mode === 'maintenance' ? t('profile.maintenance') : t('profile.surplus')}
                     </button>
                   ))}
                 </div>
@@ -394,7 +421,7 @@ export default function ProfilePage() {
                       placeholder="500"
                     />
                     <span className="text-xs text-text-tertiary">
-                      cal {calorieMode === 'deficit' ? 'below' : 'above'} TDEE
+                      {calorieMode === 'deficit' ? t('profile.belowTdee') : t('profile.aboveTdee')}
                     </span>
                   </div>
                   {errors.calorieAmount && (
@@ -406,12 +433,12 @@ export default function ProfilePage() {
           </div>
 
           {/* Body Stats section */}
-          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">Body Stats</p>
+          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">{t('profile.bodyStats')}</p>
           <div className="bg-surface rounded-2xl overflow-hidden">
             {/* Date of Birth */}
             <div className={dividerClass}>
               <div className={rowClass}>
-                <label htmlFor="dob" className="text-sm text-text-primary shrink-0 mr-4">Date of Birth</label>
+                <label htmlFor="dob" className="text-sm text-text-primary shrink-0 mr-4">{t('profile.dob')}</label>
                 <input
                   id="dob"
                   type="date"
@@ -431,20 +458,20 @@ export default function ProfilePage() {
 
             {/* Gender */}
             <div className={`${rowClass} ${dividerClass}`}>
-              <span className="text-sm text-text-primary shrink-0 mr-4">Gender</span>
+              <span className="text-sm text-text-primary shrink-0 mr-4">{t('profile.gender')}</span>
               <div className="flex gap-1">
                 {(['male', 'female'] as const).map((g) => (
                   <button
                     key={g}
                     type="button"
                     onClick={() => setGender(g)}
-                    className={`px-3 py-1 rounded-lg text-xs transition-all capitalize ${
+                    className={`px-3 py-1 rounded-lg text-xs transition-all ${
                       gender === g
                         ? 'bg-surface-hover text-text-primary font-semibold'
                         : 'text-text-muted hover:text-text-secondary'
                     }`}
                   >
-                    {g}
+                    {g === 'male' ? t('profile.male') : t('profile.female')}
                   </button>
                 ))}
               </div>
@@ -453,7 +480,7 @@ export default function ProfilePage() {
             {/* Height */}
             <div className={dividerClass}>
               <div className={rowClass}>
-                <label htmlFor="height" className="text-sm text-text-primary shrink-0 mr-4">Height</label>
+                <label htmlFor="height" className="text-sm text-text-primary shrink-0 mr-4">{t('profile.height')}</label>
                 <div className="flex items-center gap-1.5">
                   <input
                     id="height"
@@ -482,7 +509,7 @@ export default function ProfilePage() {
             {/* Weight */}
             <div>
               <div className={rowClass}>
-                <label htmlFor="weight" className="text-sm text-text-primary shrink-0 mr-4">Weight</label>
+                <label htmlFor="weight" className="text-sm text-text-primary shrink-0 mr-4">{t('profile.weight')}</label>
                 <div className="flex items-center gap-1.5">
                   <input
                     id="weight"
@@ -514,7 +541,7 @@ export default function ProfilePage() {
             disabled={saving}
             className="w-full mt-6 py-3 bg-accent hover:bg-accent-hover text-accent-fg font-medium rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
           >
-            {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
+            {saving ? t('common.saving') : saved ? t('common.saved') : t('profile.saveChanges')}
           </button>
         </>
       )}
@@ -523,21 +550,22 @@ export default function ProfilePage() {
         onClick={handleSignOut}
         className="w-full mt-10 py-3 text-text-secondary hover:text-danger-text font-medium rounded-xl hover:bg-danger-surface transition-all"
       >
-        Sign Out
+        {t('profile.signOut')}
       </button>
 
       <button
         onClick={() => setShowDeleteConfirm(true)}
         className="w-full mt-2 py-3 text-text-tertiary text-xs hover:text-danger-text transition-colors"
       >
-        Delete Account
+        {t('profile.deleteAccount')}
       </button>
 
       <ConfirmDialog
         open={showDeleteConfirm}
-        title="Delete Account"
-        message="This will permanently delete your account and all your data (habits, food logs, exercise logs). This cannot be undone."
-        confirmLabel={deleting ? 'Deleting...' : 'Delete Account'}
+        title={t('profile.deleteAccount')}
+        message={t('profile.deleteAccountMsg')}
+        confirmLabel={deleting ? t('profile.deleting') : t('profile.deleteAccount')}
+        cancelLabel={t('common.cancel')}
         onConfirm={handleDeleteAccount}
         onCancel={() => !deleting && setShowDeleteConfirm(false)}
       />

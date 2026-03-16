@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { clamp } from '@/lib/validation';
 import type { ChatContext, FoodEdit, ExerciseEdit } from '@/lib/types';
 
-const BASE_PROMPT = `You are a nutrition and exercise assistant. You MUST reply in the same language the user writes in. If they write in English, reply in English. If they write in Bahasa Indonesia, reply in Bahasa Indonesia. If they write in Chinese, reply in Chinese. This applies to any language — always match the user's language.
+const BASE_PROMPT = `You are a nutrition and exercise assistant. You will receive a language directive below — always respond in that language.
 
 You can:
 1. **Log food/exercise** — parse what the user ate or did and return structured data
@@ -44,8 +44,14 @@ Exercise calorie estimates:
 
 Determine meal_type based on context or time mentioned. Default to "lunch" if unclear.`;
 
-function buildSystemPrompt(context?: ChatContext): string {
+function buildSystemPrompt(context?: ChatContext, locale: string = 'id'): string {
   let prompt = BASE_PROMPT;
+
+  if (locale === 'en') {
+    prompt += '\n\nIMPORTANT: The user has set their language to English. Always respond in English regardless of their input language.';
+  } else {
+    prompt += '\n\nIMPORTANT: The user has set their language to Bahasa Indonesia. Always respond in Bahasa Indonesia regardless of their input language.';
+  }
 
   if (context) {
     prompt += '\n\n--- USER CONTEXT (TODAY) ---\n';
@@ -144,7 +150,7 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Input validation ---
-    const { message, context, history, image_url } = await request.json();
+    const { message, context, history, image_url, locale } = await request.json();
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -163,7 +169,8 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Build context-aware prompt ---
-    const systemPrompt = buildSystemPrompt(context as ChatContext | undefined);
+    const userLocale = locale === 'en' ? 'en' : 'id';
+    const systemPrompt = buildSystemPrompt(context as ChatContext | undefined, userLocale);
 
     // --- Build multi-turn conversation for Gemini ---
     const ai = new GoogleGenAI({ apiKey });

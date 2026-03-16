@@ -6,23 +6,26 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
+import { useLocale } from '@/lib/i18n';
 import { ServiceWorkerRegister } from './sw-register';
+import type { Locale } from '@/lib/types';
 
-const tabs = [
-  { href: '/dashboard', label: 'Overview', icon: DashboardIcon },
-  { href: '/log', label: 'Log', icon: LogIcon },
-  { href: '/chat', label: 'Chat', icon: ChatIcon },
-  { href: '/profile', label: 'Profile', icon: ProfileIcon },
+const TAB_DEFS = [
+  { href: '/dashboard', labelKey: 'nav.overview', icon: DashboardIcon },
+  { href: '/log', labelKey: 'nav.log', icon: LogIcon },
+  { href: '/chat', labelKey: 'nav.chat', icon: ChatIcon },
+  { href: '/profile', labelKey: 'nav.profile', icon: ProfileIcon },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { t, setLocale } = useLocale();
   const [ready, setReady] = useState(false);
   const checkedRef = useRef(false);
 
-  // Check if the user has completed onboarding
+  // Check if the user has completed onboarding + sync locale
   useEffect(() => {
     if (authLoading || !user || checkedRef.current) return;
     checkedRef.current = true;
@@ -31,9 +34,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       const supabase = createClient();
       const { data } = await supabase
         .from('profiles')
-        .select('onboarding_completed')
+        .select('onboarding_completed, locale')
         .eq('id', user.id)
         .single();
+
+      if (data?.locale) {
+        setLocale(data.locale as Locale);
+      }
 
       if (data && data.onboarding_completed === false) {
         router.replace('/onboarding');
@@ -44,7 +51,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     };
 
     checkOnboarding();
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, setLocale]);
 
   // Scroll to top on every page navigation (RAF + timeout for iOS reliability)
   useEffect(() => {
@@ -70,7 +77,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {children}
       <nav className="fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl safe-area-bottom z-50">
         <div className="max-w-lg mx-auto flex justify-around items-center h-16">
-          {tabs.map((tab) => {
+          {TAB_DEFS.map((tab) => {
             const isActive = pathname === tab.href;
             return (
               <Link
@@ -82,7 +89,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <tab.icon className="w-6 h-6" filled={isActive} />
-                <span className="text-[10px] font-medium">{tab.label}</span>
+                <span className="text-[10px] font-medium">{t(tab.labelKey)}</span>
               </Link>
             );
           })}

@@ -2,6 +2,7 @@ export type Frequency = 'daily' | 'weekly';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type LogSource = 'manual' | 'chat';
 export type Gender = 'male' | 'female';
+export type Locale = 'id' | 'en';
 
 export interface Profile {
   id: string;
@@ -16,6 +17,7 @@ export interface Profile {
   avatar_url: string | null;
   onboarding_completed: boolean;
   onboarding_step: number;
+  locale: Locale;
   created_at: string;
 }
 

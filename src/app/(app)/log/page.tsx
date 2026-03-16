@@ -9,6 +9,7 @@ import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import { validateCalories, validateDuration, validateMacro } from '@/lib/validation';
+import { useLocale } from '@/lib/i18n';
 import type { FoodLog, ExerciseLog, MealType } from '@/lib/types';
 
 type Tab = 'food' | 'exercise';
@@ -17,6 +18,7 @@ type Modal = 'none' | 'food' | 'exercise';
 export default function LogPage() {
   const { user } = useAuth();
   const { showToast, ToastContainer } = useToast();
+  const { t } = useLocale();
   const [tab, setTab] = useState<Tab>('food');
   const [modal, setModal] = useState<Modal>('none');
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
@@ -47,6 +49,20 @@ export default function LogPage() {
   // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'food' | 'exercise'; id: string } | null>(null);
 
+  const mealLabel = (type: string) => {
+    if (type === 'breakfast') return t('meal.breakfast');
+    if (type === 'lunch') return t('meal.lunch');
+    if (type === 'dinner') return t('meal.dinner');
+    return t('meal.other');
+  };
+
+  const mealOptions: { value: MealType; label: string }[] = [
+    { value: 'breakfast', label: t('meal.breakfast') },
+    { value: 'lunch', label: t('meal.lunch') },
+    { value: 'dinner', label: t('meal.dinner') },
+    { value: 'snack', label: t('meal.other') },
+  ];
+
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -58,7 +74,7 @@ export default function LogPage() {
       .eq('user_id', user.id)
       .eq('date', date)
       .order('created_at', { ascending: false });
-    if (foodError) showToast('error', 'Failed to load food logs');
+    if (foodError) showToast('error', t('dashboard.failedLoadFood'));
     if (food) setFoodLogs(food);
 
     const { data: exercise, error: exerciseError } = await supabase
@@ -67,10 +83,10 @@ export default function LogPage() {
       .eq('user_id', user.id)
       .eq('date', date)
       .order('created_at', { ascending: false });
-    if (exerciseError) showToast('error', 'Failed to load exercise logs');
+    if (exerciseError) showToast('error', t('dashboard.failedLoadExercise'));
     if (exercise) setExerciseLogs(exercise);
     setLoading(false);
-  }, [user, date, showToast]);
+  }, [user, date, showToast, t]);
 
   useEffect(() => {
     fetchData();
@@ -94,7 +110,7 @@ export default function LogPage() {
 
     const cal = validateCalories(calories);
     if (cal === null) {
-      showToast('error', 'Calories must be between 0 and 20,000');
+      showToast('error', t('log.failedCalories'));
       return;
     }
     const prot = proteinG ? validateMacro(proteinG) : null;
@@ -102,7 +118,7 @@ export default function LogPage() {
     const fat = fatG ? validateMacro(fatG) : null;
 
     if ((proteinG && prot === null) || (carbsG && carbs === null) || (fatG && fat === null)) {
-      showToast('error', 'Macros must be between 0 and 5,000g');
+      showToast('error', t('log.failedMacros'));
       return;
     }
 
@@ -123,7 +139,7 @@ export default function LogPage() {
       : await supabase.from('food_logs').insert({ ...fields, user_id: user.id, date, source: 'manual' as const });
 
     if (error) {
-      showToast('error', `Failed to ${editingFood ? 'update' : 'save'} food log`);
+      showToast('error', editingFood ? t('log.failedUpdateFood') : t('log.failedSaveFood'));
       setSaving(false);
       return;
     }
@@ -138,12 +154,12 @@ export default function LogPage() {
 
     const dur = validateDuration(duration);
     if (dur === null) {
-      showToast('error', 'Duration must be between 0 and 1,440 minutes');
+      showToast('error', t('log.failedDuration'));
       return;
     }
     const burned = caloriesBurned ? validateCalories(caloriesBurned) : 0;
     if (burned === null) {
-      showToast('error', 'Calories burned must be between 0 and 20,000');
+      showToast('error', t('log.failedCalBurned'));
       return;
     }
 
@@ -162,7 +178,7 @@ export default function LogPage() {
       : await supabase.from('exercise_logs').insert({ ...fields, user_id: user.id, date, source: 'manual' as const });
 
     if (error) {
-      showToast('error', `Failed to ${editingExercise ? 'update' : 'save'} exercise log`);
+      showToast('error', editingExercise ? t('log.failedUpdateExercise') : t('log.failedSaveExercise'));
       setSaving(false);
       return;
     }
@@ -180,7 +196,7 @@ export default function LogPage() {
     const { error } = await supabase.from(table).delete().eq('id', deleteTarget.id);
 
     if (error) {
-      showToast('error', `Failed to delete ${deleteTarget.type} log`);
+      showToast('error', deleteTarget.type === 'food' ? t('log.failedDeleteFood') : t('log.failedDeleteExercise'));
     }
 
     setDeleteTarget(null);
@@ -230,22 +246,22 @@ export default function LogPage() {
       {ToastContainer}
       <div className="sticky top-0 z-20 bg-bg -mx-4 px-4 pt-6 pb-3">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-text-primary">Log</h1>
+          <h1 className="text-xl font-bold text-text-primary">{t('log.title')}</h1>
           <DateNav date={date} onDateChange={handleDateChange} />
         </div>
 
         {/* Tab Switcher */}
         <div className="flex bg-surface-secondary rounded-xl p-1">
-          {(['food', 'exercise'] as const).map((t) => (
+          {(['food', 'exercise'] as const).map((tabKey) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tabKey}
+              onClick={() => setTab(tabKey)}
               className={cn(
                 'flex-1 py-2 text-sm font-medium rounded-lg transition-all capitalize',
-                tab === t ? 'bg-surface text-text-primary shadow-sm' : 'text-text-secondary'
+                tab === tabKey ? 'bg-surface text-text-primary shadow-sm' : 'text-text-secondary'
               )}
             >
-              {t === 'food' ? '🍽️ Diet' : '🏃 Exercise'}
+              {tabKey === 'food' ? t('log.food') : t('log.exercise')}
             </button>
           ))}
         </div>
@@ -260,20 +276,20 @@ export default function LogPage() {
             <div className="space-y-3">
               {foodLogs.length === 0 ? (
                 <div className="bg-surface rounded-2xl p-5 text-center">
-                  <p className="text-text-tertiary text-sm">No food logged today</p>
+                  <p className="text-text-tertiary text-sm">{t('log.noFoodLogged')}</p>
                 </div>
               ) : (
                 foodLogs.map((log, i) => (
                   <div key={log.id} onClick={() => startEditFood(log)} className="bg-surface rounded-2xl p-5 animate-stagger-in cursor-pointer hover:bg-surface-hover transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="text-xs font-medium text-accent-text uppercase">{log.meal_type === 'snack' ? 'Other' : log.meal_type}</span>
+                        <span className="text-xs font-medium text-accent-text uppercase">{mealLabel(log.meal_type)}</span>
                         <p className="text-sm font-medium text-text-primary mt-0.5">{log.description}</p>
                         <p className="text-xs text-text-tertiary mt-1">
-                          {log.calories} cal
-                          {log.protein_g && ` · ${log.protein_g}g protein`}
-                          {log.carbs_g && ` · ${log.carbs_g}g carbs`}
-                          {log.fat_g && ` · ${log.fat_g}g fat`}
+                          {log.calories} {t('common.cal')}
+                          {log.protein_g && ` · ${log.protein_g}g ${t('log.protein')}`}
+                          {log.carbs_g && ` · ${log.carbs_g}g ${t('log.carbs')}`}
+                          {log.fat_g && ` · ${log.fat_g}g ${t('log.fat')}`}
                         </p>
                       </div>
                       <button
@@ -297,7 +313,7 @@ export default function LogPage() {
             <div className="space-y-3">
               {exerciseLogs.length === 0 ? (
                 <div className="bg-surface rounded-2xl p-5 text-center">
-                  <p className="text-text-tertiary text-sm">No exercise logged today</p>
+                  <p className="text-text-tertiary text-sm">{t('log.noExerciseLogged')}</p>
                 </div>
               ) : (
                 exerciseLogs.map((log, i) => (
@@ -306,7 +322,7 @@ export default function LogPage() {
                       <div>
                         <p className="text-sm font-medium text-text-primary">{log.exercise_type}</p>
                         <p className="text-xs text-text-tertiary mt-1">
-                          {log.duration_minutes} min · {log.calories_burned} cal burned
+                          {log.duration_minutes} {t('common.min')} · {log.calories_burned} {t('log.calBurned')}
                           {log.notes && ` · ${log.notes}`}
                         </p>
                       </div>
@@ -342,10 +358,12 @@ export default function LogPage() {
       {/* Delete Confirmation */}
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Delete log"
-        message="Are you sure? This cannot be undone."
+        title={t('log.deleteLog')}
+        message={t('log.deleteConfirm')}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('common.delete')}
       />
 
       {/* Food Modal */}
@@ -355,10 +373,10 @@ export default function LogPage() {
             className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-text-primary mb-4">{editingFood ? 'Edit Diet Entry' : 'Add Diet Entry'}</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-4">{editingFood ? t('log.editDiet') : t('log.addDiet')}</h2>
 
             <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-              {([['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner'], ['snack', 'Other']] as const).map(([value, label]) => (
+              {mealOptions.map(({ value, label }) => (
                 <button
                   key={value}
                   onClick={() => setMealType(value)}
@@ -380,7 +398,7 @@ export default function LogPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className={inputClass}
-                placeholder="What did you eat?"
+                placeholder={t('log.whatDidYouEat')}
                 autoFocus
               />
               <input
@@ -390,7 +408,7 @@ export default function LogPage() {
                 value={calories}
                 onChange={(e) => setCalories(e.target.value)}
                 className={inputClass}
-                placeholder="Calories"
+                placeholder={t('log.calories')}
               />
               <div className="grid grid-cols-3 gap-2">
                 <input
@@ -399,7 +417,7 @@ export default function LogPage() {
                   value={proteinG}
                   onChange={(e) => setProteinG(e.target.value)}
                   className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                  placeholder="Protein (g)"
+                  placeholder={t('log.proteinG')}
                 />
                 <input
                   type="number"
@@ -407,7 +425,7 @@ export default function LogPage() {
                   value={carbsG}
                   onChange={(e) => setCarbsG(e.target.value)}
                   className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                  placeholder="Carbs (g)"
+                  placeholder={t('log.carbsG')}
                 />
                 <input
                   type="number"
@@ -415,7 +433,7 @@ export default function LogPage() {
                   value={fatG}
                   onChange={(e) => setFatG(e.target.value)}
                   className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                  placeholder="Fat (g)"
+                  placeholder={t('log.fatG')}
                 />
               </div>
               <button
@@ -423,7 +441,7 @@ export default function LogPage() {
                 disabled={saving || !description.trim() || !calories}
                 className="w-full py-3 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
               >
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -437,7 +455,7 @@ export default function LogPage() {
             className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-text-primary mb-4">{editingExercise ? 'Edit Exercise' : 'Add Exercise'}</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-4">{editingExercise ? t('log.editExercise') : t('log.addExercise')}</h2>
 
             <div className="space-y-3">
               <input
@@ -445,7 +463,7 @@ export default function LogPage() {
                 value={exerciseType}
                 onChange={(e) => setExerciseType(e.target.value)}
                 className={inputClass}
-                placeholder="Exercise type (e.g., Running)"
+                placeholder={t('log.exerciseType')}
                 autoFocus
               />
               <div className="grid grid-cols-2 gap-2">
@@ -456,7 +474,7 @@ export default function LogPage() {
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
-                  placeholder="Duration (min)"
+                  placeholder={t('log.durationMin')}
                 />
                 <input
                   type="number"
@@ -465,7 +483,7 @@ export default function LogPage() {
                   value={caloriesBurned}
                   onChange={(e) => setCaloriesBurned(e.target.value)}
                   className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
-                  placeholder="Calories burned"
+                  placeholder={t('log.caloriesBurned')}
                 />
               </div>
               <input
@@ -473,14 +491,14 @@ export default function LogPage() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className={inputClass}
-                placeholder="Notes (optional)"
+                placeholder={t('log.notesOptional')}
               />
               <button
                 onClick={saveExerciseLog}
                 disabled={saving || !exerciseType.trim() || !duration}
                 className="w-full py-3 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
               >
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>

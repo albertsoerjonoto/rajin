@@ -1,3 +1,5 @@
+import type { Locale } from './types';
+
 // Hardcoded to Jakarta for now — will switch to user's local timezone later
 const TIMEZONE = 'Asia/Jakarta';
 
@@ -9,22 +11,24 @@ export function getToday(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: TIMEZONE });
 }
 
+const DATE_LOCALE_MAP: Record<Locale, string> = { id: 'id-ID', en: 'en-US' };
+
 /**
  * Format a YYYY-MM-DD string into a display string, with special labels
  * for Today / Yesterday / Tomorrow.
  */
-export function formatDisplayDate(dateStr: string): string {
+export function formatDisplayDate(dateStr: string, locale: Locale = 'id'): string {
   const today = getToday();
   const yesterday = addDays(today, -1);
   const tomorrow = addDays(today, 1);
 
-  if (dateStr === today) return 'Today';
-  if (dateStr === yesterday) return 'Yesterday';
-  if (dateStr === tomorrow) return 'Tomorrow';
+  if (dateStr === today) return locale === 'id' ? 'Hari Ini' : 'Today';
+  if (dateStr === yesterday) return locale === 'id' ? 'Kemarin' : 'Yesterday';
+  if (dateStr === tomorrow) return locale === 'id' ? 'Besok' : 'Tomorrow';
 
   // Parse at UTC noon to avoid any timezone-shift artifacts in display
   const date = new Date(dateStr + 'T12:00:00Z');
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(DATE_LOCALE_MAP[locale], {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -48,7 +52,7 @@ export function cn(...classes: (string | boolean | undefined | null)[]): string 
 
 export type Period = 'day' | 'week' | 'month' | 'year';
 
-export function formatWeekLabel(dateStr: string): string {
+export function formatWeekLabel(dateStr: string, locale: Locale = 'id'): string {
   const today = getToday();
   const d = new Date(dateStr + 'T12:00:00Z');
   const dow = d.getUTCDay();
@@ -61,29 +65,34 @@ export function formatWeekLabel(dateStr: string): string {
   const todayMonOffset = todayDow === 0 ? -6 : 1 - todayDow;
   const thisMonday = addDays(today, todayMonOffset);
 
-  if (monday === thisMonday) return 'This Week';
-  if (monday === addDays(thisMonday, -7)) return 'Last Week';
-  if (monday === addDays(thisMonday, 7)) return 'Next Week';
+  if (monday === thisMonday) return locale === 'id' ? 'Minggu Ini' : 'This Week';
+  if (monday === addDays(thisMonday, -7)) return locale === 'id' ? 'Minggu Lalu' : 'Last Week';
+  if (monday === addDays(thisMonday, 7)) return locale === 'id' ? 'Minggu Depan' : 'Next Week';
 
+  const dl = DATE_LOCALE_MAP[locale];
   const m = new Date(monday + 'T12:00:00Z');
   const s = new Date(sunday + 'T12:00:00Z');
-  const mLabel = m.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-  const sLabel = s.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' });
+  const mLabel = m.toLocaleDateString(dl, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const sLabel = s.toLocaleDateString(dl, { day: 'numeric', timeZone: 'UTC' });
   return `${mLabel}–${sLabel}`;
 }
 
-export function formatMonthLabel(dateStr: string): string {
+export function formatMonthLabel(dateStr: string, locale: Locale = 'id'): string {
   const today = getToday();
   const d = new Date(dateStr + 'T12:00:00Z');
   const t = new Date(today + 'T12:00:00Z');
 
-  if (d.getUTCFullYear() === t.getUTCFullYear() && d.getUTCMonth() === t.getUTCMonth()) return 'This Month';
+  if (d.getUTCFullYear() === t.getUTCFullYear() && d.getUTCMonth() === t.getUTCMonth()) {
+    return locale === 'id' ? 'Bulan Ini' : 'This Month';
+  }
 
   const prevMonth = new Date(t);
   prevMonth.setUTCMonth(prevMonth.getUTCMonth() - 1);
-  if (d.getUTCFullYear() === prevMonth.getUTCFullYear() && d.getUTCMonth() === prevMonth.getUTCMonth()) return 'Last Month';
+  if (d.getUTCFullYear() === prevMonth.getUTCFullYear() && d.getUTCMonth() === prevMonth.getUTCMonth()) {
+    return locale === 'id' ? 'Bulan Lalu' : 'Last Month';
+  }
 
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString(DATE_LOCALE_MAP[locale], {
     month: 'long',
     year: d.getUTCFullYear() === t.getUTCFullYear() ? undefined : 'numeric',
     timeZone: 'UTC',

@@ -10,6 +10,7 @@ import { computeNutritionTargets } from '@/lib/nutrition';
 import { useToast } from '@/components/Toast';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import EmojiPicker from '@/components/EmojiPicker';
+import { useLocale } from '@/lib/i18n';
 import {
   DndContext,
   DragOverlay,
@@ -68,6 +69,7 @@ function SortableHabitCard({ habit, onEdit }: { habit: HabitWithLog; onEdit: (h:
 export default function DashboardPage() {
   const { user } = useAuth();
   const { showToast, ToastContainer } = useToast();
+  const { t } = useLocale();
   const [date, setDate] = useState(getToday());
   const [period, setPeriod] = useState<Period>('day');
   const [habits, setHabits] = useState<HabitWithLog[]>([]);
@@ -116,7 +118,7 @@ export default function DashboardPage() {
       )
     );
     if (results.some((r) => r.error)) {
-      showToast('error', 'Failed to save order');
+      showToast('error', t('dashboard.failedSaveOrder'));
       fetchData();
     }
   };
@@ -156,7 +158,7 @@ export default function DashboardPage() {
       .order('sort_order');
 
     if (habitsError) {
-      showToast('error', 'Failed to load habits');
+      showToast('error', t('dashboard.failedLoadHabits'));
     }
 
     const { data: logsData } = await supabase
@@ -179,7 +181,7 @@ export default function DashboardPage() {
       .eq('user_id', user.id)
       .eq('date', date)
       .order('created_at');
-    if (foodError) showToast('error', 'Failed to load food logs');
+    if (foodError) showToast('error', t('dashboard.failedLoadFood'));
     if (foodData) setFoodLogs(foodData);
 
     const { data: exerciseData, error: exerciseError } = await supabase
@@ -188,11 +190,11 @@ export default function DashboardPage() {
       .eq('user_id', user.id)
       .eq('date', date)
       .order('created_at');
-    if (exerciseError) showToast('error', 'Failed to load exercise logs');
+    if (exerciseError) showToast('error', t('dashboard.failedLoadExercise'));
     if (exerciseData) setExerciseLogs(exerciseData);
 
     setLoading(false);
-  }, [user, date, showToast]);
+  }, [user, date, showToast, t]);
 
   useEffect(() => {
     fetchData();
@@ -213,7 +215,6 @@ export default function DashboardPage() {
       if (wasCompleted && habit.log_id) {
         const { error } = await supabase.from('habit_logs').delete().eq('id', habit.log_id);
         if (error) throw error;
-        // Clear the log_id locally
         setHabits((prev) =>
           prev.map((h) => (h.id === habit.id ? { ...h, log_id: undefined } : h))
         );
@@ -229,7 +230,6 @@ export default function DashboardPage() {
           .select()
           .single();
         if (error) throw error;
-        // Store the new log_id locally
         if (data) {
           setHabits((prev) =>
             prev.map((h) => (h.id === habit.id ? { ...h, log_id: data.id } : h))
@@ -237,11 +237,10 @@ export default function DashboardPage() {
         }
       }
     } catch {
-      // Revert optimistic update on error
       setHabits((prev) =>
         prev.map((h) => (h.id === habit.id ? { ...h, completed: wasCompleted } : h))
       );
-      showToast('error', 'Failed to update habit');
+      showToast('error', t('dashboard.failedUpdateHabit'));
     }
     setTogglingId(null);
   };
@@ -258,7 +257,7 @@ export default function DashboardPage() {
     });
 
     if (error) {
-      showToast('error', 'Failed to add habit');
+      showToast('error', t('dashboard.failedAddHabit'));
       return;
     }
 
@@ -282,7 +281,7 @@ export default function DashboardPage() {
       .update({ name: editName.trim(), emoji: editEmoji || '⭐' })
       .eq('id', editingId);
     if (error) {
-      showToast('error', 'Failed to update habit');
+      showToast('error', t('dashboard.failedUpdateHabit'));
       return;
     }
     setEditingId(null);
@@ -297,7 +296,7 @@ export default function DashboardPage() {
       .update({ is_active: false })
       .eq('id', id);
     if (error) {
-      showToast('error', 'Failed to delete habit');
+      showToast('error', t('dashboard.failedDeleteHabit'));
       return;
     }
     setEditingId(null);
@@ -305,9 +304,6 @@ export default function DashboardPage() {
   };
 
   const totalCalories = foodLogs.reduce((sum, f) => sum + f.calories, 0);
-  const totalProtein = foodLogs.reduce((sum, f) => sum + (f.protein_g || 0), 0);
-  const totalCarbs = foodLogs.reduce((sum, f) => sum + (f.carbs_g || 0), 0);
-  const totalFat = foodLogs.reduce((sum, f) => sum + (f.fat_g || 0), 0);
   const totalExerciseMinutes = exerciseLogs.reduce((sum, e) => sum + e.duration_minutes, 0);
   const totalCaloriesBurned = exerciseLogs.reduce((sum, e) => sum + e.calories_burned, 0);
   const netCalories = totalCalories - totalCaloriesBurned;
@@ -319,7 +315,6 @@ export default function DashboardPage() {
     snack: foodLogs.filter((f) => f.meal_type === 'snack').reduce((s, f) => s + f.calories, 0),
   };
 
-  // Filtered values when a meal is selected
   const filteredLogs = selectedMeal ? foodLogs.filter((f) => f.meal_type === selectedMeal) : foodLogs;
   const displayCalories = selectedMeal ? mealBreakdown[selectedMeal as keyof typeof mealBreakdown] : totalCalories;
   const displayProtein = filteredLogs.reduce((sum, f) => sum + (f.protein_g || 0), 0);
@@ -331,11 +326,33 @@ export default function DashboardPage() {
   const calorieTarget = targets?.calorieTarget ?? 0;
   const caloriePercent = calorieTarget > 0 ? Math.min((displayCalories / calorieTarget) * 100, 100) : 0;
 
+  const mealKeys = [
+    { key: 'breakfast', labelKey: 'meal.breakfast' },
+    { key: 'lunch', labelKey: 'meal.lunch' },
+    { key: 'dinner', labelKey: 'meal.dinner' },
+    { key: 'snack', labelKey: 'meal.other' },
+  ] as const;
+
+  const macroLabel = (key: string) => {
+    if (key === 'Protein') return t('nutrition.protein');
+    if (key === 'Carbs') return t('nutrition.carbs');
+    if (key === 'Fat') return t('nutrition.fat');
+    return key;
+  };
+
+  const deltaLabel = targets ? (
+    Math.abs(targets.calorieOffset) <= 50
+      ? t('nutrition.maintenance')
+      : targets.calorieOffset < 0
+        ? `${Math.abs(targets.calorieOffset)} ${t('nutrition.calDeficit')}`
+        : `${targets.calorieOffset} ${t('nutrition.calSurplus')}`
+  ) : '';
+
   return (
     <div className="max-w-lg mx-auto px-4">
       {ToastContainer}
       <div className="sticky top-0 z-20 bg-bg flex items-center justify-between pb-4 -mx-4 px-4 pt-6">
-        <h1 className="text-xl font-bold text-text-primary">Overview</h1>
+        <h1 className="text-xl font-bold text-text-primary">{t('nav.overview')}</h1>
         <DateNav date={date} onDateChange={setDate} period={period} onPeriodChange={setPeriod} showPeriodPicker />
       </div>
 
@@ -346,17 +363,17 @@ export default function DashboardPage() {
           {/* Habits Section */}
           <section className="mb-6 animate-stagger-in" style={{ animationDelay: '0ms' }}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-text-primary">Habits</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t('dashboard.habits')}</h2>
               <div className="flex items-center gap-3">
                 <button onClick={() => { setShowAddHabit(true); setEditMode(false); setEditingId(null); }} className="text-accent-text text-sm font-medium transition-all duration-200">
-                  Add
+                  {t('common.add')}
                 </button>
                 {habits.length > 0 && (
                   <button
                     onClick={() => { setEditMode(!editMode); setEditingId(null); }}
                     className="text-accent-text text-sm font-medium transition-all duration-200"
                   >
-                    {editMode ? 'Done' : 'Edit'}
+                    {editMode ? t('common.done') : t('common.edit')}
                   </button>
                 )}
               </div>
@@ -371,16 +388,16 @@ export default function DashboardPage() {
                     value={newHabitName}
                     onChange={(e) => setNewHabitName(e.target.value)}
                     className="flex-1 px-3 py-2 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring"
-                    placeholder="Habit name"
+                    placeholder={t('dashboard.habitPlaceholder')}
                     autoFocus
                   />
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-text-secondary rounded-xl hover:bg-surface-hover transition-all duration-200">
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button onClick={addHabit} className="flex-1 py-2 text-sm text-accent-fg bg-accent rounded-xl hover:bg-accent-hover transition-all duration-200 active:scale-[0.98]">
-                    Add Habit
+                    {t('dashboard.addHabit')}
                   </button>
                 </div>
               </div>
@@ -388,7 +405,7 @@ export default function DashboardPage() {
 
             {habits.length === 0 && !showAddHabit ? (
               <div className="bg-surface rounded-2xl p-6 text-center">
-                <p className="text-text-tertiary text-sm">No habits yet. Tap Add to create one!</p>
+                <p className="text-text-tertiary text-sm">{t('dashboard.noHabits')}</p>
               </div>
             ) : editMode ? (
               <DndContext
@@ -420,20 +437,20 @@ export default function DashboardPage() {
                               onClick={() => deleteHabit(habit.id)}
                               className="py-2 px-3 text-sm text-danger-text rounded-xl hover:bg-danger-surface transition-all duration-200"
                             >
-                              Delete
+                              {t('common.delete')}
                             </button>
                             <div className="flex-1" />
                             <button
                               onClick={() => setEditingId(null)}
                               className="py-2 px-3 text-sm text-text-secondary rounded-xl hover:bg-surface-hover transition-all duration-200"
                             >
-                              Cancel
+                              {t('common.cancel')}
                             </button>
                             <button
                               onClick={saveEdit}
                               className="py-2 px-4 text-sm text-accent-fg bg-accent rounded-xl hover:bg-accent-hover transition-all duration-200 active:scale-[0.98]"
                             >
-                              Save
+                              {t('common.save')}
                             </button>
                           </div>
                         </div>
@@ -497,7 +514,7 @@ export default function DashboardPage() {
 
           {/* Diet Section */}
           <section className="mb-6 animate-stagger-in" style={{ animationDelay: '50ms' }}>
-            <h2 className="text-lg font-semibold text-text-primary mb-3">Diet</h2>
+            <h2 className="text-lg font-semibold text-text-primary mb-3">{t('dashboard.diet')}</h2>
             <div className="bg-surface rounded-2xl p-5">
               {/* Calorie Summary */}
               {hasBodyStats ? (
@@ -505,15 +522,15 @@ export default function DashboardPage() {
                   <div className="flex items-baseline justify-between mb-2">
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-3xl font-bold text-text-primary transition-all duration-300">{displayCalories}</span>
-                      <span className="text-sm text-text-tertiary">cal</span>
+                      <span className="text-sm text-text-tertiary">{t('common.cal')}</span>
                     </div>
                     {selectedMeal ? (
                       <span className="text-xs text-accent-text font-medium">
-                        {selectedMeal === 'snack' ? 'Other' : selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1)} only
+                        {t(`meal.${selectedMeal === 'snack' ? 'other' : selectedMeal}`)} {t('dashboard.only')}
                       </span>
                     ) : (
                       <span className="text-xs text-text-tertiary">
-                        of {targets!.calorieRange.min}–{targets!.calorieRange.max}
+                        {t('dashboard.of')} {targets!.calorieRange.min}–{targets!.calorieRange.max}
                       </span>
                     )}
                   </div>
@@ -534,17 +551,17 @@ export default function DashboardPage() {
                 <div className="mb-4">
                   <div className="flex items-baseline gap-1.5">
                     <p className="text-3xl font-bold text-text-primary transition-all duration-300">{displayCalories}</p>
-                    <span className="text-sm text-text-tertiary">cal</span>
+                    <span className="text-sm text-text-tertiary">{t('common.cal')}</span>
                   </div>
                   {selectedMeal ? (
                     <p className="text-xs text-accent-text font-medium mt-0.5">
-                      {selectedMeal === 'snack' ? 'Other' : selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1)} only
+                      {t(`meal.${selectedMeal === 'snack' ? 'other' : selectedMeal}`)} {t('dashboard.only')}
                     </p>
                   ) : (
                     <>
-                      <p className="text-xs text-text-tertiary mt-0.5">eaten today</p>
+                      <p className="text-xs text-text-tertiary mt-0.5">{t('dashboard.eatenToday')}</p>
                       <p className="text-[11px] text-text-tertiary mt-1">
-                        Add your stats in Profile to see your calorie range
+                        {t('dashboard.addStatsHint')}
                       </p>
                     </>
                   )}
@@ -553,7 +570,7 @@ export default function DashboardPage() {
 
               {/* Meal Breakdown */}
               <div className="grid grid-cols-4 gap-2">
-                {([['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner'], ['snack', 'Other']] as const).map(([key, label]) => (
+                {mealKeys.map(({ key, labelKey }) => (
                   <button
                     key={key}
                     type="button"
@@ -565,8 +582,8 @@ export default function DashboardPage() {
                         : 'hover:bg-surface-secondary active:scale-[0.97]'
                     )}
                   >
-                    <p className={cn('text-[11px]', selectedMeal === key ? 'text-accent-fg/70' : 'text-text-tertiary')}>{label}</p>
-                    <p className={cn('text-sm font-semibold', selectedMeal === key ? 'text-accent-fg' : 'text-text-label')}>{mealBreakdown[key]}</p>
+                    <p className={cn('text-[11px]', selectedMeal === key ? 'text-accent-fg/70' : 'text-text-tertiary')}>{t(labelKey)}</p>
+                    <p className={cn('text-sm font-semibold', selectedMeal === key ? 'text-accent-fg' : 'text-text-label')}>{mealBreakdown[key as keyof typeof mealBreakdown]}</p>
                   </button>
                 ))}
               </div>
@@ -583,12 +600,12 @@ export default function DashboardPage() {
                         targets.calorieOffset < -50 ? 'text-info' :
                         targets.calorieOffset > 50 ? 'text-warning' : 'text-positive-text'
                       )}>
-                        {targets.deltaLabel}
+                        {deltaLabel}
                       </span>
                       {totalCaloriesBurned > 0 && (
                         <>
                           <span>·</span>
-                          <span>{totalCalories} in · {totalCaloriesBurned} out · {netCalories} net</span>
+                          <span>{totalCalories} {t('dashboard.in')} · {totalCaloriesBurned} {t('dashboard.out')} · {netCalories} {t('dashboard.net')}</span>
                         </>
                       )}
                     </div>
@@ -609,7 +626,7 @@ export default function DashboardPage() {
                       return (
                         <div key={macro.label}>
                           <div className="flex justify-between items-baseline mb-1">
-                            <span className="text-xs font-medium text-text-muted">{macro.label}</span>
+                            <span className="text-xs font-medium text-text-muted">{macroLabel(macro.label)}</span>
                             <span className="text-xs text-text-tertiary">
                               <span className={cn(
                                 'font-semibold transition-all duration-300',
@@ -645,24 +662,24 @@ export default function DashboardPage() {
 
           {/* Exercise Section */}
           <section className="mb-6 animate-stagger-in" style={{ animationDelay: '100ms' }}>
-            <h2 className="text-lg font-semibold text-text-primary mb-3">Exercise</h2>
+            <h2 className="text-lg font-semibold text-text-primary mb-3">{t('dashboard.exercise')}</h2>
             <div className="bg-surface rounded-2xl p-5">
               {exerciseLogs.length === 0 ? (
-                <p className="text-sm text-text-tertiary text-center">No exercise logged today</p>
+                <p className="text-sm text-text-tertiary text-center">{t('dashboard.noExercise')}</p>
               ) : (
                 <>
                   <div className="flex items-center gap-3">
                     <div className="text-center flex-1">
                       <p className="text-3xl font-bold text-text-primary">
                         {totalExerciseMinutes}
-                        <span className="text-sm font-normal text-text-tertiary ml-1">min</span>
+                        <span className="text-sm font-normal text-text-tertiary ml-1">{t('common.min')}</span>
                       </p>
                     </div>
                     <div className="w-px h-10 bg-border-strong" />
                     <div className="text-center flex-1">
                       <p className="text-3xl font-bold text-text-primary">
                         {totalCaloriesBurned}
-                        <span className="text-sm font-normal text-text-tertiary ml-1">cal</span>
+                        <span className="text-sm font-normal text-text-tertiary ml-1">{t('common.cal')}</span>
                       </p>
                     </div>
                   </div>
@@ -671,7 +688,7 @@ export default function DashboardPage() {
                       <div key={log.id} className="flex items-center justify-between">
                         <p className="text-sm font-medium text-text-primary">{log.exercise_type}</p>
                         <p className="text-xs text-text-secondary">
-                          {log.duration_minutes} min · {log.calories_burned} cal
+                          {log.duration_minutes} {t('common.min')} · {log.calories_burned} {t('common.cal')}
                         </p>
                       </div>
                     ))}

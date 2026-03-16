@@ -7,21 +7,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/Toast';
 import { cn } from '@/lib/utils';
 import { validateDOB, validateBodyStat } from '@/lib/validation';
+import { useLocale } from '@/lib/i18n';
 import type { Gender } from '@/lib/types';
 
 const TOTAL_STEPS = 4;
-
-const STEPS = [
-  { emoji: '👋', title: 'What should we call you?', subtitle: 'You can always change this later' },
-  { emoji: '⚡', title: "What's your gender?", subtitle: 'Used to calculate your daily nutrition needs' },
-  { emoji: '🎂', title: 'When were you born?', subtitle: 'Helps us estimate your calorie needs' },
-  { emoji: '📏', title: 'Your body measurements', subtitle: 'For more accurate calorie recommendations' },
-];
 
 export default function OnboardingPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { showToast, ToastContainer } = useToast();
+  const { t } = useLocale();
   const fetchedRef = useRef(false);
 
   const [step, setStep] = useState(0);
@@ -35,6 +30,13 @@ export default function OnboardingPage() {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [heightCm, setHeightCm] = useState('');
   const [weightKg, setWeightKg] = useState('');
+
+  const steps = [
+    { emoji: '👋', title: t('onboarding.nameTitle'), subtitle: t('onboarding.nameSubtitle') },
+    { emoji: '⚡', title: t('onboarding.genderTitle'), subtitle: t('onboarding.genderSubtitle') },
+    { emoji: '🎂', title: t('onboarding.dobTitle'), subtitle: t('onboarding.dobSubtitle') },
+    { emoji: '📏', title: t('onboarding.bodyTitle'), subtitle: t('onboarding.bodySubtitle') },
+  ];
 
   // Fetch profile on mount — pre-populate and redirect if already onboarded
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function OnboardingPage() {
       .eq('id', user.id);
     setSaving(false);
     if (error) {
-      showToast('error', 'Failed to save. Please try again.');
+      showToast('error', t('onboarding.failedSave'));
       return false;
     }
     return true;
@@ -106,7 +108,7 @@ export default function OnboardingPage() {
       if (!ok) return;
     } else if (step === 2) {
       if (dateOfBirth && !validateDOB(dateOfBirth)) {
-        showToast('error', 'Please enter a valid date of birth');
+        showToast('error', t('onboarding.invalidDob'));
         return;
       }
       const fields: Record<string, unknown> = { onboarding_step: nextStep };
@@ -119,7 +121,7 @@ export default function OnboardingPage() {
       if (heightCm) {
         const h = validateBodyStat(heightCm, 50, 300);
         if (h === null) {
-          showToast('error', 'Height must be between 50 and 300 cm');
+          showToast('error', t('onboarding.heightRange'));
           return;
         }
         fields.height_cm = h;
@@ -127,7 +129,7 @@ export default function OnboardingPage() {
       if (weightKg) {
         const w = validateBodyStat(weightKg, 10, 500);
         if (w === null) {
-          showToast('error', 'Weight must be between 10 and 500 kg');
+          showToast('error', t('onboarding.weightRange'));
           return;
         }
         fields.weight_kg = w;
@@ -210,7 +212,7 @@ export default function OnboardingPage() {
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
-            <span className="text-sm">Back</span>
+            <span className="text-sm">{t('common.back')}</span>
           </button>
         )}
       </div>
@@ -226,15 +228,15 @@ export default function OnboardingPage() {
         >
           {/* Emoji */}
           <div className="text-center mb-6">
-            <span className="text-6xl">{STEPS[step].emoji}</span>
+            <span className="text-6xl">{steps[step].emoji}</span>
           </div>
 
           {/* Title + Subtitle */}
           <h1 className="text-2xl font-bold text-text-primary text-center mb-2">
-            {STEPS[step].title}
+            {steps[step].title}
           </h1>
           <p className="text-sm text-text-tertiary text-center mb-8">
-            {STEPS[step].subtitle}
+            {steps[step].subtitle}
           </p>
 
           {/* Input Area */}
@@ -251,7 +253,7 @@ export default function OnboardingPage() {
                   }
                 }}
                 className={inputClass}
-                placeholder="Your name"
+                placeholder={t('onboarding.yourName')}
                 autoFocus
               />
             )}
@@ -274,20 +276,20 @@ export default function OnboardingPage() {
                         : 'bg-surface text-text-muted border border-border-strong hover:border-accent-border'
                     )}
                   >
-                    {g === 'male' ? '👨 Male' : '👩 Female'}
+                    {g === 'male' ? t('onboarding.male') : t('onboarding.female')}
                   </button>
                 ))}
               </div>
             )}
 
             {step === 2 && (
-              <DOBPicker value={dateOfBirth} onChange={setDateOfBirth} />
+              <DOBPicker value={dateOfBirth} onChange={setDateOfBirth} t={t} />
             )}
 
             {step === 3 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-muted mb-1.5">Height</label>
+                  <label className="block text-sm font-medium text-text-muted mb-1.5">{t('onboarding.height')}</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -304,7 +306,7 @@ export default function OnboardingPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-muted mb-1.5">Weight</label>
+                  <label className="block text-sm font-medium text-text-muted mb-1.5">{t('onboarding.weight')}</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -331,14 +333,14 @@ export default function OnboardingPage() {
             disabled={saving}
             className="w-full py-3.5 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 text-base"
           >
-            {saving ? 'Saving...' : step === 3 ? 'Get Started' : 'Continue'}
+            {saving ? t('common.saving') : step === 3 ? t('common.getStarted') : t('common.continue')}
           </button>
           <button
             onClick={handleSkip}
             disabled={saving}
             className="w-full py-2 text-text-tertiary text-sm font-medium hover:text-text-muted transition-colors"
           >
-            {step === 3 ? 'Skip for now' : 'Skip'}
+            {step === 3 ? t('common.skipForNow') : t('common.skip')}
           </button>
         </div>
       </div>
@@ -348,12 +350,7 @@ export default function OnboardingPage() {
 
 // ── Custom DOB Picker: Year → Month → Day ──────────────────────────
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function DOBPicker({ value, onChange, t }: { value: string; onChange: (v: string) => void; t: (key: string) => string }) {
   // Parse existing value
   const parsed = value ? { year: +value.slice(0, 4), month: +value.slice(5, 7), day: +value.slice(8, 10) } : null;
 
@@ -382,12 +379,12 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
     container.scrollTop = Math.max(0, targetIndex * itemHeight - containerHeight / 2 + itemHeight / 2);
   }, [pickerStep, selectedYear, currentYear]);
 
-  // Get available months for selected year
-  const getMonths = () => {
+  // Get available month indices for selected year
+  const getMonthCount = () => {
     if (selectedYear === currentYear) {
-      return MONTHS.slice(0, currentMonth);
+      return currentMonth;
     }
-    return MONTHS;
+    return 12;
   };
 
   // Get days in selected month/year
@@ -427,9 +424,8 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
   // If a date is already selected, show it with an edit option
   if (value && pickerStep === 'day' && parsed) {
     const displayDate = new Date(value + 'T12:00:00Z');
-    const formatted = displayDate.toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'
-    });
+    const monthName = t('month.' + (displayDate.getUTCMonth() + 1));
+    const formatted = `${displayDate.getUTCDate()} ${monthName} ${displayDate.getUTCFullYear()}`;
 
     return (
       <div className="space-y-3">
@@ -442,7 +438,7 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
             onClick={() => { setPickerStep('year'); onChange(''); }}
             className="text-sm text-accent-text font-medium hover:underline"
           >
-            Change
+            {t('common.change')}
           </button>
         </div>
       </div>
@@ -456,6 +452,8 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
       : 'bg-surface text-text-label border border-border-strong hover:border-accent-border'
   );
 
+  const monthCount = getMonthCount();
+
   return (
     <div className="space-y-4">
       {/* Breadcrumb navigation */}
@@ -468,7 +466,7 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
             pickerStep === 'year' ? 'text-accent-text' : selectedYear ? 'text-text-label hover:text-accent-text' : 'text-text-tertiary'
           )}
         >
-          {selectedYear ?? 'Year'}
+          {selectedYear ?? t('dob.year')}
         </button>
         <span className="text-text-tertiary">›</span>
         <button
@@ -480,10 +478,10 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
             pickerStep === 'month' ? 'text-accent-text' : selectedMonth ? 'text-text-label hover:text-accent-text' : 'text-text-tertiary'
           )}
         >
-          {selectedMonth ? MONTHS[selectedMonth - 1] : 'Month'}
+          {selectedMonth ? t('month.' + selectedMonth) : t('dob.month')}
         </button>
         <span className="text-text-tertiary">›</span>
-        <span className="text-text-tertiary font-medium">Day</span>
+        <span className="text-text-tertiary font-medium">{t('dob.day')}</span>
       </div>
 
       {/* Scrollable content */}
@@ -513,14 +511,14 @@ function DOBPicker({ value, onChange }: { value: string; onChange: (v: string) =
 
         {pickerStep === 'month' && (
           <div className="grid grid-cols-3 gap-2">
-            {getMonths().map((m, i) => (
+            {Array.from({ length: monthCount }).map((_, i) => (
               <button
-                key={m}
+                key={i}
                 type="button"
                 onClick={() => handleMonthSelect(i)}
                 className={pillClass(i + 1 === selectedMonth)}
               >
-                {m.slice(0, 3)}
+                {t('month.' + (i + 1)).slice(0, 3)}
               </button>
             ))}
           </div>

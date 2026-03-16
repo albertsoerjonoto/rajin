@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { useLocale } from '@/lib/i18n';
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
@@ -12,11 +13,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const { t } = useLocale();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('error') === 'auth') {
-      setError('Email confirmation failed. Please try signing up again.');
+      setError(t('auth.emailConfirmFailed'));
     }
   }, []);
 
@@ -37,7 +39,7 @@ export default function LoginPage() {
         });
 
         if (!res.ok) {
-          setError('Username not found');
+          setError(t('auth.userNotFound'));
           setLoading(false);
           return;
         }
@@ -45,7 +47,7 @@ export default function LoginPage() {
         const data = await res.json();
         email = data.email;
       } catch {
-        setError('Something went wrong. Please try again.');
+        setError(t('auth.somethingWrong'));
         setLoading(false);
         return;
       }
@@ -72,8 +74,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-bg px-4">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-text-primary">Rajin</h1>
-          <p className="text-text-secondary mt-2">Track your habits, food & exercise</p>
+          <h1 className="text-3xl font-bold text-text-primary">{t('auth.appName')}</h1>
+          <p className="text-text-secondary mt-2">{t('auth.loginSubtitle')}</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
@@ -85,7 +87,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="identifier" className="block text-sm font-medium text-text-label mb-1">
-              Username or email
+              {t('auth.usernameOrEmail')}
             </label>
             <input
               id="identifier"
@@ -102,7 +104,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-text-label mb-1">
-              Password
+              {t('auth.password')}
             </label>
             <input
               id="password"
@@ -120,14 +122,14 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-3.5 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? t('auth.signingIn') : t('auth.signIn')}
           </button>
         </form>
 
         <p className="text-center text-sm text-text-secondary mt-6">
-          Don&apos;t have an account?{' '}
+          {t('auth.dontHaveAccount')}{' '}
           <Link href="/signup" className="text-accent-text font-medium hover:underline">
-            Sign up
+            {t('auth.signUp')}
           </Link>
         </p>
       </div>

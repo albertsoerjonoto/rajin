@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, memo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, memo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, cn } from '@/lib/utils';
@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast';
 import { computeNutritionTargets } from '@/lib/nutrition';
 import DateNav from '@/components/DateNav';
 import { compressChatImage } from '@/lib/image';
+import { useLocale } from '@/lib/i18n';
 import type { ParsedFood, ParsedExercise, MealType, FoodEdit, ExerciseEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
 
 interface Message {
@@ -27,9 +28,10 @@ interface MessageBubbleProps {
   savingId: string | null;
   onButtonClick: (msg: Message) => void;
   onUpdateFood: (msgId: string, index: number, field: keyof ParsedFood, value: string | number) => void;
+  t: (key: string) => string;
 }
 
-const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick, onUpdateFood }: MessageBubbleProps) {
+const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick, onUpdateFood, t }: MessageBubbleProps) {
   const hasActionable =
     (msg.parsedFoods?.length ?? 0) > 0 ||
     (msg.parsedExercises?.length ?? 0) > 0 ||
@@ -39,9 +41,16 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
   const getLabel = () => {
     const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0;
     const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0;
-    if (hasAdds && hasEdits) return 'Save & Apply Changes';
-    if (hasEdits) return 'Apply Changes';
-    return 'Save to Log';
+    if (hasAdds && hasEdits) return t('chat.saveAndApply');
+    if (hasEdits) return t('chat.applyChanges');
+    return t('chat.saveToLog');
+  };
+
+  const mealLabel = (type: string) => {
+    if (type === 'breakfast') return t('meal.breakfast');
+    if (type === 'lunch') return t('meal.lunch');
+    if (type === 'dinner') return t('meal.dinner');
+    return t('meal.other');
   };
 
   return (
@@ -65,17 +74,17 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
             {msg.parsedFoods.map((food, i) => (
               <div key={i} className="bg-surface-secondary rounded-xl p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-accent-text uppercase">{food.meal_type === 'snack' ? 'Other' : food.meal_type}</span>
+                  <span className="text-xs font-medium text-accent-text uppercase">{mealLabel(food.meal_type)}</span>
                   {!msg.saved && (
                     <select
                       value={food.meal_type}
                       onChange={(e) => onUpdateFood(msg.id, i, 'meal_type', e.target.value as MealType)}
                       className="text-xs bg-surface border border-border-strong rounded-lg px-1.5 py-0.5"
                     >
-                      <option value="breakfast">Breakfast</option>
-                      <option value="lunch">Lunch</option>
-                      <option value="dinner">Dinner</option>
-                      <option value="snack">Other</option>
+                      <option value="breakfast">{t('meal.breakfast')}</option>
+                      <option value="lunch">{t('meal.lunch')}</option>
+                      <option value="dinner">{t('meal.dinner')}</option>
+                      <option value="snack">{t('meal.other')}</option>
                     </select>
                   )}
                 </div>
@@ -112,50 +121,50 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
             {msg.foodEdits.map((edit, i) => (
               <div key={i} className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase">Edit</span>
-                  <span className="text-xs text-amber-600 dark:text-amber-500">· {edit.original.meal_type === 'snack' ? 'Other' : edit.original.meal_type}</span>
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase">{t('common.edit')}</span>
+                  <span className="text-xs text-amber-600 dark:text-amber-500">&middot; {mealLabel(edit.original.meal_type)}</span>
                 </div>
                 <p className="text-sm font-medium text-text-primary">{edit.original.description}</p>
                 <div className="mt-1.5 space-y-0.5">
                   {edit.updated.calories !== undefined && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-text-secondary line-through">{edit.original.calories} cal</span>
-                      <span className="text-text-secondary">→</span>
+                      <span className="text-text-secondary">&rarr;</span>
                       <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.calories} cal</span>
                     </div>
                   )}
                   {edit.updated.description !== undefined && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-text-secondary line-through">{edit.original.description}</span>
-                      <span className="text-text-secondary">→</span>
+                      <span className="text-text-secondary">&rarr;</span>
                       <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.description}</span>
                     </div>
                   )}
                   {edit.updated.protein_g !== undefined && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-text-secondary line-through">{edit.original.protein_g ?? 0}g P</span>
-                      <span className="text-text-secondary">→</span>
+                      <span className="text-text-secondary">&rarr;</span>
                       <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.protein_g}g P</span>
                     </div>
                   )}
                   {edit.updated.carbs_g !== undefined && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-text-secondary line-through">{edit.original.carbs_g ?? 0}g C</span>
-                      <span className="text-text-secondary">→</span>
+                      <span className="text-text-secondary">&rarr;</span>
                       <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.carbs_g}g C</span>
                     </div>
                   )}
                   {edit.updated.fat_g !== undefined && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-text-secondary line-through">{edit.original.fat_g ?? 0}g F</span>
-                      <span className="text-text-secondary">→</span>
+                      <span className="text-text-secondary">&rarr;</span>
                       <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.fat_g}g F</span>
                     </div>
                   )}
                   {edit.updated.meal_type !== undefined && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-text-secondary line-through">{edit.original.meal_type}</span>
-                      <span className="text-text-secondary">→</span>
+                      <span className="text-text-secondary">&rarr;</span>
                       <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.meal_type}</span>
                     </div>
                   )}
@@ -171,28 +180,28 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
             {msg.exerciseEdits.map((edit, i) => (
               <div key={i} className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase">Edit</span>
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase">{t('common.edit')}</span>
                 </div>
                 <p className="text-sm font-medium text-text-primary">{edit.original.exercise_type}</p>
                 <div className="mt-1.5 space-y-0.5">
                   {edit.updated.duration_minutes !== undefined && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-text-secondary line-through">{edit.original.duration_minutes} min</span>
-                      <span className="text-text-secondary">→</span>
+                      <span className="text-text-secondary">&rarr;</span>
                       <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.duration_minutes} min</span>
                     </div>
                   )}
                   {edit.updated.calories_burned !== undefined && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-text-secondary line-through">{edit.original.calories_burned} cal</span>
-                      <span className="text-text-secondary">→</span>
+                      <span className="text-text-secondary">&rarr;</span>
                       <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.calories_burned} cal</span>
                     </div>
                   )}
                   {edit.updated.exercise_type !== undefined && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-text-secondary line-through">{edit.original.exercise_type}</span>
-                      <span className="text-text-secondary">→</span>
+                      <span className="text-text-secondary">&rarr;</span>
                       <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.exercise_type}</span>
                     </div>
                   )}
@@ -214,23 +223,17 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
                 : 'bg-accent hover:bg-accent-hover text-accent-fg'
             )}
           >
-            {savingId === msg.id ? 'Saving...' : getLabel()}
+            {savingId === msg.id ? t('common.saving') : getLabel()}
           </button>
         ) : msg.saved ? (
           <p className="mt-2 text-xs text-positive-text font-medium text-center">
-            {(msg.foodEdits?.length || msg.exerciseEdits?.length) ? 'Changes applied!' : 'Saved!'}
+            {(msg.foodEdits?.length || msg.exerciseEdits?.length) ? t('chat.changesApplied') : t('chat.saved')}
           </p>
         ) : null}
       </div>
     </div>
   );
 });
-
-const WELCOME_MESSAGE: Message = {
-  id: 'welcome',
-  role: 'assistant',
-  content: 'Hi! I can log food & exercise, edit your entries, answer nutrition questions, and give meal recommendations. Try "had nasi goreng for lunch", "change breakfast to 400 cal", or "what should I eat for dinner?"',
-};
 
 function dbRowToMessage(row: ChatMessage): Message {
   return {
@@ -248,9 +251,17 @@ function dbRowToMessage(row: ChatMessage): Message {
 
 export default function ChatPage() {
   const { user } = useAuth();
+  const { t, locale } = useLocale();
   const { showToast, ToastContainer } = useToast();
   const [date, setDate] = useState(getToday());
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+
+  const welcomeMessage = useMemo<Message>(() => ({
+    id: 'welcome',
+    role: 'assistant',
+    content: t('chat.welcome'),
+  }), [t]);
+
+  const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -287,10 +298,10 @@ export default function ChatPage() {
     if (data && data.length > 0) {
       setMessages(data.map((row: ChatMessage) => dbRowToMessage(row)));
     } else {
-      setMessages([WELCOME_MESSAGE]);
+      setMessages([welcomeMessage]);
     }
     setLoadingMessages(false);
-  }, [user, date]);
+  }, [user, date, welcomeMessage]);
 
   // Fetch context: profile + today's logs
   const fetchContext = useCallback(async () => {
@@ -409,11 +420,11 @@ export default function ChatPage() {
     if ((!input.trim() && !imageFile) || loading || !isToday) return;
 
     if (input.trim().length > 1000) {
-      showToast('error', 'Message too long (max 1,000 characters)');
+      showToast('error', t('chat.messageTooLong'));
       return;
     }
 
-    const userContent = input.trim() || (imageFile ? "What's in this photo?" : '');
+    const userContent = input.trim() || (imageFile ? t('chat.whatsInPhoto') : '');
     const currentImageFile = imageFile;
     const currentImagePreview = imagePreview;
     setInput('');
@@ -468,14 +479,14 @@ export default function ChatPage() {
       const res = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userContent, context: contextRef.current, history: recentMessages, image_url: uploadedImageUrl }),
+        body: JSON.stringify({ message: userContent, context: contextRef.current, history: recentMessages, image_url: uploadedImageUrl, locale }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
         // Insert error message to DB
-        const errorContent = data.error || 'Sorry, something went wrong. Please try again.';
+        const errorContent = data.error || t('chat.somethingWrong');
         const { data: errRow } = await supabase
           .from('chat_messages')
           .insert({ user_id: user!.id, date, role: 'assistant', content: errorContent })
@@ -506,17 +517,18 @@ export default function ChatPage() {
       }
       if (hasAdds || hasEdits) {
         const parts: string[] = [];
-        if (foods.length > 0) parts.push(`${foods.length} food item${foods.length > 1 ? 's' : ''}`);
-        if (exercises.length > 0) parts.push(`${exercises.length} exercise${exercises.length > 1 ? 's' : ''}`);
-        if (foodEdits.length > 0) parts.push(`${foodEdits.length} food edit${foodEdits.length > 1 ? 's' : ''}`);
-        if (exerciseEdits.length > 0) parts.push(`${exerciseEdits.length} exercise edit${exerciseEdits.length > 1 ? 's' : ''}`);
+        if (foods.length > 0) parts.push(`${foods.length} ${t('chat.foodItems')}`);
+        if (exercises.length > 0) parts.push(`${exercises.length} ${t('chat.exercises')}`);
+        if (foodEdits.length > 0) parts.push(`${foodEdits.length} ${t('chat.foodEdits')}`);
+        if (exerciseEdits.length > 0) parts.push(`${exerciseEdits.length} ${t('chat.exerciseEdits')}`);
 
-        const actionText = `Found ${parts.join(' and ')}. Review and tap ${hasEdits && hasAdds ? 'Save & Apply' : hasEdits ? 'Apply Changes' : 'Save'} to confirm.`;
+        const buttonLabel = hasEdits && hasAdds ? t('chat.saveAndApply') : hasEdits ? t('chat.applyChanges') : t('common.save');
+        const actionText = `${t('chat.found')} ${parts.join(` ${t('chat.and')} `)}. ${t('chat.reviewAndTap')} ${buttonLabel} ${t('chat.toConfirm')}`;
         responseText = responseText ? `${responseText}\n\n${actionText}` : actionText;
       }
 
       if (!responseText) {
-        responseText = "I couldn't find any food or exercise in your message. Try being more specific!";
+        responseText = t('chat.couldntFind');
       }
 
       // Insert assistant message to DB
@@ -551,7 +563,7 @@ export default function ChatPage() {
 
       setMessages((prev) => [...prev, assistantMsg]);
     } catch {
-      const errorContent = 'Sorry, something went wrong. Please try again.';
+      const errorContent = t('chat.somethingWrong');
       const { data: errRow } = await supabase
         .from('chat_messages')
         .insert({ user_id: user!.id, date, role: 'assistant', content: errorContent })
@@ -605,7 +617,7 @@ export default function ChatPage() {
     }
 
     if (hasError) {
-      showToast('error', 'Failed to save some entries. Please try again.');
+      showToast('error', t('chat.failedSave'));
       setSavingId(null);
       return;
     }
@@ -614,7 +626,7 @@ export default function ChatPage() {
     setSavingId(null);
     fetchContext();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, showToast, fetchContext]);
+  }, [user, showToast, fetchContext, t]);
 
   const confirmEdits = useCallback(async (msgId: string, foodEdits: FoodEdit[], exerciseEdits: ExerciseEdit[]) => {
     if (!user || savingId) return;
@@ -633,7 +645,7 @@ export default function ChatPage() {
     }
 
     if (hasError) {
-      showToast('error', 'Failed to apply some edits. Please try again.');
+      showToast('error', t('chat.failedApply'));
       setSavingId(null);
       return;
     }
@@ -642,7 +654,7 @@ export default function ChatPage() {
     setSavingId(null);
     fetchContext();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, showToast, fetchContext]);
+  }, [user, showToast, fetchContext, t]);
 
   const handleSaveAndApply = useCallback(async (msg: Message) => {
     if (!user || savingId) return;
@@ -684,7 +696,7 @@ export default function ChatPage() {
     }
 
     if (hasError) {
-      showToast('error', 'Failed to save some entries. Please try again.');
+      showToast('error', t('chat.failedSave'));
       setSavingId(null);
       return;
     }
@@ -693,7 +705,7 @@ export default function ChatPage() {
     setSavingId(null);
     fetchContext();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, showToast, fetchContext]);
+  }, [user, showToast, fetchContext, t]);
 
   const updateFood = useCallback((msgId: string, index: number, field: keyof ParsedFood, value: string | number) => {
     setMessages((prev) =>
@@ -737,7 +749,7 @@ export default function ChatPage() {
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-6 pb-2">
-        <h1 className="text-xl font-bold text-text-primary">Chat</h1>
+        <h1 className="text-xl font-bold text-text-primary">{t('chat.title')}</h1>
         <DateNav date={date} onDateChange={setDate} />
       </div>
 
@@ -759,6 +771,7 @@ export default function ChatPage() {
               savingId={savingId}
               onButtonClick={handleButtonClick}
               onUpdateFood={updateFood}
+              t={t}
             />
           ))
         )}
@@ -820,7 +833,7 @@ export default function ChatPage() {
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
             disabled={!isToday}
             className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary disabled:cursor-not-allowed"
-            placeholder={isToday ? 'Log, edit, ask, or get recommendations...' : 'Switch to today to send messages'}
+            placeholder={isToday ? t('chat.placeholder') : t('chat.placeholderPastDate')}
           />
           <button
             onClick={sendMessage}

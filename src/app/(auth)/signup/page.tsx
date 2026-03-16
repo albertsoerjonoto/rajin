@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { useLocale } from '@/lib/i18n';
 
 type SignupMode = 'username' | 'email';
 
@@ -18,23 +19,24 @@ export default function SignupPage() {
   const [emailSent, setEmailSent] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const { t } = useLocale();
 
   const handleUsernameSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      setError('Username must be 3-20 characters (letters, numbers, underscores)');
+      setError(t('auth.usernameInvalid'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('auth.passwordMinLength'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordsNoMatch'));
       return;
     }
 
@@ -49,7 +51,7 @@ export default function SignupPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Failed to create account');
+        setError(data.error || t('auth.failedCreate'));
         setLoading(false);
         return;
       }
@@ -69,7 +71,7 @@ export default function SignupPage() {
       router.push('/onboarding');
       router.refresh();
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError(t('auth.somethingWrong'));
       setLoading(false);
     }
   };
@@ -79,12 +81,12 @@ export default function SignupPage() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordsNoMatch'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('auth.passwordMinLength'));
       return;
     }
 
@@ -112,12 +114,12 @@ export default function SignupPage() {
       <div className="min-h-screen flex items-center justify-center bg-bg px-4">
         <div className="w-full max-w-sm text-center animate-fade-in">
           <div className="text-5xl mb-4">📧</div>
-          <h1 className="text-2xl font-bold text-text-primary mb-2">Check your email</h1>
+          <h1 className="text-2xl font-bold text-text-primary mb-2">{t('auth.checkEmail')}</h1>
           <p className="text-text-secondary mb-6">
-            We sent a confirmation link to <span className="font-medium text-text-label">{email}</span>. Click it to activate your account.
+            {t('auth.checkEmailDesc')} <span className="font-medium text-text-label">{email}</span>. {t('auth.checkEmailAction')}
           </p>
           <p className="text-sm text-text-tertiary">
-            Didn&apos;t get it? Check your spam folder.
+            {t('auth.checkSpam')}
           </p>
         </div>
       </div>
@@ -131,8 +133,8 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-bg px-4">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-text-primary">Rajin</h1>
-          <p className="text-text-secondary mt-2">Start tracking your daily progress</p>
+          <h1 className="text-3xl font-bold text-text-primary">{t('auth.appName')}</h1>
+          <p className="text-text-secondary mt-2">{t('auth.signupSubtitle')}</p>
         </div>
 
         {/* Mode toggle */}
@@ -148,7 +150,7 @@ export default function SignupPage() {
                   : 'bg-surface-secondary text-text-muted hover:bg-surface-hover'
               }`}
             >
-              {m === 'username' ? 'Username' : 'Email'}
+              {m === 'username' ? t('auth.username') : t('auth.email')}
             </button>
           ))}
         </div>
@@ -163,7 +165,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-text-label mb-1">
-                Username
+                {t('auth.username')}
               </label>
               <input
                 id="username"
@@ -177,12 +179,12 @@ export default function SignupPage() {
                 autoCapitalize="none"
                 autoCorrect="off"
               />
-              <p className="text-xs text-text-tertiary mt-1">3-20 characters, letters, numbers, underscores</p>
+              <p className="text-xs text-text-tertiary mt-1">{t('auth.usernameRequirements')}</p>
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-text-label mb-1">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -197,7 +199,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-label mb-1">
-                Confirm Password
+                {t('auth.confirmPassword')}
               </label>
               <input
                 id="confirmPassword"
@@ -215,7 +217,7 @@ export default function SignupPage() {
               disabled={loading}
               className="w-full py-3.5 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
             </button>
           </form>
         ) : (
@@ -228,7 +230,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-text-label mb-1">
-                Email
+                {t('auth.email')}
               </label>
               <input
                 id="email"
@@ -243,7 +245,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="emailPassword" className="block text-sm font-medium text-text-label mb-1">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="emailPassword"
@@ -258,7 +260,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="emailConfirmPassword" className="block text-sm font-medium text-text-label mb-1">
-                Confirm Password
+                {t('auth.confirmPassword')}
               </label>
               <input
                 id="emailConfirmPassword"
@@ -276,15 +278,15 @@ export default function SignupPage() {
               disabled={loading}
               className="w-full py-3.5 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
             </button>
           </form>
         )}
 
         <p className="text-center text-sm text-text-secondary mt-6">
-          Already have an account?{' '}
+          {t('auth.alreadyHaveAccount')}{' '}
           <Link href="/login" className="text-accent-text font-medium hover:underline">
-            Sign in
+            {t('auth.signInLink')}
           </Link>
         </p>
       </div>
