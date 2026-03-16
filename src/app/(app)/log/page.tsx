@@ -76,10 +76,12 @@ export default function LogPage() {
     fetchData();
   }, [fetchData]);
 
-  // Scroll to top on mount and whenever date changes
-  useEffect(() => {
+  const handleDateChange = useCallback((newDate: string) => {
+    setDate(newDate);
     window.scrollTo(0, 0);
-  }, [date]);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
 
   const saveFoodLog = async () => {
     if (!user || !description.trim()) return;
@@ -223,7 +225,7 @@ export default function LogPage() {
       <div className="sticky top-0 z-20 bg-bg -mx-4 px-4 pt-6 pb-3">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-text-primary">Log</h1>
-          <DateNav date={date} onDateChange={setDate} />
+          <DateNav date={date} onDateChange={handleDateChange} />
         </div>
 
         {/* Tab Switcher */}
