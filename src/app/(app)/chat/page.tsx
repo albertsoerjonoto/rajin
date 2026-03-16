@@ -10,7 +10,7 @@ import DateNav from '@/components/DateNav';
 import { compressChatImage } from '@/lib/image';
 import { useLocale } from '@/lib/i18n';
 import MarkdownContent from '@/components/MarkdownContent';
-import type { ParsedFood, ParsedExercise, MealType, FoodEdit, ExerciseEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
+import type { ParsedFood, ParsedExercise, ParsedDrink, MealType, DrinkType, FoodEdit, ExerciseEdit, DrinkEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
 
 interface Message {
   id: string;
@@ -19,8 +19,10 @@ interface Message {
   imageUrl?: string;
   parsedFoods?: ParsedFood[];
   parsedExercises?: ParsedExercise[];
+  parsedDrinks?: ParsedDrink[];
   foodEdits?: FoodEdit[];
   exerciseEdits?: ExerciseEdit[];
+  drinkEdits?: DrinkEdit[];
   saved?: boolean;
 }
 
@@ -36,12 +38,14 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
   const hasActionable =
     (msg.parsedFoods?.length ?? 0) > 0 ||
     (msg.parsedExercises?.length ?? 0) > 0 ||
+    (msg.parsedDrinks?.length ?? 0) > 0 ||
     (msg.foodEdits?.length ?? 0) > 0 ||
-    (msg.exerciseEdits?.length ?? 0) > 0;
+    (msg.exerciseEdits?.length ?? 0) > 0 ||
+    (msg.drinkEdits?.length ?? 0) > 0;
 
   const getLabel = () => {
-    const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0;
-    const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0;
+    const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0 || (msg.parsedDrinks?.length ?? 0) > 0;
+    const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0 || (msg.drinkEdits?.length ?? 0) > 0;
     if (hasAdds && hasEdits) return t('chat.saveAndApply');
     if (hasEdits) return t('chat.applyChanges');
     return t('chat.saveToLog');
@@ -114,6 +118,25 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
                 <div className="flex gap-3 mt-1 text-xs text-text-secondary">
                   <span>{ex.duration_minutes} min</span>
                   <span>{ex.calories_burned} cal burned</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Parsed Drink Cards (Add) */}
+        {msg.parsedDrinks && msg.parsedDrinks.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {msg.parsedDrinks.map((drink, i) => (
+              <div key={i} className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-3">
+                <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">{drink.drink_type}</span>
+                <p className="text-sm font-medium text-text-primary">{drink.description}</p>
+                <div className="flex gap-3 mt-1 text-xs text-text-secondary">
+                  <span>{drink.volume_ml}ml</span>
+                  {drink.calories > 0 && <span>{drink.calories} cal</span>}
+                  {drink.protein_g ? <span>{drink.protein_g}g P</span> : null}
+                  {drink.carbs_g ? <span>{drink.carbs_g}g C</span> : null}
+                  {drink.fat_g ? <span>{drink.fat_g}g F</span> : null}
                 </div>
               </div>
             ))}
@@ -216,6 +239,44 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
           </div>
         )}
 
+        {/* Drink Edit Cards */}
+        {msg.drinkEdits && msg.drinkEdits.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {msg.drinkEdits.map((edit, i) => (
+              <div key={i} className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase">{t('common.edit')}</span>
+                  <span className="text-xs text-amber-600 dark:text-amber-500">&middot; {edit.original.drink_type}</span>
+                </div>
+                <p className="text-sm font-medium text-text-primary">{edit.original.description}</p>
+                <div className="mt-1.5 space-y-0.5">
+                  {edit.updated.volume_ml !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.volume_ml}ml</span>
+                      <span className="text-text-secondary">&rarr;</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.volume_ml}ml</span>
+                    </div>
+                  )}
+                  {edit.updated.calories !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.calories} cal</span>
+                      <span className="text-text-secondary">&rarr;</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.calories} cal</span>
+                    </div>
+                  )}
+                  {edit.updated.description !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.description}</span>
+                      <span className="text-text-secondary">&rarr;</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.description}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Action Button */}
         {hasActionable && !msg.saved ? (
           <button
@@ -223,7 +284,7 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
             disabled={savingId === msg.id}
             className={cn(
               'mt-3 w-full py-2 text-sm font-medium rounded-xl transition-all active:scale-[0.98] disabled:opacity-50',
-              (msg.foodEdits?.length || msg.exerciseEdits?.length)
+              (msg.foodEdits?.length || msg.exerciseEdits?.length || msg.drinkEdits?.length)
                 ? 'bg-amber-500 hover:bg-amber-600 text-white'
                 : 'bg-accent hover:bg-accent-hover text-accent-fg'
             )}
@@ -232,7 +293,7 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
           </button>
         ) : msg.saved ? (
           <p className="mt-2 text-xs text-positive-text font-medium text-center">
-            {(msg.foodEdits?.length || msg.exerciseEdits?.length) ? t('chat.changesApplied') : t('chat.saved')}
+            {(msg.foodEdits?.length || msg.exerciseEdits?.length || msg.drinkEdits?.length) ? t('chat.changesApplied') : t('chat.saved')}
           </p>
         ) : null}
       </div>
@@ -248,8 +309,10 @@ function dbRowToMessage(row: ChatMessage): Message {
     imageUrl: row.image_url ?? undefined,
     parsedFoods: row.parsed_foods ?? undefined,
     parsedExercises: row.parsed_exercises ?? undefined,
+    parsedDrinks: row.parsed_drinks ?? undefined,
     foodEdits: row.food_edits ?? undefined,
     exerciseEdits: row.exercise_edits ?? undefined,
+    drinkEdits: row.drink_edits ?? undefined,
     saved: row.saved,
   };
 }
@@ -314,15 +377,17 @@ export default function ChatPage() {
     const supabase = createClient();
     const today = getToday();
 
-    const [profileRes, foodRes, exerciseRes] = await Promise.all([
+    const [profileRes, foodRes, exerciseRes, drinkRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('food_logs').select('*').eq('user_id', user.id).eq('date', today).order('created_at'),
       supabase.from('exercise_logs').select('*').eq('user_id', user.id).eq('date', today).order('created_at'),
+      supabase.from('drink_logs').select('*').eq('user_id', user.id).eq('date', today).order('created_at'),
     ]);
 
     const profile = profileRes.data as Profile | null;
     const foodLogs = foodRes.data || [];
     const exerciseLogs = exerciseRes.data || [];
+    const drinkLogs = drinkRes.data || [];
 
     let profileContext: ChatContext['profile'] = null;
     if (profile) {
@@ -348,6 +413,9 @@ export default function ChatPage() {
       }
     }
 
+    const drinkCalories = drinkLogs.reduce((sum: number, l: { calories: number }) => sum + l.calories, 0);
+    const waterMl = drinkLogs.filter((l: { drink_type: string }) => l.drink_type === 'water').reduce((sum: number, l: { volume_ml: number }) => sum + l.volume_ml, 0);
+
     contextRef.current = {
       todayFoodLogs: foodLogs.map((log: { id: string; description: string; meal_type: MealType; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }, i: number) => ({
         index: i + 1,
@@ -366,9 +434,23 @@ export default function ChatPage() {
         duration_minutes: log.duration_minutes,
         calories_burned: log.calories_burned,
       })),
+      todayDrinkLogs: drinkLogs.map((log: { id: string; drink_type: DrinkType; description: string; volume_ml: number; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }, i: number) => ({
+        index: i + 1,
+        id: log.id,
+        drink_type: log.drink_type,
+        description: log.description,
+        volume_ml: log.volume_ml,
+        calories: log.calories,
+        protein_g: log.protein_g,
+        carbs_g: log.carbs_g,
+        fat_g: log.fat_g,
+      })),
       profile: profileContext,
-      totalCalories: foodLogs.reduce((sum: number, l: { calories: number }) => sum + l.calories, 0),
+      totalCalories: foodLogs.reduce((sum: number, l: { calories: number }) => sum + l.calories, 0) + drinkCalories,
       totalCaloriesBurned: exerciseLogs.reduce((sum: number, l: { calories_burned: number }) => sum + l.calories_burned, 0),
+      totalDrinkCalories: drinkCalories,
+      totalWaterMl: waterMl,
+      waterGoalMl: profile?.daily_water_goal_ml ?? 2000,
       totalProtein: foodLogs.reduce((sum: number, l: { protein_g: number | null }) => sum + (l.protein_g ?? 0), 0),
       totalCarbs: foodLogs.reduce((sum: number, l: { carbs_g: number | null }) => sum + (l.carbs_g ?? 0), 0),
       totalFat: foodLogs.reduce((sum: number, l: { fat_g: number | null }) => sum + (l.fat_g ?? 0), 0),
@@ -508,12 +590,14 @@ export default function ChatPage() {
 
       const foods: ParsedFood[] = data.foods || [];
       const exercises: ParsedExercise[] = data.exercises || [];
+      const drinks: ParsedDrink[] = data.drinks || [];
       const foodEdits: FoodEdit[] = data.food_edits || [];
       const exerciseEdits: ExerciseEdit[] = data.exercise_edits || [];
+      const drinkEdits: DrinkEdit[] = data.drink_edits || [];
       const textMessage: string | null = data.message || null;
 
-      const hasAdds = foods.length > 0 || exercises.length > 0;
-      const hasEdits = foodEdits.length > 0 || exerciseEdits.length > 0;
+      const hasAdds = foods.length > 0 || exercises.length > 0 || drinks.length > 0;
+      const hasEdits = foodEdits.length > 0 || exerciseEdits.length > 0 || drinkEdits.length > 0;
 
       // Build response text
       let responseText = '';
@@ -524,8 +608,10 @@ export default function ChatPage() {
         const parts: string[] = [];
         if (foods.length > 0) parts.push(`${foods.length} ${t('chat.foodItems')}`);
         if (exercises.length > 0) parts.push(`${exercises.length} ${t('chat.exercises')}`);
+        if (drinks.length > 0) parts.push(`${drinks.length} ${t('chat.drinkItems')}`);
         if (foodEdits.length > 0) parts.push(`${foodEdits.length} ${t('chat.foodEdits')}`);
         if (exerciseEdits.length > 0) parts.push(`${exerciseEdits.length} ${t('chat.exerciseEdits')}`);
+        if (drinkEdits.length > 0) parts.push(`${drinkEdits.length} ${t('chat.drinkEdits')}`);
 
         const buttonLabel = hasEdits && hasAdds ? t('chat.saveAndApply') : hasEdits ? t('chat.applyChanges') : t('common.save');
         const actionText = `${t('chat.found')} ${parts.join(` ${t('chat.and')} `)}. ${t('chat.reviewAndTap')} ${buttonLabel} ${t('chat.toConfirm')}`;
@@ -546,8 +632,10 @@ export default function ChatPage() {
           content: responseText,
           parsed_foods: foods.length > 0 ? foods : null,
           parsed_exercises: exercises.length > 0 ? exercises : null,
+          parsed_drinks: drinks.length > 0 ? drinks : null,
           food_edits: foodEdits.length > 0 ? foodEdits : null,
           exercise_edits: exerciseEdits.length > 0 ? exerciseEdits : null,
+          drink_edits: drinkEdits.length > 0 ? drinkEdits : null,
           saved: false,
         })
         .select()
@@ -561,8 +649,10 @@ export default function ChatPage() {
             content: responseText,
             parsedFoods: foods.length > 0 ? foods : undefined,
             parsedExercises: exercises.length > 0 ? exercises : undefined,
+            parsedDrinks: drinks.length > 0 ? drinks : undefined,
             foodEdits: foodEdits.length > 0 ? foodEdits : undefined,
             exerciseEdits: exerciseEdits.length > 0 ? exerciseEdits : undefined,
+            drinkEdits: drinkEdits.length > 0 ? drinkEdits : undefined,
             saved: (hasAdds || hasEdits) ? false : undefined,
           };
 
@@ -594,7 +684,7 @@ export default function ChatPage() {
     }
   };
 
-  const saveResults = useCallback(async (msgId: string, foods: ParsedFood[], exercises: ParsedExercise[]) => {
+  const saveResults = useCallback(async (msgId: string, foods: ParsedFood[], exercises: ParsedExercise[], drinks: ParsedDrink[] = []) => {
     if (!user || savingId) return;
     setSavingId(msgId);
     const supabase = createClient();
@@ -621,6 +711,17 @@ export default function ChatPage() {
       if (error) hasError = true;
     }
 
+    if (drinks.length > 0) {
+      const { error } = await supabase.from('drink_logs').insert(
+        drinks.map((d) => ({
+          user_id: user.id, date: today, drink_type: d.drink_type, description: d.description,
+          volume_ml: d.volume_ml, calories: d.calories, protein_g: d.protein_g,
+          carbs_g: d.carbs_g, fat_g: d.fat_g, source: 'chat' as const,
+        }))
+      );
+      if (error) hasError = true;
+    }
+
     if (hasError) {
       showToast('error', t('chat.failedSave'));
       setSavingId(null);
@@ -633,7 +734,7 @@ export default function ChatPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, showToast, fetchContext, t]);
 
-  const confirmEdits = useCallback(async (msgId: string, foodEdits: FoodEdit[], exerciseEdits: ExerciseEdit[]) => {
+  const confirmEdits = useCallback(async (msgId: string, foodEdits: FoodEdit[], exerciseEdits: ExerciseEdit[], drinkEdits: DrinkEdit[] = []) => {
     if (!user || savingId) return;
     setSavingId(msgId);
     const supabase = createClient();
@@ -646,6 +747,11 @@ export default function ChatPage() {
 
     for (const edit of exerciseEdits) {
       const { error } = await supabase.from('exercise_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
+      if (error) hasError = true;
+    }
+
+    for (const edit of drinkEdits) {
+      const { error } = await supabase.from('drink_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
       if (error) hasError = true;
     }
 
@@ -686,6 +792,16 @@ export default function ChatPage() {
       );
       if (error) hasError = true;
     }
+    if (msg.parsedDrinks && msg.parsedDrinks.length > 0) {
+      const { error } = await supabase.from('drink_logs').insert(
+        msg.parsedDrinks.map((d) => ({
+          user_id: user.id, date: today, drink_type: d.drink_type, description: d.description,
+          volume_ml: d.volume_ml, calories: d.calories, protein_g: d.protein_g,
+          carbs_g: d.carbs_g, fat_g: d.fat_g, source: 'chat' as const,
+        }))
+      );
+      if (error) hasError = true;
+    }
 
     if (msg.foodEdits) {
       for (const edit of msg.foodEdits) {
@@ -696,6 +812,12 @@ export default function ChatPage() {
     if (msg.exerciseEdits) {
       for (const edit of msg.exerciseEdits) {
         const { error } = await supabase.from('exercise_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
+        if (error) hasError = true;
+      }
+    }
+    if (msg.drinkEdits) {
+      for (const edit of msg.drinkEdits) {
+        const { error } = await supabase.from('drink_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
         if (error) hasError = true;
       }
     }
@@ -735,15 +857,15 @@ export default function ChatPage() {
   }, []);
 
   const handleButtonClick = useCallback((msg: Message) => {
-    const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0;
-    const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0;
+    const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0 || (msg.parsedDrinks?.length ?? 0) > 0;
+    const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0 || (msg.drinkEdits?.length ?? 0) > 0;
 
     if (hasAdds && hasEdits) {
       handleSaveAndApply(msg);
     } else if (hasEdits) {
-      confirmEdits(msg.id, msg.foodEdits || [], msg.exerciseEdits || []);
+      confirmEdits(msg.id, msg.foodEdits || [], msg.exerciseEdits || [], msg.drinkEdits || []);
     } else {
-      saveResults(msg.id, msg.parsedFoods || [], msg.parsedExercises || []);
+      saveResults(msg.id, msg.parsedFoods || [], msg.parsedExercises || [], msg.parsedDrinks || []);
     }
   }, [handleSaveAndApply, confirmEdits, saveResults]);
 

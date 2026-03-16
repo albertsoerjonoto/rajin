@@ -23,7 +23,7 @@ import {
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { HabitWithLog, FoodLog, ExerciseLog, Profile } from '@/lib/types';
+import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, Profile } from '@/lib/types';
 
 function HabitCardContent({ habit, isDragging }: { habit: HabitWithLog; isDragging?: boolean }) {
   return (
@@ -75,6 +75,7 @@ export default function DashboardPage() {
   const [habits, setHabits] = useState<HabitWithLog[]>([]);
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
+  const [drinkLogs, setDrinkLogs] = useState<DrinkLog[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddHabit, setShowAddHabit] = useState(false);
@@ -193,6 +194,15 @@ export default function DashboardPage() {
     if (exerciseError) showToast('error', t('dashboard.failedLoadExercise'));
     if (exerciseData) setExerciseLogs(exerciseData);
 
+    const { data: drinkData, error: drinkError } = await supabase
+      .from('drink_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('date', date)
+      .order('created_at');
+    if (drinkError) showToast('error', t('dashboard.failedLoadDrinks'));
+    if (drinkData) setDrinkLogs(drinkData);
+
     setLoading(false);
   }, [user, date, showToast, t]);
 
@@ -303,23 +313,39 @@ export default function DashboardPage() {
     fetchData();
   };
 
-  const totalCalories = foodLogs.reduce((sum, f) => sum + f.calories, 0);
+  const totalFoodCalories = foodLogs.reduce((sum, f) => sum + f.calories, 0);
+  const totalDrinkCalories = drinkLogs.reduce((sum, d) => sum + d.calories, 0);
+  const totalCalories = totalFoodCalories + totalDrinkCalories;
   const totalExerciseMinutes = exerciseLogs.reduce((sum, e) => sum + e.duration_minutes, 0);
   const totalCaloriesBurned = exerciseLogs.reduce((sum, e) => sum + e.calories_burned, 0);
   const netCalories = totalCalories - totalCaloriesBurned;
 
-  const mealBreakdown = {
-    breakfast: foodLogs.filter((f) => f.meal_type === 'breakfast').reduce((s, f) => s + f.calories, 0),
-    lunch: foodLogs.filter((f) => f.meal_type === 'lunch').reduce((s, f) => s + f.calories, 0),
-    dinner: foodLogs.filter((f) => f.meal_type === 'dinner').reduce((s, f) => s + f.calories, 0),
-    snack: foodLogs.filter((f) => f.meal_type === 'snack').reduce((s, f) => s + f.calories, 0),
+  const totalWaterMl = drinkLogs.filter((d) => d.drink_type === 'water').reduce((sum, d) => sum + d.volume_ml, 0);
+  const waterGoalMl = profile?.daily_water_goal_ml ?? 2000;
+
+  const categoryBreakdown = {
+    food: foodLogs.filter((f) => f.meal_type !== 'snack').reduce((s, f) => s + f.calories, 0),
+    snacks: foodLogs.filter((f) => f.meal_type === 'snack').reduce((s, f) => s + f.calories, 0),
+    drinks: totalDrinkCalories,
   };
 
-  const filteredLogs = selectedMeal ? foodLogs.filter((f) => f.meal_type === selectedMeal) : foodLogs;
-  const displayCalories = selectedMeal ? mealBreakdown[selectedMeal as keyof typeof mealBreakdown] : netCalories;
-  const displayProtein = filteredLogs.reduce((sum, f) => sum + (f.protein_g || 0), 0);
-  const displayCarbs = filteredLogs.reduce((sum, f) => sum + (f.carbs_g || 0), 0);
-  const displayFat = filteredLogs.reduce((sum, f) => sum + (f.fat_g || 0), 0);
+  const filteredLogs = selectedMeal === 'drinks'
+    ? [] // drinks don't use foodLogs
+    : selectedMeal
+      ? selectedMeal === 'food'
+        ? foodLogs.filter((f) => f.meal_type !== 'snack')
+        : foodLogs.filter((f) => f.meal_type === 'snack')
+      : foodLogs;
+  const displayCalories = selectedMeal ? categoryBreakdown[selectedMeal as keyof typeof categoryBreakdown] : netCalories;
+  const displayProtein = selectedMeal === 'drinks'
+    ? drinkLogs.reduce((sum, d) => sum + (d.protein_g || 0), 0)
+    : filteredLogs.reduce((sum, f) => sum + (f.protein_g || 0), 0);
+  const displayCarbs = selectedMeal === 'drinks'
+    ? drinkLogs.reduce((sum, d) => sum + (d.carbs_g || 0), 0)
+    : filteredLogs.reduce((sum, f) => sum + (f.carbs_g || 0), 0);
+  const displayFat = selectedMeal === 'drinks'
+    ? drinkLogs.reduce((sum, d) => sum + (d.fat_g || 0), 0)
+    : filteredLogs.reduce((sum, f) => sum + (f.fat_g || 0), 0);
 
   const targets = profile ? computeNutritionTargets(profile) : null;
   const hasBodyStats = targets?.hasData ?? false;
@@ -328,11 +354,10 @@ export default function DashboardPage() {
   const isOverBudget = !selectedMeal && calorieTarget > 0 && netCalories > calorieTarget;
   const remainingCalories = calorieTarget - netCalories;
 
-  const mealKeys = [
-    { key: 'breakfast', labelKey: 'meal.breakfast' },
-    { key: 'lunch', labelKey: 'meal.lunch' },
-    { key: 'dinner', labelKey: 'meal.dinner' },
-    { key: 'snack', labelKey: 'meal.other' },
+  const categoryKeys = [
+    { key: 'food', labelKey: 'dashboard.food' },
+    { key: 'snacks', labelKey: 'dashboard.snacks' },
+    { key: 'drinks', labelKey: 'dashboard.drinks' },
   ] as const;
 
   const macroLabel = (key: string) => {
@@ -531,7 +556,7 @@ export default function DashboardPage() {
                     </div>
                     {selectedMeal ? (
                       <span className="text-xs text-accent-text font-medium">
-                        {t(`meal.${selectedMeal === 'snack' ? 'other' : selectedMeal}`)} {t('dashboard.only')}
+                        {t(`dashboard.${selectedMeal}`)} {t('dashboard.only')}
                       </span>
                     ) : (
                       <span className={cn('text-xs font-medium', isOverBudget ? 'text-warning' : 'text-positive-text')}>
@@ -572,7 +597,7 @@ export default function DashboardPage() {
                   </div>
                   {selectedMeal ? (
                     <p className="text-xs text-accent-text font-medium mt-0.5">
-                      {t(`meal.${selectedMeal === 'snack' ? 'other' : selectedMeal}`)} {t('dashboard.only')}
+                      {t(`dashboard.${selectedMeal}`)} {t('dashboard.only')}
                     </p>
                   ) : (
                     <>
@@ -593,9 +618,9 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Meal Breakdown */}
-              <div className="grid grid-cols-4 gap-2">
-                {mealKeys.map(({ key, labelKey }) => (
+              {/* Category Breakdown */}
+              <div className="grid grid-cols-3 gap-2">
+                {categoryKeys.map(({ key, labelKey }) => (
                   <button
                     key={key}
                     type="button"
@@ -608,7 +633,7 @@ export default function DashboardPage() {
                     )}
                   >
                     <p className={cn('text-[11px]', selectedMeal === key ? 'text-accent-fg/70' : 'text-text-tertiary')}>{t(labelKey)}</p>
-                    <p className={cn('text-sm font-semibold', selectedMeal === key ? 'text-accent-fg' : 'text-text-label')}>{mealBreakdown[key as keyof typeof mealBreakdown]}</p>
+                    <p className={cn('text-sm font-semibold', selectedMeal === key ? 'text-accent-fg' : 'text-text-label')}>{categoryBreakdown[key as keyof typeof categoryBreakdown]}</p>
                   </button>
                 ))}
               </div>
@@ -674,6 +699,33 @@ export default function DashboardPage() {
                       );
                     })}
                   </div>
+
+                  {/* Water Intake Bar */}
+                  {!selectedMeal && (
+                    <div className="mt-3">
+                      <div className="flex justify-between items-baseline mb-1">
+                        <span className="text-xs font-medium text-text-muted">{t('drink.water')}</span>
+                        <span className="text-xs text-text-tertiary">
+                          <span className={cn(
+                            'font-semibold transition-all duration-300',
+                            totalWaterMl >= waterGoalMl ? 'text-positive-text' : 'text-text-label'
+                          )}>
+                            {totalWaterMl}ml
+                          </span>
+                          {' / '}{waterGoalMl}ml
+                        </span>
+                      </div>
+                      <div className="w-full h-2.5 bg-surface-secondary rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-all duration-500',
+                            totalWaterMl >= waterGoalMl ? 'bg-positive-bar' : 'bg-blue-400'
+                          )}
+                          style={{ width: `${Math.min((totalWaterMl / waterGoalMl) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

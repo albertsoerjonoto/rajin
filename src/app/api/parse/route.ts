@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@/lib/supabase/server';
 import { clamp } from '@/lib/validation';
-import type { ChatContext, FoodEdit, ExerciseEdit } from '@/lib/types';
+import type { ChatContext, FoodEdit, ExerciseEdit, DrinkEdit } from '@/lib/types';
 
 const BASE_PROMPT = `You are a nutrition and exercise assistant. You will receive a language directive below — always respond in that language.
 
@@ -28,10 +28,33 @@ You are an expert on ALL foods worldwide, especially Indonesian cuisine. Here ar
 - Tahu goreng (3 pcs): ~180 cal, 10g protein, 8g carbs, 12g fat
 - Sambal: ~20 cal
 - Nasi putih: ~200 cal, 4g protein, 45g carbs, 0g fat
-- Es jeruk: ~90 cal, 0g protein, 22g carbs, 0g fat
-- Kopi susu: ~120 cal, 3g protein, 15g carbs, 5g fat
-
 IMPORTANT: This list is NOT exhaustive. You know thousands of foods. For ANY food not listed above (e.g. nasi bogana, lontong sayur, martabak, pizza, sushi, etc.), use your general knowledge to provide your best calorie and macro estimate. NEVER ask the user to provide calorie counts — that is YOUR job. If the user mentions a portion size (e.g. "half portion"), adjust the estimate accordingly. Always log the food with your best estimate.
+
+Common drinks (Indonesian & international):
+- Air putih / air mineral (water): 0 cal, 250ml
+- Es teh manis (sweet iced tea): ~120 cal, 0g P, 30g C, 0g F, 250ml
+- Es jeruk (iced orange): ~90 cal, 0g P, 22g C, 0g F, 250ml
+- Kopi susu (milk coffee/latte): ~120 cal, 3g P, 15g C, 5g F, 200ml
+- Kopi hitam (black coffee): ~5 cal, 0g P, 0g C, 0g F, 200ml
+- Teh tarik: ~150 cal, 3g P, 20g C, 6g F, 250ml
+- Es cendol/dawet: ~200 cal, 1g P, 40g C, 5g F, 300ml
+- Jus alpukat (avocado juice): ~250 cal, 3g P, 25g C, 15g F, 300ml
+- Wedang jahe: ~80 cal, 0g P, 20g C, 0g F, 200ml
+- Susu segar (fresh milk): ~150 cal, 8g P, 12g C, 8g F, 250ml
+- Cola/soda: ~140 cal, 0g P, 39g C, 0g F, 330ml
+- Jus jeruk (orange juice): ~110 cal, 2g P, 25g C, 0g F, 250ml
+
+DRINK vs FOOD CATEGORIZATION:
+When the user mentions a beverage/drink, put it in "drinks" (NOT "foods"). Categorize drink_type as:
+- "water" — water, air putih, air mineral, air es
+- "coffee" — any coffee variant (kopi, latte, cappuccino, americano, espresso)
+- "tea" — any tea variant (teh, green tea, teh tarik, matcha latte)
+- "juice" — fruit juices (jus, es jeruk, smoothie)
+- "soda" — carbonated drinks (cola, sprite, fanta, soda)
+- "milk" — milk-based drinks not coffee/tea (susu, susu coklat, yakult)
+- "other" — other beverages (es cendol, wedang, es campur, es kelapa)
+Food-adjacent items (smoothie bowls, soup, ice cream) stay as "foods".
+Always estimate volume_ml for drinks. Default 250ml if unclear. "1 gelas" = 250ml, "1 botol" = 500ml.
 
 Exercise calorie estimates:
 - Running: ~100 cal per 10 min
@@ -86,6 +109,16 @@ function buildSystemPrompt(context?: ChatContext, locale: string = 'id'): string
     } else {
       prompt += '\n\nNo exercise logged today yet.';
     }
+
+    if (context.todayDrinkLogs && context.todayDrinkLogs.length > 0) {
+      prompt += '\n\nToday\'s drink logs:';
+      for (const log of context.todayDrinkLogs) {
+        prompt += `\n  #${log.index}: ${log.description} (${log.drink_type}, ${log.volume_ml}ml, ${log.calories} cal)`;
+      }
+    } else {
+      prompt += '\n\nNo drinks logged today yet.';
+    }
+    prompt += `\nWater intake: ${context.totalWaterMl ?? 0}ml / ${context.waterGoalMl ?? 2000}ml goal`;
   }
 
   prompt += `\n\n--- RESPONSE FORMAT ---
@@ -110,6 +143,17 @@ RESPOND ONLY WITH VALID JSON in this exact format:
       "notes": "optional note"
     }
   ],
+  "drinks": [
+    {
+      "description": "drink name",
+      "drink_type": "water|coffee|tea|juice|soda|milk|other",
+      "volume_ml": 250,
+      "calories": 0,
+      "protein_g": 0,
+      "carbs_g": 0,
+      "fat_g": 0
+    }
+  ],
   "food_edits": [
     {
       "index": 1,
@@ -121,16 +165,23 @@ RESPOND ONLY WITH VALID JSON in this exact format:
       "index": 1,
       "updated": { "duration_minutes": 45 }
     }
+  ],
+  "drink_edits": [
+    {
+      "index": 1,
+      "updated": { "volume_ml": 500 }
+    }
   ]
 }
 
 Rules:
-- Use "foods"/"exercises" for NEW entries the user wants to add
-- Use "food_edits"/"exercise_edits" when the user wants to CHANGE an existing log. Reference the log by its # index from the context above. Only include fields that changed in "updated".
+- Use "foods"/"exercises"/"drinks" for NEW entries the user wants to add
+- Use "food_edits"/"exercise_edits"/"drink_edits" when the user wants to CHANGE an existing log. Reference the log by its # index from the context above. Only include fields that changed in "updated".
 - Use "message" for answering questions, giving recommendations, or any conversational response. Keep it concise and friendly.
 - CRITICAL LANGUAGE RULE: The "message" field MUST be written in the SAME language the user used. If the user writes in English, the message MUST be in English. If in Bahasa Indonesia, reply in Bahasa Indonesia. If in Chinese, reply in Chinese. Always match the user's language exactly.
 - Multiple arrays can be populated at once (e.g., add new food AND edit an existing one)
-- If the user's input doesn't match any action, return: { "message": "helpful response", "foods": [], "exercises": [], "food_edits": [], "exercise_edits": [] }
+- Beverages go in "drinks", NOT "foods". Use the drink_type field to categorize.
+- If the user's input doesn't match any action, return: { "message": "helpful response", "foods": [], "exercises": [], "drinks": [], "food_edits": [], "exercise_edits": [], "drink_edits": [] }
 - Always return valid JSON only, never include explanation text outside the JSON.`;
 
   return prompt;
@@ -189,8 +240,10 @@ export async function POST(request: NextRequest) {
             message: msg.content,
             foods: [],
             exercises: [],
+            drinks: [],
             food_edits: [],
             exercise_edits: [],
+            drink_edits: [],
           });
           contents.push({ role: 'model', parts: [{ text: wrappedJson }] });
         }
@@ -248,8 +301,10 @@ export async function POST(request: NextRequest) {
         message: text || "I couldn't process that. Could you try rephrasing?",
         foods: [],
         exercises: [],
+        drinks: [],
         food_edits: [],
         exercise_edits: [],
+        drink_edits: [],
       };
     }
 
@@ -278,10 +333,26 @@ export async function POST(request: NextRequest) {
         }))
       : [];
 
+    const DRINK_TYPES = ['water', 'coffee', 'tea', 'juice', 'soda', 'milk', 'other'];
+    const drinks = Array.isArray(parsed.drinks)
+      ? parsed.drinks.map((d: Record<string, unknown>) => ({
+          description: typeof d.description === 'string' ? d.description : 'Unknown drink',
+          drink_type: DRINK_TYPES.includes(d.drink_type as string)
+            ? d.drink_type
+            : 'other',
+          volume_ml: clamp(Number(d.volume_ml) || 250, 0, 10000),
+          calories: clamp(Number(d.calories) || 0, 0, 20000),
+          protein_g: clamp(Number(d.protein_g) || 0, 0, 5000),
+          carbs_g: clamp(Number(d.carbs_g) || 0, 0, 5000),
+          fat_g: clamp(Number(d.fat_g) || 0, 0, 5000),
+        }))
+      : [];
+
     // --- Process edits: map indices to real log IDs ---
     const typedContext = context as ChatContext | undefined;
     const foodEdits: FoodEdit[] = [];
     const exerciseEdits: ExerciseEdit[] = [];
+    const drinkEdits: DrinkEdit[] = [];
 
     if (Array.isArray(parsed.food_edits) && typedContext?.todayFoodLogs) {
       for (const edit of parsed.food_edits) {
@@ -342,12 +413,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (Array.isArray(parsed.drink_edits) && typedContext?.todayDrinkLogs) {
+      for (const edit of parsed.drink_edits) {
+        const idx = Number(edit.index);
+        const log = typedContext.todayDrinkLogs.find((l) => l.index === idx);
+        if (!log || !edit.updated || typeof edit.updated !== 'object') continue;
+
+        const updated: Record<string, unknown> = {};
+        if (edit.updated.description !== undefined) updated.description = String(edit.updated.description);
+        if (edit.updated.drink_type !== undefined && DRINK_TYPES.includes(edit.updated.drink_type)) {
+          updated.drink_type = edit.updated.drink_type;
+        }
+        if (edit.updated.volume_ml !== undefined) updated.volume_ml = clamp(Number(edit.updated.volume_ml) || 0, 0, 10000);
+        if (edit.updated.calories !== undefined) updated.calories = clamp(Number(edit.updated.calories) || 0, 0, 20000);
+        if (edit.updated.protein_g !== undefined) updated.protein_g = clamp(Number(edit.updated.protein_g) || 0, 0, 5000);
+        if (edit.updated.carbs_g !== undefined) updated.carbs_g = clamp(Number(edit.updated.carbs_g) || 0, 0, 5000);
+        if (edit.updated.fat_g !== undefined) updated.fat_g = clamp(Number(edit.updated.fat_g) || 0, 0, 5000);
+
+        if (Object.keys(updated).length > 0) {
+          drinkEdits.push({
+            log_id: log.id,
+            original: {
+              drink_type: log.drink_type,
+              description: log.description,
+              volume_ml: log.volume_ml,
+              calories: log.calories,
+              protein_g: log.protein_g,
+              carbs_g: log.carbs_g,
+              fat_g: log.fat_g,
+            },
+            updated,
+          });
+        }
+      }
+    }
+
     return NextResponse.json({
       message: responseMessage,
       foods,
       exercises,
+      drinks,
       food_edits: foodEdits,
       exercise_edits: exerciseEdits,
+      drink_edits: drinkEdits,
     });
   } catch (error) {
     console.error('Parse error:', error);
@@ -365,8 +473,10 @@ export async function POST(request: NextRequest) {
       message: userMessage,
       foods: [],
       exercises: [],
+      drinks: [],
       food_edits: [],
       exercise_edits: [],
+      drink_edits: [],
     });
   }
 }

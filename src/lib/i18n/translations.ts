@@ -255,6 +255,44 @@ export const translations: Translations = {
   'month.11': { id: 'November', en: 'November' },
   'month.12': { id: 'Desember', en: 'December' },
 
+  // ── Drinks ──
+  'drink.water': { id: 'Air', en: 'Water' },
+  'drink.coffee': { id: 'Kopi', en: 'Coffee' },
+  'drink.tea': { id: 'Teh', en: 'Tea' },
+  'drink.juice': { id: 'Jus', en: 'Juice' },
+  'drink.soda': { id: 'Soda', en: 'Soda' },
+  'drink.milk': { id: 'Susu', en: 'Milk' },
+  'drink.other': { id: 'Lainnya', en: 'Other' },
+  'drink.drinks': { id: 'Minuman', en: 'Drinks' },
+  'drink.addDrink': { id: 'Tambah Minuman', en: 'Add Drink' },
+  'drink.editDrink': { id: 'Edit Minuman', en: 'Edit Drink' },
+  'drink.whatDidYouDrink': { id: 'Apa yang kamu minum?', en: 'What did you drink?' },
+  'drink.volumeMl': { id: 'Volume (ml)', en: 'Volume (ml)' },
+  'drink.noDrinksLogged': { id: 'Belum ada minuman hari ini', en: 'No drinks logged today' },
+  'drink.failedSave': { id: 'Gagal menyimpan log minuman', en: 'Failed to save drink log' },
+  'drink.failedUpdate': { id: 'Gagal memperbarui log minuman', en: 'Failed to update drink log' },
+  'drink.failedDelete': { id: 'Gagal menghapus log minuman', en: 'Failed to delete drink log' },
+  'drink.failedVolume': { id: 'Volume harus antara 0 dan 10.000 ml', en: 'Volume must be between 0 and 10,000 ml' },
+
+  // ── Dashboard drinks ──
+  'dashboard.food': { id: 'Makanan', en: 'Food' },
+  'dashboard.snacks': { id: 'Camilan', en: 'Snacks' },
+  'dashboard.drinks': { id: 'Minuman', en: 'Drinks' },
+  'dashboard.failedLoadDrinks': { id: 'Gagal memuat log minuman', en: 'Failed to load drink logs' },
+
+  // ── Log page drinks ──
+  'log.meals': { id: 'Makanan', en: 'Meals' },
+  'log.snacks': { id: 'Camilan', en: 'Snacks' },
+  'log.drinks': { id: 'Minuman', en: 'Drinks' },
+
+  // ── Chat drinks ──
+  'chat.drinkItems': { id: 'item minuman', en: 'drink(s)' },
+  'chat.drinkEdits': { id: 'edit minuman', en: 'drink edit(s)' },
+
+  // ── Profile water goal ──
+  'profile.waterGoal': { id: 'Target Air', en: 'Water Goal' },
+  'profile.waterGoalUnit': { id: 'ml per hari', en: 'ml per day' },
+
   // ── Emoji picker categories ──
   'emoji.fitness': { id: 'Kebugaran', en: 'Fitness' },
   'emoji.health': { id: 'Kesehatan', en: 'Health' },
