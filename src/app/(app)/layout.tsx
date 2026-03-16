@@ -34,7 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       const supabase = createClient();
       const { data } = await supabase
         .from('profiles')
-        .select('onboarding_completed, locale')
+        .select('*')
         .eq('id', user.id)
         .single();
 
