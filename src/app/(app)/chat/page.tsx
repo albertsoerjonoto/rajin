@@ -10,6 +10,7 @@ import DateNav from '@/components/DateNav';
 import { compressChatImage } from '@/lib/image';
 import { useLocale } from '@/lib/i18n';
 import MarkdownContent from '@/components/MarkdownContent';
+import VoiceButton from '@/components/VoiceButton';
 import type { ParsedFood, ParsedExercise, MealType, FoodEdit, ExerciseEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
 
 interface Message {
@@ -839,6 +840,12 @@ export default function ChatPage() {
             disabled={!isToday}
             className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary disabled:cursor-not-allowed"
             placeholder={isToday ? t('chat.placeholder') : t('chat.placeholderPastDate')}
+          />
+          <VoiceButton
+            onTranscript={(text) => setInput((prev) => prev ? `${prev} ${text}` : text)}
+            onError={(key) => showToast('error', t(key))}
+            disabled={!isToday || loading}
+            lang={locale === 'id' ? 'id-ID' : 'en-US'}
           />
           <button
             onClick={sendMessage}
