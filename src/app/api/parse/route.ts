@@ -323,10 +323,12 @@ export async function POST(request: NextRequest) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     const isTimeout = errorMsg.includes('timeout') || errorMsg.includes('ETIMEDOUT') || errorMsg.includes('deadline');
     const isRateLimit = errorMsg.includes('429') || errorMsg.includes('rate limit') || errorMsg.includes('quota') || errorMsg.includes('RESOURCE_EXHAUSTED');
+    const isOverloaded = errorMsg.includes('503') || errorMsg.includes('UNAVAILABLE') || errorMsg.includes('high demand') || errorMsg.includes('overloaded');
 
-    let userMessage = `Sorry, something went wrong. Please try again. (Debug: ${errorMsg.substring(0, 200)})`;
+    let userMessage = 'Sorry, something went wrong. Please try again.';
     if (isTimeout) userMessage = 'The request took too long. Please try a shorter message.';
     if (isRateLimit) userMessage = "I've hit my usage limit. Please wait a minute and try again, or try a shorter message.";
+    if (isOverloaded) userMessage = "The AI service is busy right now. Please try again in a few seconds.";
 
     return NextResponse.json({
       message: userMessage,
