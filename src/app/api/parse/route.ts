@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Input validation ---
-    const { message, context, history } = await request.json();
+    const { message, context, history, image_url } = await request.json();
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -169,7 +169,8 @@ export async function POST(request: NextRequest) {
     const ai = new GoogleGenAI({ apiKey });
 
     // Build conversation history as alternating user/model turns
-    const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const contents: { role: 'user' | 'model'; parts: any[] }[] = [];
 
     if (Array.isArray(history)) {
       for (const msg of history.slice(-10)) {
@@ -189,8 +190,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Add the current user message
-    contents.push({ role: 'user', parts: [{ text: message }] });
+    // Add the current user message, optionally with image
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userParts: any[] = [{ text: message }];
+
+    if (image_url && typeof image_url === 'string') {
+      try {
+        const imgResponse = await fetch(image_url);
+        const imgBuffer = await imgResponse.arrayBuffer();
+        const base64 = Buffer.from(imgBuffer).toString('base64');
+        const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg';
+        userParts.push({ inlineData: { mimeType, data: base64 } });
+      } catch {
+        // If image fetch fails, proceed with text only
+      }
+    }
+
+    contents.push({ role: 'user', parts: userParts });
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-lite',

@@ -7,12 +7,14 @@ import { getToday, cn } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 import { computeNutritionTargets } from '@/lib/nutrition';
 import DateNav from '@/components/DateNav';
+import { compressChatImage } from '@/lib/image';
 import type { ParsedFood, ParsedExercise, MealType, FoodEdit, ExerciseEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  imageUrl?: string;
   parsedFoods?: ParsedFood[];
   parsedExercises?: ParsedExercise[];
   foodEdits?: FoodEdit[];
@@ -52,6 +54,9 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
             : 'bg-surface'
         )}
       >
+        {msg.imageUrl && (
+          <img src={msg.imageUrl} alt="Attached" className="rounded-xl mb-2 max-h-48 w-auto" />
+        )}
         <p className="text-sm whitespace-pre-line">{msg.content}</p>
 
         {/* Parsed Food Cards (Add) */}
@@ -232,6 +237,7 @@ function dbRowToMessage(row: ChatMessage): Message {
     id: row.id,
     role: row.role,
     content: row.content,
+    imageUrl: row.image_url ?? undefined,
     parsedFoods: row.parsed_foods ?? undefined,
     parsedExercises: row.parsed_exercises ?? undefined,
     foodEdits: row.food_edits ?? undefined,
@@ -249,6 +255,9 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<ChatContext | null>(null);
   const shouldAutoScroll = useRef(false);
@@ -361,16 +370,34 @@ export default function ChatPage() {
   }, [messages, loading]);
 
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    const url = URL.createObjectURL(file);
+    setImagePreview(url);
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const sendMessage = async () => {
-    if (!input.trim() || loading || !isToday) return;
+    if ((!input.trim() && !imageFile) || loading || !isToday) return;
 
     if (input.trim().length > 1000) {
       showToast('error', 'Message too long (max 1,000 characters)');
       return;
     }
 
-    const userContent = input.trim();
+    const userContent = input.trim() || (imageFile ? "What's in this photo?" : '');
+    const currentImageFile = imageFile;
+    const currentImagePreview = imagePreview;
     setInput('');
+    clearImage();
     setLoading(true);
     shouldAutoScroll.current = true;
 
@@ -379,16 +406,35 @@ export default function ChatPage() {
 
     const supabase = createClient();
 
+    // Upload image to Supabase Storage if present
+    let uploadedImageUrl: string | null = null;
+    if (currentImageFile) {
+      try {
+        const compressed = await compressChatImage(currentImageFile);
+        const path = `${user!.id}/${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('chat-images')
+          .upload(path, compressed, { contentType: 'image/jpeg' });
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('chat-images').getPublicUrl(path);
+          uploadedImageUrl = urlData.publicUrl;
+        }
+      } catch {
+        // If upload fails, still send the text message
+      }
+    }
+
     // Insert user message to DB
     const { data: userRow } = await supabase
       .from('chat_messages')
-      .insert({ user_id: user!.id, date, role: 'user', content: userContent })
+      .insert({ user_id: user!.id, date, role: 'user', content: userContent, image_url: uploadedImageUrl })
       .select()
       .single();
 
     const userMsg: Message = userRow
       ? dbRowToMessage(userRow)
-      : { id: `temp-${Date.now()}`, role: 'user', content: userContent };
+      : { id: `temp-${Date.now()}`, role: 'user', content: userContent, imageUrl: uploadedImageUrl || currentImagePreview || undefined };
 
     setMessages((prev) => [...prev, userMsg]);
 
@@ -402,7 +448,7 @@ export default function ChatPage() {
       const res = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userContent, context: contextRef.current, history: recentMessages }),
+        body: JSON.stringify({ message: userContent, context: contextRef.current, history: recentMessages, image_url: uploadedImageUrl }),
       });
 
       const data = await res.json();
@@ -712,10 +758,42 @@ export default function ChatPage() {
 
       {/* Input */}
       <div className="px-4 pt-2 pb-4">
+        {/* Image preview */}
+        {imagePreview && (
+          <div className="mb-2 relative inline-block">
+            <img src={imagePreview} alt="Preview" className="h-20 rounded-xl object-cover" />
+            <button
+              onClick={clearImage}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-text-primary text-bg rounded-full flex items-center justify-center text-xs"
+              aria-label="Remove image"
+            >
+              &times;
+            </button>
+          </div>
+        )}
         <div className={cn(
           'flex items-center bg-surface-secondary rounded-2xl px-4 py-1 transition-colors',
           !isToday && 'opacity-50'
         )}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!isToday || loading}
+            className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
+            aria-label="Attach photo"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+            </svg>
+          </button>
           <input
             type="text"
             value={input}
@@ -727,7 +805,7 @@ export default function ChatPage() {
           />
           <button
             onClick={sendMessage}
-            disabled={loading || !input.trim() || !isToday}
+            disabled={loading || (!input.trim() && !imageFile) || !isToday}
             className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
             aria-label="Send message"
           >

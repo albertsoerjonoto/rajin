@@ -59,3 +59,48 @@ export async function compressAvatar(file: File): Promise<Blob> {
 
   return blob;
 }
+
+/**
+ * Compress a chat image to max 800px on longest side.
+ * Preserves aspect ratio (no cropping). Outputs JPEG for smaller size.
+ */
+export async function compressChatImage(file: File): Promise<Blob> {
+  const MAX = 800;
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    const url = URL.createObjectURL(file);
+    el.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(el);
+    };
+    el.onerror = reject;
+    el.src = url;
+  });
+
+  // Scale down preserving aspect ratio
+  let w = img.width;
+  let h = img.height;
+  if (w > MAX || h > MAX) {
+    const ratio = Math.min(MAX / w, MAX / h);
+    w = Math.round(w * ratio);
+    h = Math.round(h * ratio);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(img, 0, 0, w, h);
+
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => {
+        if (b) resolve(b);
+        else reject(new Error('Canvas toBlob failed'));
+      },
+      'image/jpeg',
+      0.8,
+    );
+  });
+}

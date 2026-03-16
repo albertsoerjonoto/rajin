@@ -122,6 +122,7 @@ export interface ChatMessage {
   date: string;
   role: 'user' | 'assistant';
   content: string;
+  image_url: string | null;
   parsed_foods: ParsedFood[] | null;
   parsed_exercises: ParsedExercise[] | null;
   food_edits: FoodEdit[] | null;
