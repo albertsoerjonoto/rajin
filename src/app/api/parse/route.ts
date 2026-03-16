@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Input validation ---
-    const { message, context } = await request.json();
+    const { message, context, history } = await request.json();
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -165,17 +165,31 @@ export async function POST(request: NextRequest) {
     // --- Build context-aware prompt ---
     const systemPrompt = buildSystemPrompt(context as ChatContext | undefined);
 
-    // --- Call Gemini ---
+    // --- Build multi-turn conversation for Gemini ---
     const ai = new GoogleGenAI({ apiKey });
+
+    const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = [
+      { role: 'user', parts: [{ text: systemPrompt }] },
+      { role: 'model', parts: [{ text: '{"message": null, "foods": [], "exercises": [], "food_edits": [], "exercise_edits": []}' }] },
+    ];
+
+    // Add conversation history (last ~10 messages from frontend)
+    if (Array.isArray(history)) {
+      for (const msg of history.slice(-10)) {
+        if (msg.role === 'user' && typeof msg.content === 'string') {
+          contents.push({ role: 'user', parts: [{ text: msg.content }] });
+        } else if (msg.role === 'assistant' && typeof msg.content === 'string') {
+          contents.push({ role: 'model', parts: [{ text: msg.content }] });
+        }
+      }
+    }
+
+    // Add the current user message
+    contents.push({ role: 'user', parts: [{ text: message }] });
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-lite',
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `${systemPrompt}\n\nUser input: ${message}` }],
-        },
-      ],
+      contents,
     });
 
     const text = response.text ?? '';

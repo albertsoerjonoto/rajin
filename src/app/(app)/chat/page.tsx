@@ -392,11 +392,17 @@ export default function ChatPage() {
 
     setMessages((prev) => [...prev, userMsg]);
 
+    // Build conversation history from recent messages (last 10, excluding welcome)
+    const recentMessages = messages
+      .filter((m) => m.id !== 'welcome')
+      .slice(-10)
+      .map((m) => ({ role: m.role, content: m.content }));
+
     try {
       const res = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userContent, context: contextRef.current }),
+        body: JSON.stringify({ message: userContent, context: contextRef.current, history: recentMessages }),
       });
 
       const data = await res.json();
