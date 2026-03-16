@@ -66,7 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <ScrollContext.Provider value={{ scrollToTop }}>
-      <div ref={contentRef} className="h-screen overflow-y-auto bg-bg pb-20">
+      <div ref={contentRef} className="h-dvh overflow-y-auto bg-bg pb-20">
         <ServiceWorkerRegister />
         {children}
         <nav className="fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl safe-area-bottom z-50">
