@@ -56,7 +56,7 @@ export default function ChatPage() {
 
   const isToday = date === getToday();
 
-  // Resize chat container to visual viewport (handles keyboard height)
+  // Track visual viewport to handle iOS keyboard
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
@@ -64,29 +64,29 @@ export default function ChatPage() {
     const update = () => {
       if (!containerRef.current) return;
       const isKb = window.innerHeight - vv.height > 100;
-      containerRef.current.style.height = `${vv.height}px`;
+
+      if (isKb) {
+        // Keyboard open: resize to visual viewport & follow its scroll
+        containerRef.current.style.height = `${vv.height}px`;
+        containerRef.current.style.transform = `translateY(${vv.offsetTop}px)`;
+      } else {
+        // Keyboard closed: reset everything
+        containerRef.current.style.height = '';
+        containerRef.current.style.transform = 'none';
+        if (window.scrollY > 0) window.scrollTo(0, 0);
+      }
+
       setKeyboardVisible(isKb);
     };
 
     update();
     vv.addEventListener('resize', update);
-    return () => vv.removeEventListener('resize', update);
-  }, []);
+    vv.addEventListener('scroll', update);
 
-  // Lock body on input focus to prevent iOS from scrolling page
-  const handleInputFocus = useCallback(() => {
-    document.body.style.position = 'fixed';
-    document.body.style.top = '0';
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-  }, []);
-
-  const handleInputBlur = useCallback(() => {
-    document.body.style.position = '';
-    document.body.style.top = '';
-    document.body.style.left = '';
-    document.body.style.right = '';
-    window.scrollTo(0, 0);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
   }, []);
 
   // Fetch messages from DB for the selected date
@@ -727,8 +727,6 @@ export default function ChatPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            onFocus={handleInputFocus}
-            onBlur={handleInputBlur}
             disabled={!isToday}
             className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary disabled:cursor-not-allowed"
             placeholder={isToday ? 'Log, edit, ask, or get recommendations...' : 'Switch to today to send messages'}
