@@ -271,6 +271,8 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [voiceRecording, setVoiceRecording] = useState(false);
+  const pendingVoiceTextRef = useRef<string | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -422,15 +424,16 @@ export default function ChatPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const sendMessage = async () => {
-    if ((!input.trim() && !imageFile) || loading || !isToday) return;
+  const sendMessage = async (textOverride?: string) => {
+    const messageText = textOverride ?? input;
+    if ((!messageText.trim() && !imageFile) || loading || !isToday) return;
 
-    if (input.trim().length > 1000) {
+    if (messageText.trim().length > 1000) {
       showToast('error', t('chat.messageTooLong'));
       return;
     }
 
-    const userContent = input.trim() || (imageFile ? t('chat.whatsInPhoto') : '');
+    const userContent = messageText.trim() || (imageFile ? t('chat.whatsInPhoto') : '');
     const currentImageFile = imageFile;
     const currentImagePreview = imagePreview;
     setInput('');
@@ -821,42 +824,55 @@ export default function ChatPage() {
             onChange={handleImageSelect}
             className="hidden"
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={!isToday || loading}
-            className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
-            aria-label="Attach photo"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-            </svg>
-          </button>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            disabled={!isToday}
-            className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary disabled:cursor-not-allowed"
-            placeholder={isToday ? t('chat.placeholder') : t('chat.placeholderPastDate')}
-          />
-          <VoiceButton
-            onTranscript={(text) => setInput((prev) => prev ? `${prev} ${text}` : text)}
-            onError={(key) => showToast('error', t(key))}
-            disabled={!isToday || loading}
-            lang={locale === 'id' ? 'id-ID' : 'en-US'}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={loading || (!input.trim() && !imageFile) || !isToday}
-            className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
-            aria-label="Send message"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-            </svg>
-          </button>
+          {voiceRecording ? (
+            <VoiceButton
+              onTranscript={(text) => sendMessage(text)}
+              onRecordingChange={setVoiceRecording}
+              onError={(key) => showToast('error', t(key))}
+              disabled={!isToday || loading}
+              lang={locale === 'id' ? 'id-ID' : 'en-US'}
+            />
+          ) : (
+            <>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!isToday || loading}
+                className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
+                aria-label="Attach photo"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                </svg>
+              </button>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                disabled={!isToday}
+                className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary disabled:cursor-not-allowed"
+                placeholder={isToday ? t('chat.placeholder') : t('chat.placeholderPastDate')}
+              />
+              <VoiceButton
+                onTranscript={(text) => sendMessage(text)}
+                onRecordingChange={setVoiceRecording}
+                onError={(key) => showToast('error', t(key))}
+                disabled={!isToday || loading}
+                lang={locale === 'id' ? 'id-ID' : 'en-US'}
+              />
+              <button
+                onClick={() => sendMessage()}
+                disabled={loading || (!input.trim() && !imageFile) || !isToday}
+                className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
+                aria-label="Send message"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+              </button>
+            </>
+          )}
         </div>
       </div>
       </div>

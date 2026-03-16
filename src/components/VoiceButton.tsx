@@ -4,108 +4,256 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface VoiceButtonProps {
   onTranscript: (text: string) => void;
+  onRecordingChange: (recording: boolean) => void;
   onError: (message: string) => void;
   disabled?: boolean;
   lang: string;
 }
 
-export default function VoiceButton({ onTranscript, onError, disabled, lang }: VoiceButtonProps) {
-  const [supported, setSupported] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+type VoiceState = 'idle' | 'recording' | 'transcribing';
 
-  // Use refs for callbacks to avoid stale closures in recognition event handlers
+export default function VoiceButton({ onTranscript, onRecordingChange, onError, disabled, lang }: VoiceButtonProps) {
+  const [state, setState] = useState<VoiceState>('idle');
+  const [supported, setSupported] = useState(false);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animFrameRef = useRef<number>(0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Refs for callbacks to avoid stale closures
   const onTranscriptRef = useRef(onTranscript);
+  const onRecordingChangeRef = useRef(onRecordingChange);
   const onErrorRef = useRef(onError);
   useEffect(() => { onTranscriptRef.current = onTranscript; }, [onTranscript]);
+  useEffect(() => { onRecordingChangeRef.current = onRecordingChange; }, [onRecordingChange]);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
   useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    setSupported(!!SR);
+    setSupported(!!(navigator.mediaDevices?.getUserMedia));
   }, []);
 
-  const toggle = useCallback(() => {
-    if (recording) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+  const drawWaveform = useCallback(() => {
+    const analyser = analyserRef.current;
+    const canvas = canvasRef.current;
+    if (!analyser || !canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      animFrameRef.current = requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+
+      const { width, height } = canvas;
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw waveform bars
+      const barCount = 32;
+      const barWidth = width / barCount - 2;
+      const step = Math.floor(bufferLength / barCount);
+
+      for (let i = 0; i < barCount; i++) {
+        const value = dataArray[i * step];
+        const barHeight = Math.max(2, (value / 255) * height * 0.85);
+        const x = i * (barWidth + 2);
+        const y = (height - barHeight) / 2;
+
+        ctx.fillStyle = '#ef4444'; // red-500
+        ctx.beginPath();
+        ctx.roundRect(x, y, barWidth, barHeight, 1.5);
+        ctx.fill();
       }
-      return;
+    };
+
+    draw();
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
     }
+  }, []);
 
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
+  const cleanup = useCallback(() => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = 0;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+    mediaRecorderRef.current = null;
+    chunksRef.current = [];
+  }, []);
 
-    const recognition = new SR();
-    recognition.lang = lang;
-    recognition.interimResults = false;
-    recognition.continuous = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const result = event.results[0];
-      if (result && result[0]) {
-        const transcript = result[0].transcript;
-        if (transcript) {
-          onTranscriptRef.current(transcript);
-        }
-      }
-    };
-
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      if (event.error === 'no-speech') {
-        onErrorRef.current('voice.noSpeechDetected');
-      } else if (event.error === 'not-allowed') {
-        onErrorRef.current('voice.micPermissionDenied');
-      } else if (event.error === 'network') {
-        onErrorRef.current('voice.networkError');
-      } else if (event.error !== 'aborted') {
-        onErrorRef.current('voice.notSupported');
-      }
-    };
-
-    recognition.onend = () => {
-      recognitionRef.current = null;
-      setRecording(false);
-    };
-
-    recognitionRef.current = recognition;
-    setRecording(true);
+  const transcribe = useCallback(async (blob: Blob) => {
+    setState('transcribing');
+    onRecordingChangeRef.current(false);
 
     try {
-      recognition.start();
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.webm');
+      formData.append('locale', lang === 'id-ID' ? 'id' : 'en');
+
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.text) {
+        onErrorRef.current(data.error === 'No speech detected' ? 'voice.noSpeechDetected' : 'voice.transcriptionFailed');
+        setState('idle');
+        return;
+      }
+
+      onTranscriptRef.current(data.text);
+      setState('idle');
     } catch {
-      setRecording(false);
-      recognitionRef.current = null;
-      onErrorRef.current('voice.notSupported');
+      onErrorRef.current('voice.transcriptionFailed');
+      setState('idle');
     }
-  }, [recording, lang]);
+  }, [lang]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      // Set up Web Audio API for waveform
+      const audioContext = new AudioContext();
+      audioContextRef.current = audioContext;
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      // Set up MediaRecorder
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : 'audio/mp4';
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        cleanup();
+        if (blob.size > 0) {
+          transcribe(blob);
+        } else {
+          onErrorRef.current('voice.noSpeechDetected');
+          setState('idle');
+        }
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start(100); // collect data every 100ms
+      setState('recording');
+      onRecordingChangeRef.current(true);
+
+      // Start waveform animation
+      drawWaveform();
+    } catch (err) {
+      cleanup();
+      if (err instanceof DOMException && err.name === 'NotAllowedError') {
+        onErrorRef.current('voice.micPermissionDenied');
+      } else {
+        onErrorRef.current('voice.networkError');
+      }
+    }
+  }, [cleanup, drawWaveform, transcribe]);
+
+  const toggle = useCallback(() => {
+    if (state === 'recording') {
+      stopRecording();
+    } else if (state === 'idle') {
+      startRecording();
+    }
+  }, [state, startRecording, stopRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-        recognitionRef.current = null;
-      }
+      cleanup();
     };
-  }, []);
+  }, [cleanup]);
 
   if (!supported) return null;
 
+  // Recording state: show waveform + stop button
+  if (state === 'recording') {
+    return (
+      <div className="flex items-center gap-2 flex-1">
+        <canvas
+          ref={canvasRef}
+          width={200}
+          height={32}
+          className="flex-1 h-8"
+        />
+        <button
+          onClick={toggle}
+          className="p-2 text-red-500 hover:text-red-400 transition-colors rounded-lg"
+          aria-label="Stop recording"
+          type="button"
+        >
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="6" width="12" height="12" rx="2" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  // Transcribing state: show spinner
+  if (state === 'transcribing') {
+    return (
+      <button
+        disabled
+        className="p-2 text-text-tertiary disabled:opacity-50 transition-colors rounded-lg"
+        aria-label="Transcribing"
+        type="button"
+      >
+        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      </button>
+    );
+  }
+
+  // Idle state: mic button
   return (
     <button
       onClick={toggle}
       disabled={disabled}
-      className="relative p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
-      aria-label={recording ? 'Stop recording' : 'Voice input'}
+      className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
+      aria-label="Voice input"
       type="button"
     >
-      {recording && (
-        <span className="absolute inset-0.5 rounded-full border-2 border-red-500 animate-pulse" />
-      )}
       <svg
-        className={`w-5 h-5 transition-colors ${recording ? 'text-red-500' : ''}`}
+        className="w-5 h-5"
         fill="none"
         viewBox="0 0 24 24"
         strokeWidth={2}
