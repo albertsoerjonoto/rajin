@@ -14,22 +14,19 @@ export default function VoiceButton({ onTranscript, onError, disabled, lang }: V
   const [recording, setRecording] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
+  // Use refs for callbacks to avoid stale closures in recognition event handlers
+  const onTranscriptRef = useRef(onTranscript);
+  const onErrorRef = useRef(onError);
+  useEffect(() => { onTranscriptRef.current = onTranscript; }, [onTranscript]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     setSupported(!!SR);
   }, []);
 
-  const stop = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.abort();
-      recognitionRef.current = null;
-    }
-    setRecording(false);
-  }, []);
-
   const toggle = useCallback(() => {
     if (recording) {
-      // Stop — let onresult/onend fire naturally
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
@@ -46,21 +43,24 @@ export default function VoiceButton({ onTranscript, onError, disabled, lang }: V
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0]?.[0]?.transcript;
-      if (transcript) {
-        onTranscript(transcript);
+      const result = event.results[0];
+      if (result && result[0]) {
+        const transcript = result[0].transcript;
+        if (transcript) {
+          onTranscriptRef.current(transcript);
+        }
       }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       if (event.error === 'no-speech') {
-        onError('voice.noSpeechDetected');
+        onErrorRef.current('voice.noSpeechDetected');
       } else if (event.error === 'not-allowed') {
-        onError('voice.micPermissionDenied');
+        onErrorRef.current('voice.micPermissionDenied');
       } else if (event.error === 'network') {
-        onError('voice.networkError');
+        onErrorRef.current('voice.networkError');
       } else if (event.error !== 'aborted') {
-        onError('voice.notSupported');
+        onErrorRef.current('voice.notSupported');
       }
     };
 
@@ -77,9 +77,9 @@ export default function VoiceButton({ onTranscript, onError, disabled, lang }: V
     } catch {
       setRecording(false);
       recognitionRef.current = null;
-      onError('voice.notSupported');
+      onErrorRef.current('voice.notSupported');
     }
-  }, [recording, lang, onTranscript, onError]);
+  }, [recording, lang]);
 
   // Cleanup on unmount
   useEffect(() => {
