@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, memo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, cn } from '@/lib/utils';
@@ -265,6 +265,12 @@ export default function ChatPage() {
 
   const isToday = date === getToday();
 
+  // Prevent body scroll while on chat page (fixes scroll leak to other pages)
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   // Fetch messages from DB for the selected date
   const fetchMessages = useCallback(async () => {
     if (!user) return;
@@ -374,7 +380,7 @@ export default function ChatPage() {
   }, [messages, loading]);
 
   // Instant scroll to bottom after initial load (no animation, no flash)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!loadingMessages && messages.length > 0) {
       const container = messagesContainerRef.current;
       if (container) {
