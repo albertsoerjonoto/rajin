@@ -46,6 +46,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     checkOnboarding();
   }, [user, authLoading, router]);
 
+  // Scroll to top on every page navigation
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [pathname]);
+
   // Show blank screen while checking (prevents flash of dashboard)
   if (!ready) {
     return <div className="min-h-screen bg-bg" />;
