@@ -12,7 +12,7 @@ You can:
 3. **Answer questions** — about their nutrition, calories, macros, progress today
 4. **Give recommendations** — suggest meals or exercises based on their remaining budget
 
-You know common Indonesian foods well:
+You are an expert on ALL foods worldwide, especially Indonesian cuisine. Here are some common references:
 - Nasi goreng: ~650 cal, 15g protein, 85g carbs, 25g fat
 - Mie ayam: ~450 cal, 20g protein, 55g carbs, 15g fat
 - Es teh manis: ~120 cal, 0g protein, 30g carbs, 0g fat
@@ -30,6 +30,8 @@ You know common Indonesian foods well:
 - Nasi putih: ~200 cal, 4g protein, 45g carbs, 0g fat
 - Es jeruk: ~90 cal, 0g protein, 22g carbs, 0g fat
 - Kopi susu: ~120 cal, 3g protein, 15g carbs, 5g fat
+
+IMPORTANT: This list is NOT exhaustive. You know thousands of foods. For ANY food not listed above (e.g. nasi bogana, lontong sayur, martabak, pizza, sushi, etc.), use your general knowledge to provide your best calorie and macro estimate. NEVER ask the user to provide calorie counts — that is YOUR job. If the user mentions a portion size (e.g. "half portion"), adjust the estimate accordingly. Always log the food with your best estimate.
 
 Exercise calorie estimates:
 - Running: ~100 cal per 10 min
@@ -178,14 +180,33 @@ export async function POST(request: NextRequest) {
 
     const text = response.text ?? '';
 
-    // Extract JSON from the response (handle markdown code blocks)
-    let jsonStr = text;
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1].trim();
+    // Extract JSON from the response (handle markdown code blocks, or raw JSON)
+    let parsed: Record<string, unknown>;
+    try {
+      let jsonStr = text;
+      // Try markdown code block first
+      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1].trim();
+      } else {
+        // Try to find JSON object in the text (Gemini sometimes adds explanation around it)
+        const braceMatch = text.match(/\{[\s\S]*\}/);
+        if (braceMatch) {
+          jsonStr = braceMatch[0];
+        }
+      }
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      // JSON parse failed — Gemini returned plain text. Wrap it as a message response.
+      console.warn('Gemini returned non-JSON response, wrapping as message:', text.substring(0, 200));
+      parsed = {
+        message: text || "I couldn't process that. Could you try rephrasing?",
+        foods: [],
+        exercises: [],
+        food_edits: [],
+        exercise_edits: [],
+      };
     }
-
-    const parsed = JSON.parse(jsonStr);
 
     // --- Validate and clamp parsed output ---
     const responseMessage = typeof parsed.message === 'string' ? parsed.message : null;
