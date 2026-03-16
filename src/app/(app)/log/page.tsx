@@ -78,9 +78,15 @@ export default function LogPage() {
 
   const handleDateChange = useCallback((newDate: string) => {
     setDate(newDate);
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
+    // iOS Safari/PWA needs RAF + timeout to reliably scroll after re-render
+    const scrollTop = () => {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    scrollTop();
+    requestAnimationFrame(scrollTop);
+    setTimeout(scrollTop, 100);
   }, []);
 
   const saveFoodLog = async () => {

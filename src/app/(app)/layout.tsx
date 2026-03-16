@@ -46,11 +46,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     checkOnboarding();
   }, [user, authLoading, router]);
 
-  // Scroll to top on every page navigation
+  // Scroll to top on every page navigation (RAF + timeout for iOS reliability)
   useEffect(() => {
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
+    const scrollTop = () => {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    scrollTop();
+    requestAnimationFrame(scrollTop);
+    const timer = setTimeout(scrollTop, 100);
+    return () => clearTimeout(timer);
   }, [pathname]);
 
   // Show blank screen while checking (prevents flash of dashboard)
