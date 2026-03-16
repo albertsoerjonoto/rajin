@@ -9,6 +9,7 @@ import { computeNutritionTargets } from '@/lib/nutrition';
 import DateNav from '@/components/DateNav';
 import { compressChatImage } from '@/lib/image';
 import { useLocale } from '@/lib/i18n';
+import MarkdownContent from '@/components/MarkdownContent';
 import type { ParsedFood, ParsedExercise, MealType, FoodEdit, ExerciseEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
 
 interface Message {
@@ -66,7 +67,11 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
         {msg.imageUrl && (
           <img src={msg.imageUrl} alt="Attached" className="rounded-xl mb-2 max-h-48 w-auto" />
         )}
-        <p className="text-sm whitespace-pre-line">{msg.content}</p>
+        {msg.role === 'assistant' ? (
+          <MarkdownContent content={msg.content} />
+        ) : (
+          <p className="text-sm whitespace-pre-line">{msg.content}</p>
+        )}
 
         {/* Parsed Food Cards (Add) */}
         {msg.parsedFoods && msg.parsedFoods.length > 0 && (
