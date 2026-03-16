@@ -369,13 +369,23 @@ export default function ChatPage() {
     const onResize = () => {
       if (!containerRef.current) return;
       const kbOpen = window.innerHeight - vv.height > 100;
-      containerRef.current.style.height = kbOpen
-        ? `${vv.height}px`
-        : '100%';
+      if (kbOpen) {
+        // Keyboard open: fill visual viewport (hides nav, input sits above keyboard)
+        containerRef.current.style.height = `${vv.height}px`;
+        // Counteract iOS auto-scroll that pushes header off screen
+        window.scrollTo(0, 0);
+      } else {
+        // Keyboard closed: leave room for nav bar (4rem = 64px)
+        containerRef.current.style.height = 'calc(100% - 4rem)';
+      }
     };
 
     vv.addEventListener('resize', onResize);
-    return () => vv.removeEventListener('resize', onResize);
+    return () => {
+      vv.removeEventListener('resize', onResize);
+      // Reset scroll when leaving chat page
+      window.scrollTo(0, 0);
+    };
   }, []);
 
   const sendMessage = async () => {
@@ -676,7 +686,7 @@ export default function ChatPage() {
   }, [handleSaveAndApply, confirmEdits, saveResults]);
 
   return (
-    <div ref={containerRef} className="fixed top-0 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: '100%' }}>
+    <div ref={containerRef} className="fixed top-0 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: 'calc(100% - 4rem)' }}>
       <div className="max-w-lg mx-auto flex flex-col h-full w-full">
       {ToastContainer}
 
