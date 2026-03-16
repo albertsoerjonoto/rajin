@@ -168,18 +168,23 @@ export async function POST(request: NextRequest) {
     // --- Build multi-turn conversation for Gemini ---
     const ai = new GoogleGenAI({ apiKey });
 
-    const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = [
-      { role: 'user', parts: [{ text: systemPrompt }] },
-      { role: 'model', parts: [{ text: '{"message": null, "foods": [], "exercises": [], "food_edits": [], "exercise_edits": []}' }] },
-    ];
+    // Build conversation history as alternating user/model turns
+    const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = [];
 
-    // Add conversation history (last ~10 messages from frontend)
     if (Array.isArray(history)) {
       for (const msg of history.slice(-10)) {
         if (msg.role === 'user' && typeof msg.content === 'string') {
           contents.push({ role: 'user', parts: [{ text: msg.content }] });
         } else if (msg.role === 'assistant' && typeof msg.content === 'string') {
-          contents.push({ role: 'model', parts: [{ text: msg.content }] });
+          // Wrap assistant text as JSON so it's consistent with the expected response format
+          const wrappedJson = JSON.stringify({
+            message: msg.content,
+            foods: [],
+            exercises: [],
+            food_edits: [],
+            exercise_edits: [],
+          });
+          contents.push({ role: 'model', parts: [{ text: wrappedJson }] });
         }
       }
     }
@@ -189,6 +194,9 @@ export async function POST(request: NextRequest) {
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-lite',
+      config: {
+        systemInstruction: systemPrompt,
+      },
       contents,
     });
 
