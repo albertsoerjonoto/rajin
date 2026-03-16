@@ -1,15 +1,12 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import { ServiceWorkerRegister } from './sw-register';
-
-const ScrollContext = createContext<{ scrollToTop: () => void }>({ scrollToTop: () => {} });
-export const useScrollContext = () => useContext(ScrollContext);
 
 const tabs = [
   { href: '/dashboard', label: 'Overview', icon: DashboardIcon },
@@ -24,11 +21,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [ready, setReady] = useState(false);
   const checkedRef = useRef(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const scrollToTop = useCallback(() => {
-    if (contentRef.current) contentRef.current.scrollTop = 0;
-  }, []);
 
   // Check if the user has completed onboarding
   useEffect(() => {
@@ -54,10 +46,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     checkOnboarding();
   }, [user, authLoading, router]);
 
-  // Scroll to top on every page navigation
+  // Scroll to top on every page navigation (RAF + timeout for iOS reliability)
   useEffect(() => {
-    scrollToTop();
-  }, [pathname, scrollToTop]);
+    const scrollTop = () => {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    scrollTop();
+    requestAnimationFrame(scrollTop);
+    const timer = setTimeout(scrollTop, 100);
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   // Show blank screen while checking (prevents flash of dashboard)
   if (!ready) {
@@ -65,32 +65,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ScrollContext.Provider value={{ scrollToTop }}>
-      <div ref={contentRef} className="h-dvh overflow-y-auto bg-bg pb-20">
-        <ServiceWorkerRegister />
-        {children}
-        <nav className="fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl safe-area-bottom z-50">
-          <div className="max-w-lg mx-auto flex justify-around items-center h-16">
-            {tabs.map((tab) => {
-              const isActive = pathname === tab.href;
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  className={cn(
-                    'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-200',
-                    isActive ? 'text-nav-active' : 'text-nav-inactive hover:text-nav-inactive-hover'
-                  )}
-                >
-                  <tab.icon className="w-6 h-6" filled={isActive} />
-                  <span className="text-[10px] font-medium">{tab.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
-      </div>
-    </ScrollContext.Provider>
+    <div className="min-h-screen bg-bg pb-20">
+      <ServiceWorkerRegister />
+      {children}
+      <nav className="fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl safe-area-bottom z-50">
+        <div className="max-w-lg mx-auto flex justify-around items-center h-16">
+          {tabs.map((tab) => {
+            const isActive = pathname === tab.href;
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={cn(
+                  'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-200',
+                  isActive ? 'text-nav-active' : 'text-nav-inactive hover:text-nav-inactive-hover'
+                )}
+              >
+                <tab.icon className="w-6 h-6" filled={isActive} />
+                <span className="text-[10px] font-medium">{tab.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
   );
 }
 

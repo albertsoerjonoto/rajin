@@ -265,6 +265,12 @@ export default function ChatPage() {
 
   const isToday = date === getToday();
 
+  // Prevent body scroll while on chat page (fixes scroll leak to other pages)
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   // Fetch messages from DB for the selected date
   const fetchMessages = useCallback(async () => {
     if (!user) return;
@@ -725,7 +731,7 @@ export default function ChatPage() {
   }, [handleSaveAndApply, confirmEdits, saveResults]);
 
   return (
-    <div className="fixed inset-0 bottom-16 bg-bg overflow-hidden flex flex-col z-10">
+    <div className="fixed top-0 bottom-16 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col">
       <div className="max-w-lg mx-auto flex flex-col h-full w-full">
       {ToastContainer}
 
