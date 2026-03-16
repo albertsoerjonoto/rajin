@@ -272,7 +272,6 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [voiceRecording, setVoiceRecording] = useState(false);
-  const pendingVoiceTextRef = useRef<string | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
