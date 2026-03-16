@@ -44,6 +44,16 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Match canvas internal resolution to display size
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const displayWidth = rect.width;
+    const displayHeight = rect.height;
+
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
@@ -51,34 +61,28 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
       animFrameRef.current = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
-      const { width, height } = canvas;
-      ctx.clearRect(0, 0, width, height);
+      ctx.clearRect(0, 0, displayWidth, displayHeight);
 
-      // Draw waveform bars
-      const barCount = 32;
-      const barWidth = width / barCount - 2;
+      // Draw centered waveform bars
+      const barCount = 40;
+      const gap = 2;
+      const barWidth = (displayWidth - (barCount - 1) * gap) / barCount;
       const step = Math.floor(bufferLength / barCount);
 
       for (let i = 0; i < barCount; i++) {
         const value = dataArray[i * step];
-        const barHeight = Math.max(2, (value / 255) * height * 0.85);
-        const x = i * (barWidth + 2);
-        const y = (height - barHeight) / 2;
+        const barHeight = Math.max(3, (value / 255) * displayHeight * 0.9);
+        const x = i * (barWidth + gap);
+        const y = (displayHeight - barHeight) / 2;
 
-        ctx.fillStyle = '#ef4444'; // red-500
+        ctx.fillStyle = '#ef4444';
         ctx.beginPath();
-        ctx.roundRect(x, y, barWidth, barHeight, 1.5);
+        ctx.roundRect(x, y, barWidth, barHeight, 2);
         ctx.fill();
       }
     };
 
     draw();
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
   }, []);
 
   const cleanup = useCallback(() => {
@@ -169,12 +173,12 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
       };
 
       mediaRecorderRef.current = recorder;
-      recorder.start(100); // collect data every 100ms
+      recorder.start(100);
       setState('recording');
       onRecordingChangeRef.current(true);
 
-      // Start waveform animation
-      drawWaveform();
+      // Start waveform after a small delay to let canvas mount
+      requestAnimationFrame(() => drawWaveform());
     } catch (err) {
       cleanup();
       if (err instanceof DOMException && err.name === 'NotAllowedError') {
@@ -184,6 +188,12 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
       }
     }
   }, [cleanup, drawWaveform, transcribe]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
 
   const toggle = useCallback(() => {
     if (state === 'recording') {
@@ -202,19 +212,17 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
 
   if (!supported) return null;
 
-  // Recording state: show waveform + stop button
+  // Recording: waveform canvas + stop button (fills the parent flex container)
   if (state === 'recording') {
     return (
-      <div className="flex items-center gap-2 flex-1">
+      <>
         <canvas
           ref={canvasRef}
-          width={200}
-          height={32}
           className="flex-1 h-8"
         />
         <button
           onClick={toggle}
-          className="p-2 text-red-500 hover:text-red-400 transition-colors rounded-lg"
+          className="p-2 text-red-500 hover:text-red-400 transition-colors rounded-lg flex-shrink-0"
           aria-label="Stop recording"
           type="button"
         >
@@ -222,33 +230,28 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
             <rect x="6" y="6" width="12" height="12" rx="2" />
           </svg>
         </button>
+      </>
+    );
+  }
+
+  // Transcribing: spinner in place of mic button
+  if (state === 'transcribing') {
+    return (
+      <div className="p-2 flex-shrink-0">
+        <svg className="w-5 h-5 animate-spin text-accent" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
       </div>
     );
   }
 
-  // Transcribing state: show spinner
-  if (state === 'transcribing') {
-    return (
-      <button
-        disabled
-        className="p-2 text-text-tertiary disabled:opacity-50 transition-colors rounded-lg"
-        aria-label="Transcribing"
-        type="button"
-      >
-        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      </button>
-    );
-  }
-
-  // Idle state: mic button
+  // Idle: mic button
   return (
     <button
       onClick={toggle}
       disabled={disabled}
-      className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
+      className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg flex-shrink-0"
       aria-label="Voice input"
       type="button"
     >

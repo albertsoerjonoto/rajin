@@ -824,15 +824,7 @@ export default function ChatPage() {
             onChange={handleImageSelect}
             className="hidden"
           />
-          {voiceRecording ? (
-            <VoiceButton
-              onTranscript={(text) => sendMessage(text)}
-              onRecordingChange={setVoiceRecording}
-              onError={(key) => showToast('error', t(key))}
-              disabled={!isToday || loading}
-              lang={locale === 'id' ? 'id-ID' : 'en-US'}
-            />
-          ) : (
+          {!voiceRecording && (
             <>
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -854,24 +846,26 @@ export default function ChatPage() {
                 className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary disabled:cursor-not-allowed"
                 placeholder={isToday ? t('chat.placeholder') : t('chat.placeholderPastDate')}
               />
-              <VoiceButton
-                onTranscript={(text) => sendMessage(text)}
-                onRecordingChange={setVoiceRecording}
-                onError={(key) => showToast('error', t(key))}
-                disabled={!isToday || loading}
-                lang={locale === 'id' ? 'id-ID' : 'en-US'}
-              />
-              <button
-                onClick={() => sendMessage()}
-                disabled={loading || (!input.trim() && !imageFile) || !isToday}
-                className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
-                aria-label="Send message"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
-              </button>
             </>
+          )}
+          <VoiceButton
+            onTranscript={(text) => sendMessage(text)}
+            onRecordingChange={setVoiceRecording}
+            onError={(key) => showToast('error', t(key))}
+            disabled={!isToday || loading}
+            lang={locale === 'id' ? 'id-ID' : 'en-US'}
+          />
+          {!voiceRecording && (
+            <button
+              onClick={() => sendMessage()}
+              disabled={loading || (!input.trim() && !imageFile) || !isToday}
+              className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
+              aria-label="Send message"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+              </svg>
+            </button>
           )}
         </div>
       </div>
