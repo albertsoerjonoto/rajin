@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, cn } from '@/lib/utils';
@@ -19,6 +19,207 @@ interface Message {
   exerciseEdits?: ExerciseEdit[];
   saved?: boolean;
 }
+
+interface MessageBubbleProps {
+  msg: Message;
+  savingId: string | null;
+  onButtonClick: (msg: Message) => void;
+  onUpdateFood: (msgId: string, index: number, field: keyof ParsedFood, value: string | number) => void;
+}
+
+const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick, onUpdateFood }: MessageBubbleProps) {
+  const hasActionable =
+    (msg.parsedFoods?.length ?? 0) > 0 ||
+    (msg.parsedExercises?.length ?? 0) > 0 ||
+    (msg.foodEdits?.length ?? 0) > 0 ||
+    (msg.exerciseEdits?.length ?? 0) > 0;
+
+  const getLabel = () => {
+    const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0;
+    const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0;
+    if (hasAdds && hasEdits) return 'Save & Apply Changes';
+    if (hasEdits) return 'Apply Changes';
+    return 'Save to Log';
+  };
+
+  return (
+    <div className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+      <div
+        className={cn(
+          'max-w-[85%] rounded-2xl px-4 py-3 animate-bounce-in',
+          msg.role === 'user'
+            ? 'bg-accent text-accent-fg'
+            : 'bg-surface'
+        )}
+      >
+        <p className="text-sm whitespace-pre-line">{msg.content}</p>
+
+        {/* Parsed Food Cards (Add) */}
+        {msg.parsedFoods && msg.parsedFoods.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {msg.parsedFoods.map((food, i) => (
+              <div key={i} className="bg-surface-secondary rounded-xl p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium text-accent-text uppercase">{food.meal_type === 'snack' ? 'Other' : food.meal_type}</span>
+                  {!msg.saved && (
+                    <select
+                      value={food.meal_type}
+                      onChange={(e) => onUpdateFood(msg.id, i, 'meal_type', e.target.value as MealType)}
+                      className="text-xs bg-surface border border-border-strong rounded-lg px-1.5 py-0.5"
+                    >
+                      <option value="breakfast">Breakfast</option>
+                      <option value="lunch">Lunch</option>
+                      <option value="dinner">Dinner</option>
+                      <option value="snack">Other</option>
+                    </select>
+                  )}
+                </div>
+                <p className="text-sm font-medium text-text-primary">{food.description}</p>
+                <div className="flex gap-3 mt-1 text-xs text-text-secondary">
+                  <span>{food.calories} cal</span>
+                  {food.protein_g ? <span>{food.protein_g}g P</span> : null}
+                  {food.carbs_g ? <span>{food.carbs_g}g C</span> : null}
+                  {food.fat_g ? <span>{food.fat_g}g F</span> : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Parsed Exercise Cards (Add) */}
+        {msg.parsedExercises && msg.parsedExercises.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {msg.parsedExercises.map((ex, i) => (
+              <div key={i} className="bg-exercise-surface rounded-xl p-3">
+                <p className="text-sm font-medium text-text-primary">{ex.exercise_type}</p>
+                <div className="flex gap-3 mt-1 text-xs text-text-secondary">
+                  <span>{ex.duration_minutes} min</span>
+                  <span>{ex.calories_burned} cal burned</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Food Edit Cards */}
+        {msg.foodEdits && msg.foodEdits.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {msg.foodEdits.map((edit, i) => (
+              <div key={i} className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase">Edit</span>
+                  <span className="text-xs text-amber-600 dark:text-amber-500">· {edit.original.meal_type === 'snack' ? 'Other' : edit.original.meal_type}</span>
+                </div>
+                <p className="text-sm font-medium text-text-primary">{edit.original.description}</p>
+                <div className="mt-1.5 space-y-0.5">
+                  {edit.updated.calories !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.calories} cal</span>
+                      <span className="text-text-secondary">→</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.calories} cal</span>
+                    </div>
+                  )}
+                  {edit.updated.description !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.description}</span>
+                      <span className="text-text-secondary">→</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.description}</span>
+                    </div>
+                  )}
+                  {edit.updated.protein_g !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.protein_g ?? 0}g P</span>
+                      <span className="text-text-secondary">→</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.protein_g}g P</span>
+                    </div>
+                  )}
+                  {edit.updated.carbs_g !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.carbs_g ?? 0}g C</span>
+                      <span className="text-text-secondary">→</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.carbs_g}g C</span>
+                    </div>
+                  )}
+                  {edit.updated.fat_g !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.fat_g ?? 0}g F</span>
+                      <span className="text-text-secondary">→</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.fat_g}g F</span>
+                    </div>
+                  )}
+                  {edit.updated.meal_type !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.meal_type}</span>
+                      <span className="text-text-secondary">→</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.meal_type}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Exercise Edit Cards */}
+        {msg.exerciseEdits && msg.exerciseEdits.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {msg.exerciseEdits.map((edit, i) => (
+              <div key={i} className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase">Edit</span>
+                </div>
+                <p className="text-sm font-medium text-text-primary">{edit.original.exercise_type}</p>
+                <div className="mt-1.5 space-y-0.5">
+                  {edit.updated.duration_minutes !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.duration_minutes} min</span>
+                      <span className="text-text-secondary">→</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.duration_minutes} min</span>
+                    </div>
+                  )}
+                  {edit.updated.calories_burned !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.calories_burned} cal</span>
+                      <span className="text-text-secondary">→</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.calories_burned} cal</span>
+                    </div>
+                  )}
+                  {edit.updated.exercise_type !== undefined && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary line-through">{edit.original.exercise_type}</span>
+                      <span className="text-text-secondary">→</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.exercise_type}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Action Button */}
+        {hasActionable && !msg.saved ? (
+          <button
+            onClick={() => onButtonClick(msg)}
+            disabled={savingId === msg.id}
+            className={cn(
+              'mt-3 w-full py-2 text-sm font-medium rounded-xl transition-all active:scale-[0.98] disabled:opacity-50',
+              (msg.foodEdits?.length || msg.exerciseEdits?.length)
+                ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                : 'bg-accent hover:bg-accent-hover text-accent-fg'
+            )}
+          >
+            {savingId === msg.id ? 'Saving...' : getLabel()}
+          </button>
+        ) : msg.saved ? (
+          <p className="mt-2 text-xs text-positive-text font-medium text-center">
+            {(msg.foodEdits?.length || msg.exerciseEdits?.length) ? 'Changes applied!' : 'Saved!'}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+});
 
 const WELCOME_MESSAGE: Message = {
   id: 'welcome',
@@ -49,6 +250,7 @@ export default function ChatPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<ChatContext | null>(null);
   const shouldAutoScroll = useRef(false);
 
@@ -158,6 +360,23 @@ export default function ChatPage() {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, loading]);
+
+  // Resize container when iOS keyboard opens/closes
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onResize = () => {
+      if (!containerRef.current) return;
+      const kbOpen = window.innerHeight - vv.height > 100;
+      containerRef.current.style.height = kbOpen
+        ? `${vv.height}px`
+        : `calc(100% - 4rem)`;
+    };
+
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, []);
 
   const sendMessage = async () => {
     if (!input.trim() || loading || !isToday) return;
@@ -303,7 +522,7 @@ export default function ChatPage() {
     }
   };
 
-  const saveResults = async (msgId: string, foods: ParsedFood[], exercises: ParsedExercise[]) => {
+  const saveResults = useCallback(async (msgId: string, foods: ParsedFood[], exercises: ParsedExercise[]) => {
     if (!user || savingId) return;
     setSavingId(msgId);
     const supabase = createClient();
@@ -339,9 +558,10 @@ export default function ChatPage() {
     await markSaved(msgId);
     setSavingId(null);
     fetchContext();
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, showToast, fetchContext]);
 
-  const confirmEdits = async (msgId: string, foodEdits: FoodEdit[], exerciseEdits: ExerciseEdit[]) => {
+  const confirmEdits = useCallback(async (msgId: string, foodEdits: FoodEdit[], exerciseEdits: ExerciseEdit[]) => {
     if (!user || savingId) return;
     setSavingId(msgId);
     const supabase = createClient();
@@ -366,9 +586,10 @@ export default function ChatPage() {
     await markSaved(msgId);
     setSavingId(null);
     fetchContext();
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, showToast, fetchContext]);
 
-  const handleSaveAndApply = async (msg: Message) => {
+  const handleSaveAndApply = useCallback(async (msg: Message) => {
     if (!user || savingId) return;
     setSavingId(msg.id);
     const supabase = createClient();
@@ -416,9 +637,10 @@ export default function ChatPage() {
     await markSaved(msg.id);
     setSavingId(null);
     fetchContext();
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, showToast, fetchContext]);
 
-  const updateFood = (msgId: string, index: number, field: keyof ParsedFood, value: string | number) => {
+  const updateFood = useCallback((msgId: string, index: number, field: keyof ParsedFood, value: string | number) => {
     setMessages((prev) =>
       prev.map((m) => {
         if (m.id !== msgId || !m.parsedFoods) return m;
@@ -427,9 +649,9 @@ export default function ChatPage() {
         return { ...m, parsedFoods: newFoods };
       })
     );
-  };
+  }, []);
 
-  const updateExercise = (msgId: string, index: number, field: keyof ParsedExercise, value: string | number) => {
+  const updateExercise = useCallback((msgId: string, index: number, field: keyof ParsedExercise, value: string | number) => {
     setMessages((prev) =>
       prev.map((m) => {
         if (m.id !== msgId || !m.parsedExercises) return m;
@@ -438,17 +660,9 @@ export default function ChatPage() {
         return { ...m, parsedExercises: newExercises };
       })
     );
-  };
+  }, []);
 
-  const getButtonLabel = (msg: Message) => {
-    const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0;
-    const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0;
-    if (hasAdds && hasEdits) return 'Save & Apply Changes';
-    if (hasEdits) return 'Apply Changes';
-    return 'Save to Log';
-  };
-
-  const handleButtonClick = (msg: Message) => {
+  const handleButtonClick = useCallback((msg: Message) => {
     const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0;
     const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0;
 
@@ -459,16 +673,10 @@ export default function ChatPage() {
     } else {
       saveResults(msg.id, msg.parsedFoods || [], msg.parsedExercises || []);
     }
-  };
-
-  const hasActionableContent = (msg: Message) =>
-    (msg.parsedFoods?.length ?? 0) > 0 ||
-    (msg.parsedExercises?.length ?? 0) > 0 ||
-    (msg.foodEdits?.length ?? 0) > 0 ||
-    (msg.exerciseEdits?.length ?? 0) > 0;
+  }, [handleSaveAndApply, confirmEdits, saveResults]);
 
   return (
-    <div className="fixed top-0 bottom-16 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col">
+    <div ref={containerRef} className="fixed top-0 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: 'calc(100% - 4rem)' }}>
       <div className="max-w-lg mx-auto flex flex-col h-full w-full">
       {ToastContainer}
 
@@ -490,181 +698,13 @@ export default function ChatPage() {
           </div>
         ) : (
           messages.map((msg) => (
-            <div key={msg.id} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-              <div
-                className={cn(
-                  'max-w-[85%] rounded-2xl px-4 py-3 animate-bounce-in',
-                  msg.role === 'user'
-                    ? 'bg-accent text-accent-fg'
-                    : 'bg-surface'
-                )}
-              >
-                <p className="text-sm whitespace-pre-line">{msg.content}</p>
-
-                {/* Parsed Food Cards (Add) */}
-                {msg.parsedFoods && msg.parsedFoods.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {msg.parsedFoods.map((food, i) => (
-                      <div key={i} className="bg-surface-secondary rounded-xl p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-accent-text uppercase">{food.meal_type === 'snack' ? 'Other' : food.meal_type}</span>
-                          {!msg.saved && (
-                            <select
-                              value={food.meal_type}
-                              onChange={(e) => updateFood(msg.id, i, 'meal_type', e.target.value as MealType)}
-                              className="text-xs bg-surface border border-border-strong rounded-lg px-1.5 py-0.5"
-                            >
-                              <option value="breakfast">Breakfast</option>
-                              <option value="lunch">Lunch</option>
-                              <option value="dinner">Dinner</option>
-                              <option value="snack">Other</option>
-                            </select>
-                          )}
-                        </div>
-                        <p className="text-sm font-medium text-text-primary">{food.description}</p>
-                        <div className="flex gap-3 mt-1 text-xs text-text-secondary">
-                          <span>{food.calories} cal</span>
-                          {food.protein_g ? <span>{food.protein_g}g P</span> : null}
-                          {food.carbs_g ? <span>{food.carbs_g}g C</span> : null}
-                          {food.fat_g ? <span>{food.fat_g}g F</span> : null}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Parsed Exercise Cards (Add) */}
-                {msg.parsedExercises && msg.parsedExercises.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {msg.parsedExercises.map((ex, i) => (
-                      <div key={i} className="bg-exercise-surface rounded-xl p-3">
-                        <p className="text-sm font-medium text-text-primary">{ex.exercise_type}</p>
-                        <div className="flex gap-3 mt-1 text-xs text-text-secondary">
-                          <span>{ex.duration_minutes} min</span>
-                          <span>{ex.calories_burned} cal burned</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Food Edit Cards */}
-                {msg.foodEdits && msg.foodEdits.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {msg.foodEdits.map((edit, i) => (
-                      <div key={i} className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase">Edit</span>
-                          <span className="text-xs text-amber-600 dark:text-amber-500">· {edit.original.meal_type === 'snack' ? 'Other' : edit.original.meal_type}</span>
-                        </div>
-                        <p className="text-sm font-medium text-text-primary">{edit.original.description}</p>
-                        <div className="mt-1.5 space-y-0.5">
-                          {edit.updated.calories !== undefined && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-secondary line-through">{edit.original.calories} cal</span>
-                              <span className="text-text-secondary">→</span>
-                              <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.calories} cal</span>
-                            </div>
-                          )}
-                          {edit.updated.description !== undefined && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-secondary line-through">{edit.original.description}</span>
-                              <span className="text-text-secondary">→</span>
-                              <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.description}</span>
-                            </div>
-                          )}
-                          {edit.updated.protein_g !== undefined && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-secondary line-through">{edit.original.protein_g ?? 0}g P</span>
-                              <span className="text-text-secondary">→</span>
-                              <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.protein_g}g P</span>
-                            </div>
-                          )}
-                          {edit.updated.carbs_g !== undefined && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-secondary line-through">{edit.original.carbs_g ?? 0}g C</span>
-                              <span className="text-text-secondary">→</span>
-                              <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.carbs_g}g C</span>
-                            </div>
-                          )}
-                          {edit.updated.fat_g !== undefined && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-secondary line-through">{edit.original.fat_g ?? 0}g F</span>
-                              <span className="text-text-secondary">→</span>
-                              <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.fat_g}g F</span>
-                            </div>
-                          )}
-                          {edit.updated.meal_type !== undefined && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-secondary line-through">{edit.original.meal_type}</span>
-                              <span className="text-text-secondary">→</span>
-                              <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.meal_type}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Exercise Edit Cards */}
-                {msg.exerciseEdits && msg.exerciseEdits.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {msg.exerciseEdits.map((edit, i) => (
-                      <div key={i} className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase">Edit</span>
-                        </div>
-                        <p className="text-sm font-medium text-text-primary">{edit.original.exercise_type}</p>
-                        <div className="mt-1.5 space-y-0.5">
-                          {edit.updated.duration_minutes !== undefined && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-secondary line-through">{edit.original.duration_minutes} min</span>
-                              <span className="text-text-secondary">→</span>
-                              <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.duration_minutes} min</span>
-                            </div>
-                          )}
-                          {edit.updated.calories_burned !== undefined && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-secondary line-through">{edit.original.calories_burned} cal</span>
-                              <span className="text-text-secondary">→</span>
-                              <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.calories_burned} cal</span>
-                            </div>
-                          )}
-                          {edit.updated.exercise_type !== undefined && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-text-secondary line-through">{edit.original.exercise_type}</span>
-                              <span className="text-text-secondary">→</span>
-                              <span className="font-semibold text-amber-700 dark:text-amber-400">{edit.updated.exercise_type}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Action Button */}
-                {hasActionableContent(msg) && !msg.saved ? (
-                  <button
-                    onClick={() => handleButtonClick(msg)}
-                    disabled={savingId === msg.id}
-                    className={cn(
-                      'mt-3 w-full py-2 text-sm font-medium rounded-xl transition-all active:scale-[0.98] disabled:opacity-50',
-                      (msg.foodEdits?.length || msg.exerciseEdits?.length)
-                        ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                        : 'bg-accent hover:bg-accent-hover text-accent-fg'
-                    )}
-                  >
-                    {savingId === msg.id ? 'Saving...' : getButtonLabel(msg)}
-                  </button>
-                ) : msg.saved ? (
-                  <p className="mt-2 text-xs text-positive-text font-medium text-center">
-                    {(msg.foodEdits?.length || msg.exerciseEdits?.length) ? 'Changes applied!' : 'Saved!'}
-                  </p>
-                ) : null}
-              </div>
-            </div>
+            <MessageBubble
+              key={msg.id}
+              msg={msg}
+              savingId={savingId}
+              onButtonClick={handleButtonClick}
+              onUpdateFood={updateFood}
+            />
           ))
         )}
         {loading && (
