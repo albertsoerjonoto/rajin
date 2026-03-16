@@ -49,47 +49,10 @@ export default function ChatPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<ChatContext | null>(null);
   const shouldAutoScroll = useRef(false);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const isToday = date === getToday();
-
-  // Track visual viewport to handle iOS keyboard
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const update = () => {
-      if (!containerRef.current) return;
-      const isKb = window.innerHeight - vv.height > 100;
-
-      if (isKb) {
-        // Keyboard open: resize to visual viewport & follow its scroll
-        containerRef.current.style.height = `${vv.height}px`;
-        containerRef.current.style.transform = `translateY(${vv.offsetTop}px)`;
-      } else {
-        // Keyboard closed: restore full height and reset position
-        containerRef.current.style.height = '100vh';
-        containerRef.current.style.transform = 'none';
-        window.scrollTo(0, 0);
-      }
-
-      setKeyboardVisible(isKb);
-    };
-
-    // Don't run update() on mount — React's inline style is already correct
-    vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
-
-    return () => {
-      vv.removeEventListener('resize', update);
-      vv.removeEventListener('scroll', update);
-      // Reset scroll when navigating away from chat
-      window.scrollTo(0, 0);
-    };
-  }, []);
 
   // Fetch messages from DB for the selected date
   const fetchMessages = useCallback(async () => {
@@ -505,7 +468,7 @@ export default function ChatPage() {
     (msg.exerciseEdits?.length ?? 0) > 0;
 
   return (
-    <div ref={containerRef} className="fixed top-0 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col" style={{ height: '100vh' }}>
+    <div className="fixed top-0 bottom-16 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col">
       <div className="max-w-lg mx-auto flex flex-col h-full w-full">
       {ToastContainer}
 
@@ -719,7 +682,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className={cn("px-4 pt-2", keyboardVisible ? "pb-2" : "pb-20")}>
+      <div className="px-4 pt-2 pb-4">
         <div className={cn(
           'flex items-center bg-surface-secondary rounded-2xl px-4 py-1 transition-colors',
           !isToday && 'opacity-50'
