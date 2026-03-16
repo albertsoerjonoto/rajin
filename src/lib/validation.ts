@@ -56,6 +56,12 @@ export function validateBodyStat(
   return Math.round(n * 10) / 10;
 }
 
+export function validateVolume(val: string): number | null {
+  const n = parseFloat(val);
+  if (isNaN(n) || n < 0 || n > 10000) return null;
+  return Math.round(n);
+}
+
 /** Clamp a number into [min, max]. */
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
