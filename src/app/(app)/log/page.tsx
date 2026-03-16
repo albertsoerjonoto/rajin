@@ -9,6 +9,7 @@ import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import { validateCalories, validateDuration, validateMacro } from '@/lib/validation';
+import { useScrollContext } from '../layout';
 import type { FoodLog, ExerciseLog, MealType } from '@/lib/types';
 
 type Tab = 'food' | 'exercise';
@@ -17,6 +18,7 @@ type Modal = 'none' | 'food' | 'exercise';
 export default function LogPage() {
   const { user } = useAuth();
   const { showToast, ToastContainer } = useToast();
+  const { scrollToTop } = useScrollContext();
   const [tab, setTab] = useState<Tab>('food');
   const [modal, setModal] = useState<Modal>('none');
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
@@ -78,16 +80,8 @@ export default function LogPage() {
 
   const handleDateChange = useCallback((newDate: string) => {
     setDate(newDate);
-    // iOS Safari/PWA needs RAF + timeout to reliably scroll after re-render
-    const scrollTop = () => {
-      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    };
-    scrollTop();
-    requestAnimationFrame(scrollTop);
-    setTimeout(scrollTop, 100);
-  }, []);
+    scrollToTop();
+  }, [scrollToTop]);
 
   const saveFoodLog = async () => {
     if (!user || !description.trim()) return;

@@ -9,6 +9,7 @@ import DateNav from '@/components/DateNav';
 import { computeNutritionTargets } from '@/lib/nutrition';
 import { useToast } from '@/components/Toast';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
+import { useScrollContext } from '../layout';
 import EmojiPicker from '@/components/EmojiPicker';
 import {
   DndContext,
@@ -68,6 +69,7 @@ function SortableHabitCard({ habit, onEdit }: { habit: HabitWithLog; onEdit: (h:
 export default function DashboardPage() {
   const { user } = useAuth();
   const { showToast, ToastContainer } = useToast();
+  const { scrollToTop } = useScrollContext();
   const [date, setDate] = useState(getToday());
   const [period, setPeriod] = useState<Period>('day');
   const [habits, setHabits] = useState<HabitWithLog[]>([]);
@@ -336,7 +338,7 @@ export default function DashboardPage() {
       {ToastContainer}
       <div className="sticky top-0 z-20 bg-bg flex items-center justify-between pb-4 -mx-4 px-4 pt-6">
         <h1 className="text-xl font-bold text-text-primary">Overview</h1>
-        <DateNav date={date} onDateChange={setDate} period={period} onPeriodChange={setPeriod} showPeriodPicker />
+        <DateNav date={date} onDateChange={(d) => { setDate(d); scrollToTop(); }} period={period} onPeriodChange={(p) => { setPeriod(p); scrollToTop(); }} showPeriodPicker />
       </div>
 
       {loading ? (
