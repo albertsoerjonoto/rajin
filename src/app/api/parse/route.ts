@@ -306,14 +306,13 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Parse error:', error);
-    // Return a friendly message instead of a cryptic error
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    const errorMsg = error instanceof Error ? error.message : String(error);
     const isTimeout = errorMsg.includes('timeout') || errorMsg.includes('ETIMEDOUT') || errorMsg.includes('deadline');
-    const isRateLimit = errorMsg.includes('429') || errorMsg.includes('rate') || errorMsg.includes('quota');
+    const isRateLimit = errorMsg.includes('429') || errorMsg.includes('rate limit') || errorMsg.includes('quota') || errorMsg.includes('RESOURCE_EXHAUSTED');
 
-    let userMessage = 'Sorry, something went wrong. Please try again.';
+    let userMessage = `Sorry, something went wrong. Please try again. (Debug: ${errorMsg.substring(0, 150)})`;
     if (isTimeout) userMessage = 'The request took too long. Please try a shorter message.';
-    if (isRateLimit) userMessage = "I'm getting too many requests right now. Please wait a moment and try again.";
+    if (isRateLimit) userMessage = `Too many requests — please wait a minute and try again. (Debug: ${errorMsg.substring(0, 150)})`;
 
     return NextResponse.json({
       message: userMessage,
