@@ -259,6 +259,7 @@ export default function ChatPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<ChatContext | null>(null);
   const shouldAutoScroll = useRef(false);
 
@@ -283,10 +284,6 @@ export default function ChatPage() {
       setMessages([WELCOME_MESSAGE]);
     }
     setLoadingMessages(false);
-    // Scroll to bottom after messages load
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView();
-    }, 50);
   }, [user, date]);
 
   // Fetch context: profile + today's logs
@@ -366,12 +363,25 @@ export default function ChatPage() {
     if (user) fetchContext();
   }, [user, fetchContext]);
 
-  // Auto-scroll to bottom only when sending/receiving (not on initial load or date switch)
+  // Scroll to bottom when messages change
   useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
     if (shouldAutoScroll.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      // Smooth scroll for new messages (send/receive)
+      container.scrollTop = container.scrollHeight;
     }
   }, [messages, loading]);
+
+  // Instant scroll to bottom after initial load (no animation, no flash)
+  useEffect(() => {
+    if (!loadingMessages && messages.length > 0) {
+      const container = messagesContainerRef.current;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+  }, [loadingMessages, messages.length]);
 
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -726,7 +736,7 @@ export default function ChatPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 scrollbar-hide">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 scrollbar-hide">
         {loadingMessages ? (
           <div className="flex justify-center py-8">
             <div className="flex gap-1">
