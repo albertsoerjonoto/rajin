@@ -74,8 +74,12 @@ export default function LogPage() {
 
   useEffect(() => {
     fetchData();
-    window.scrollTo(0, 0);
   }, [fetchData]);
+
+  // Scroll to top on mount and whenever date changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [date]);
 
   const saveFoodLog = async () => {
     if (!user || !description.trim()) return;
