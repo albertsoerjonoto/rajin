@@ -283,6 +283,10 @@ export default function ChatPage() {
       setMessages([WELCOME_MESSAGE]);
     }
     setLoadingMessages(false);
+    // Scroll to bottom after messages load
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView();
+    }, 50);
   }, [user, date]);
 
   // Fetch context: profile + today's logs

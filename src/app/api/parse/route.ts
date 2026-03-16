@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
     contents.push({ role: 'user', parts: userParts });
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
+      model: 'gemini-2.5-flash',
       config: {
         systemInstruction: systemPrompt,
       },
