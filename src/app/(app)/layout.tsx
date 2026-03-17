@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ const TAB_DEFS = [
   { href: '/dashboard', labelKey: 'nav.overview', icon: DashboardIcon },
   { href: '/log', labelKey: 'nav.log', icon: LogIcon },
   { href: '/chat', labelKey: 'nav.chat', icon: ChatIcon },
+  { href: '/friends', labelKey: 'nav.friends', icon: FriendsIcon },
   { href: '/profile', labelKey: 'nav.profile', icon: ProfileIcon },
 ];
 
@@ -24,6 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { t, setLocale } = useLocale();
   const [ready, setReady] = useState(false);
   const checkedRef = useRef(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   // Check if the user has completed onboarding + sync locale
   useEffect(() => {
@@ -53,6 +55,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     checkOnboarding();
   }, [user, authLoading, router, setLocale]);
 
+  // Fetch pending friend request count
+  const fetchPendingCount = useCallback(async () => {
+    if (!user) return;
+    const supabase = createClient();
+    const { count } = await supabase
+      .from('friendships')
+      .select('*', { count: 'exact', head: true })
+      .eq('addressee_id', user.id)
+      .eq('status', 'pending');
+    setPendingCount(count ?? 0);
+  }, [user]);
+
+  useEffect(() => {
+    if (!ready || !user) return;
+    fetchPendingCount();
+
+    const handleFocus = () => fetchPendingCount();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [ready, user, fetchPendingCount]);
+
   // Scroll to top on every page navigation (RAF + timeout for iOS reliability)
   useEffect(() => {
     const scrollTop = () => {
@@ -79,16 +102,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="max-w-lg mx-auto flex justify-around items-center h-16">
           {TAB_DEFS.map((tab) => {
             const isActive = pathname === tab.href;
+            const showBadge = tab.href === '/friends' && pendingCount > 0;
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-200',
+                  'flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-all duration-200 relative',
                   isActive ? 'text-nav-active' : 'text-nav-inactive hover:text-nav-inactive-hover'
                 )}
               >
-                <tab.icon className="w-6 h-6" filled={isActive} />
+                <div className="relative">
+                  <tab.icon className="w-6 h-6" filled={isActive} />
+                  {showBadge && (
+                    <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
+                  )}
+                </div>
                 <span className="text-[10px] font-medium">{t(tab.labelKey)}</span>
               </Link>
             );
@@ -119,6 +148,14 @@ function ChatIcon({ className, filled }: { className?: string; filled?: boolean 
   return (
     <svg className={className} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={filled ? 0 : 1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+    </svg>
+  );
+}
+
+function FriendsIcon({ className, filled }: { className?: string; filled?: boolean }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={filled ? 0 : 1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
     </svg>
   );
 }
