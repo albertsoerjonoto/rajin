@@ -121,6 +121,7 @@ export const translations: Translations = {
   'chat.failedSave': { id: 'Gagal menyimpan beberapa entri. Coba lagi.', en: 'Failed to save some entries. Please try again.' },
   'chat.failedApply': { id: 'Gagal menerapkan beberapa edit. Coba lagi.', en: 'Failed to apply some edits. Please try again.' },
   'chat.somethingWrong': { id: 'Maaf, terjadi kesalahan. Silakan coba lagi.', en: 'Sorry, something went wrong. Please try again.' },
+  'chat.requestTimeout': { id: 'Permintaan terlalu lama. Silakan coba pesan lebih singkat.', en: 'The request took too long. Please try a shorter message.' },
   'chat.whatsInPhoto': { id: 'Apa isi foto ini?', en: "What's in this photo?" },
   'chat.found': { id: 'Ditemukan', en: 'Found' },
   'chat.foodItems': { id: 'item makanan', en: 'food item(s)' },

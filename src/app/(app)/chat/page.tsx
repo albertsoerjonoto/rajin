@@ -397,10 +397,28 @@ export default function ChatPage() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<ChatContext | null>(null);
   const shouldAutoScroll = useRef(false);
+  const imagePreviewRef = useRef<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const isToday = date === getToday();
   const [hasHistoryMessages, setHasHistoryMessages] = useState(false);
 
+  // Track imagePreview in ref so cleanup always has the latest value
+  useEffect(() => {
+    imagePreviewRef.current = imagePreview;
+  }, [imagePreview]);
+
+  // Revoke image preview blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
+    };
+  }, []);
+
+  // Abort any in-flight API call on unmount or date change
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, [date]);
 
   // Fetch messages from DB for the selected date
   const fetchMessages = useCallback(async () => {
@@ -410,7 +428,7 @@ export default function ChatPage() {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('chat_messages')
-      .select('*')
+      .select('id,user_id,role,content,image_url,parsed_foods,parsed_exercises,parsed_drinks,parsed_measurements,food_edits,exercise_edits,drink_edits,measurement_edits,saved,date,created_at')
       .eq('user_id', user.id)
       .eq('date', date)
       .order('created_at', { ascending: true });
@@ -603,6 +621,11 @@ export default function ChatPage() {
       return;
     }
 
+    // Abort any previous in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     const userContent = messageText.trim() || (imageFile ? t('chat.whatsInPhoto') : '');
     const currentImageFile = imageFile;
     const currentImagePreview = imagePreview;
@@ -616,6 +639,8 @@ export default function ChatPage() {
 
     // Refresh context before sending
     await fetchContext();
+
+    if (controller.signal.aborted) { setLoading(false); return; }
 
     const supabase = createClient();
 
@@ -697,6 +722,7 @@ export default function ChatPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userContent, context: contextRef.current, history: recentMessages, image_url: uploadedImageUrl, locale }),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]),
       });
 
       const data = await res.json();
@@ -797,11 +823,17 @@ export default function ChatPage() {
           };
 
       setMessages((prev) => [...prev, assistantMsg]);
-    } catch {
-      // Show error in UI but don't persist to DB
+    } catch (err) {
+      // Silently ignore aborted requests (user changed date or navigated away)
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setLoading(false);
+        return;
+      }
+      // Show timeout or generic error in UI but don't persist to DB
+      const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
       setMessages((prev) => [
         ...prev,
-        { id: `error-${Date.now()}`, role: 'assistant', content: t('chat.somethingWrong') },
+        { id: `error-${Date.now()}`, role: 'assistant', content: isTimeout ? t('chat.requestTimeout') : t('chat.somethingWrong') },
       ]);
     }
 
