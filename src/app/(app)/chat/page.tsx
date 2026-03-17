@@ -1054,7 +1054,7 @@ export default function ChatPage() {
       'fixed top-0 bottom-16 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col',
       isExpanded && 'lg:bottom-0 lg:left-60'
     )}>
-      <div className="max-w-3xl mx-auto flex flex-col h-full w-full">
+      <div className={cn('max-w-lg mx-auto flex flex-col h-full w-full', isExpanded && 'lg:max-w-3xl')}>
       {ToastContainer}
 
       {/* Header */}

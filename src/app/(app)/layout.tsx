@@ -71,10 +71,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       {isExpanded && (
         <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-60 lg:bg-surface lg:border-r lg:border-border lg:z-50">
           {/* Logo */}
-          <div className="flex items-center gap-2.5 px-6 h-16 border-b border-border">
-            <div className="w-8 h-8 bg-positive rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">R</span>
-            </div>
+          <div className="flex items-center px-6 h-16 border-b border-border">
             <span className="text-lg font-bold text-text-primary">Rajin</span>
           </div>
 
