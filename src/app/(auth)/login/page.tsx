@@ -19,9 +19,9 @@ export default function LoginPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('error') === 'auth') {
-      setError(t('auth.emailConfirmFailed'));
+      setError(t('auth.emailConfirmFailed')); // eslint-disable-line react-hooks/set-state-in-effect
     }
-  }, []);
+  }, [t]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

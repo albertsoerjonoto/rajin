@@ -74,6 +74,7 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
         )}
       >
         {msg.imageUrl && (
+          /* eslint-disable-next-line @next/next/no-img-element */
           <img src={msg.imageUrl} alt="Attached" className="rounded-xl mb-2 max-h-48 w-auto" />
         )}
         {msg.role === 'assistant' ? (
@@ -988,17 +989,6 @@ export default function ChatPage() {
     );
   }, []);
 
-  const updateExercise = useCallback((msgId: string, index: number, field: keyof ParsedExercise, value: string | number) => {
-    setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== msgId || !m.parsedExercises) return m;
-        const newExercises = [...m.parsedExercises];
-        newExercises[index] = { ...newExercises[index], [field]: value };
-        return { ...m, parsedExercises: newExercises };
-      })
-    );
-  }, []);
-
   const handleButtonClick = useCallback((msg: Message) => {
     const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0 || (msg.parsedDrinks?.length ?? 0) > 0 || (msg.parsedMeasurements?.length ?? 0) > 0;
     const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0 || (msg.drinkEdits?.length ?? 0) > 0 || (msg.measurementEdits?.length ?? 0) > 0;
@@ -1078,6 +1068,7 @@ export default function ChatPage() {
         {/* Image preview */}
         {imagePreview && (
           <div className="mb-2 relative inline-block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imagePreview} alt="Preview" className="h-20 rounded-xl object-cover" />
             <button
               onClick={clearImage}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useLocale } from '@/lib/i18n';
@@ -14,7 +13,6 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const router = useRouter();
   const supabase = createClient();
   const { t } = useLocale();
 

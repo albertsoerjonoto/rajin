@@ -458,6 +458,7 @@ function Avatar({ url, name }: { url: string | null; name: string | null }) {
 
   if (url) {
     return (
+      /* eslint-disable-next-line @next/next/no-img-element */
       <img
         src={url}
         alt={name ?? 'Avatar'}

@@ -33,7 +33,7 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
   useEffect(() => {
-    setSupported(!!(navigator.mediaDevices?.getUserMedia));
+    setSupported(!!(navigator.mediaDevices?.getUserMedia)); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
 
   const drawWaveform = useCallback(() => {

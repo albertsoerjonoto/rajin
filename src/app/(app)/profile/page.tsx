@@ -287,6 +287,7 @@ export default function ProfilePage() {
                 disabled={uploading}
               >
                 {avatarUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-2xl font-bold text-white flex items-center justify-center w-full h-full">

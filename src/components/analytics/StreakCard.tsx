@@ -47,7 +47,7 @@ export default function StreakCard({ dayDataMap, allHabitLogs }: StreakCardProps
   }, [dayDataMap, allHabitLogs]);
 
   useEffect(() => {
-    if (currentStreak === 0) { setAnimatedCount(0); return; }
+    if (currentStreak === 0) { setAnimatedCount(0); return; } // eslint-disable-line react-hooks/set-state-in-effect
     let frame: number;
     const duration = 600;
     const start = performance.now();

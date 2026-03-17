@@ -69,7 +69,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!ready || !user) return;
-    fetchPendingCount();
+    fetchPendingCount(); // eslint-disable-line react-hooks/set-state-in-effect
 
     const handleFocus = () => fetchPendingCount();
     window.addEventListener('focus', handleFocus);

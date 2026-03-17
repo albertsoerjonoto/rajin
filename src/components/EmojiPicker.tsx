@@ -53,7 +53,7 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
 
   useEffect(() => {
     if (!open) return;
-    updatePosition();
+    updatePosition(); // eslint-disable-line react-hooks/set-state-in-effect
     const handleClickOutside = (e: MouseEvent) => {
       if (
         buttonRef.current?.contains(e.target as Node) ||
