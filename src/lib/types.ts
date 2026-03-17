@@ -3,7 +3,9 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type DrinkType = 'water' | 'coffee' | 'tea' | 'juice' | 'soda' | 'milk' | 'smoothie' | 'other';
 export type LogSource = 'manual' | 'chat';
 export type Gender = 'male' | 'female';
-export type FriendshipStatus = 'pending' | 'accepted' | 'declined';
+export type FriendshipStatus = 'pending' | 'accepted' | 'declined' | 'rejected' | 'blocked';
+export type SharedHabitStatus = 'pending' | 'accepted' | 'rejected';
+export type FeedEventType = 'habit_completed' | 'streak_milestone' | 'friend_added' | 'shared_habit_started' | 'shared_streak';
 export type Locale = 'id' | 'en';
 
 export interface Profile {
@@ -32,6 +34,7 @@ export interface Habit {
   emoji: string;
   frequency: Frequency;
   is_active: boolean;
+  is_private: boolean;
   sort_order: number;
   created_at: string;
 }
@@ -132,6 +135,34 @@ export interface HabitWithLog extends Habit {
   completed: boolean;
   log_id?: string;
   logged_at?: string;
+}
+
+export interface SharedHabit {
+  id: string;
+  habit_id: string;
+  owner_id: string;
+  friend_id: string;
+  status: SharedHabitStatus;
+  created_at: string;
+}
+
+export interface HabitStreak {
+  id: string;
+  user_id: string;
+  habit_id: string;
+  current_streak: number;
+  longest_streak: number;
+  last_completed_date: string | null;
+  updated_at: string;
+}
+
+export interface FeedEvent {
+  id: string;
+  user_id: string;
+  event_type: FeedEventType;
+  data: Record<string, unknown>;
+  is_private: boolean;
+  created_at: string;
 }
 
 // Gemini parsing types

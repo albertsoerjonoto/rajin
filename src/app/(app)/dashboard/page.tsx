@@ -23,7 +23,8 @@ import {
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile } from '@/lib/types';
+import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile, FriendProfile, SharedHabit, HabitStreak } from '@/lib/types';
+import { updateHabitStreak, isStreakMilestone } from '@/lib/streaks';
 import { buildDayDataMap } from '@/components/analytics/types';
 import type { DayData } from '@/components/analytics/types';
 import StreakCard from '@/components/analytics/StreakCard';
@@ -50,6 +51,12 @@ function HabitCardContent({ habit, isDragging }: { habit: HabitWithLog; isDraggi
       <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', isDragging ? 'text-text-primary' : 'text-text-secondary')}>
         {habit.name}
       </span>
+      {habit.is_private && (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-text-tertiary">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      )}
     </div>
   );
 }
@@ -104,13 +111,19 @@ export default function DashboardPage() {
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitEmoji, setNewHabitEmoji] = useState('⭐');
+  const [newHabitPrivate, setNewHabitPrivate] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmoji, setEditEmoji] = useState('');
+  const [editPrivate, setEditPrivate] = useState(false);
   const [activeHabit, setActiveHabit] = useState<HabitWithLog | null>(null);
   const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState<string | null>(null); // habit id
+  const [acceptedFriends, setAcceptedFriends] = useState<FriendProfile[]>([]);
+  const [sharedHabits, setSharedHabits] = useState<SharedHabit[]>([]);
+  const [streakMap, setStreakMap] = useState<Record<string, HabitStreak>>({});
 
   // Analytics state (for period != day)
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
@@ -329,6 +342,65 @@ export default function DashboardPage() {
     fetchData();
   }, [fetchData]);
 
+  // Load accepted friends and shared habits for the share modal
+  useEffect(() => {
+    if (!user) return;
+    const sb = createClient();
+    // Load accepted friends
+    sb.from('friendships')
+      .select('*')
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+      .eq('status', 'accepted')
+      .then(async ({ data }) => {
+        if (!data) return;
+        const otherIds = data.map(f => f.requester_id === user.id ? f.addressee_id : f.requester_id);
+        if (otherIds.length === 0) return;
+        const { data: profiles } = await sb.from('profiles').select('id, username, display_name, avatar_url').in('id', otherIds);
+        setAcceptedFriends((profiles ?? []) as FriendProfile[]);
+      });
+    // Load shared habits
+    sb.from('shared_habits')
+      .select('*')
+      .or(`owner_id.eq.${user.id},friend_id.eq.${user.id}`)
+      .then(({ data }) => {
+        setSharedHabits((data ?? []) as SharedHabit[]);
+      });
+    // Load streaks
+    sb.from('habit_streaks')
+      .select('*')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        const map: Record<string, HabitStreak> = {};
+        (data ?? []).forEach((s: HabitStreak) => { map[s.habit_id] = s; });
+        setStreakMap(map);
+      });
+  }, [user]);
+
+  const shareHabit = async (habitId: string, friendId: string) => {
+    if (!user) return;
+    const sb = createClient();
+    const { error } = await sb.from('shared_habits').insert({
+      habit_id: habitId,
+      owner_id: user.id,
+      friend_id: friendId,
+    });
+    if (error) {
+      showToast('error', t('friends.failedShare'));
+      return;
+    }
+    showToast('success', t('friends.habitShared'));
+    setShowShareModal(null);
+    // Refresh shared habits
+    const { data } = await sb.from('shared_habits').select('*').or(`owner_id.eq.${user.id},friend_id.eq.${user.id}`);
+    setSharedHabits((data ?? []) as SharedHabit[]);
+  };
+
+  const getSharedFriendsForHabit = (habitId: string): FriendProfile[] => {
+    const accepted = sharedHabits.filter(sh => sh.habit_id === habitId && sh.status === 'accepted');
+    const friendIds = accepted.map(sh => sh.owner_id === user?.id ? sh.friend_id : sh.owner_id);
+    return acceptedFriends.filter(f => friendIds.includes(f.id));
+  };
+
   const toggleHabit = async (habit: HabitWithLog) => {
     if (!user || togglingId) return;
     setTogglingId(habit.id);
@@ -364,6 +436,32 @@ export default function DashboardPage() {
           );
         }
       }
+      // Update streak and create feed events in background
+      updateHabitStreak(user.id, habit.id, date).then(async (streakData) => {
+        if (streakData) {
+          setStreakMap(prev => ({ ...prev, [habit.id]: streakData }));
+        }
+        // Create feed events only when completing (not uncompleting)
+        if (!wasCompleted && !habit.is_private) {
+          const sb = createClient();
+          // Habit completed event
+          await sb.from('feed_events').insert({
+            user_id: user.id,
+            event_type: 'habit_completed',
+            data: { habit_id: habit.id, habit_name: habit.name, habit_emoji: habit.emoji },
+            is_private: false,
+          });
+          // Streak milestone event
+          if (streakData && isStreakMilestone(streakData.current_streak)) {
+            await sb.from('feed_events').insert({
+              user_id: user.id,
+              event_type: 'streak_milestone',
+              data: { habit_id: habit.id, habit_name: habit.name, habit_emoji: habit.emoji, streak: streakData.current_streak },
+              is_private: false,
+            });
+          }
+        }
+      }).catch(() => { /* streak/feed tables may not exist pre-migration */ });
     } catch {
       setHabits((prev) =>
         prev.map((h) => (h.id === habit.id ? { ...h, completed: wasCompleted } : h))
@@ -382,6 +480,7 @@ export default function DashboardPage() {
       name: newHabitName.trim(),
       emoji: newHabitEmoji || '⭐',
       sort_order: habits.length,
+      is_private: newHabitPrivate,
     });
 
     if (error) {
@@ -391,6 +490,7 @@ export default function DashboardPage() {
 
     setNewHabitName('');
     setNewHabitEmoji('⭐');
+    setNewHabitPrivate(false);
     setShowAddHabit(false);
     fetchData();
   };
@@ -399,6 +499,7 @@ export default function DashboardPage() {
     setEditingId(habit.id);
     setEditName(habit.name);
     setEditEmoji(habit.emoji);
+    setEditPrivate(habit.is_private);
   };
 
   const saveEdit = async () => {
@@ -406,7 +507,7 @@ export default function DashboardPage() {
     const supabase = createClient();
     const { error } = await supabase
       .from('habits')
-      .update({ name: editName.trim(), emoji: editEmoji || '⭐' })
+      .update({ name: editName.trim(), emoji: editEmoji || '⭐', is_private: editPrivate })
       .eq('id', editingId);
     if (error) {
       showToast('error', t('dashboard.failedUpdateHabit'));
@@ -687,6 +788,24 @@ export default function DashboardPage() {
                     autoFocus
                   />
                 </div>
+                <div className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setNewHabitPrivate(!newHabitPrivate)}>
+                  <div
+                    role="switch"
+                    aria-checked={newHabitPrivate}
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setNewHabitPrivate(!newHabitPrivate); } }}
+                    className={cn(
+                      'relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0',
+                      newHabitPrivate ? 'bg-accent' : 'bg-surface-secondary'
+                    )}
+                  >
+                    <span className={cn(
+                      'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200',
+                      newHabitPrivate && 'translate-x-4'
+                    )} />
+                  </div>
+                  <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
+                </div>
                 <div className="flex gap-2">
                   <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-text-secondary rounded-xl hover:bg-surface-hover transition-all duration-200">
                     {t('common.cancel')}
@@ -727,6 +846,64 @@ export default function DashboardPage() {
                               autoFocus
                             />
                           </div>
+                          <div className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setEditPrivate(!editPrivate)}>
+                            <div
+                              role="switch"
+                              aria-checked={editPrivate}
+                              tabIndex={0}
+                              onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setEditPrivate(!editPrivate); } }}
+                              className={cn(
+                                'relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0',
+                                editPrivate ? 'bg-accent' : 'bg-surface-secondary'
+                              )}
+                            >
+                              <span className={cn(
+                                'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200',
+                                editPrivate && 'translate-x-4'
+                              )} />
+                            </div>
+                            <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
+                          </div>
+                          {!editPrivate && acceptedFriends.length > 0 && (
+                            <div className="mb-3">
+                              {showShareModal === habit.id ? (
+                                <div className="space-y-1">
+                                  <p className="text-xs text-text-secondary mb-1">{t('friends.selectFriend')}</p>
+                                  {acceptedFriends
+                                    .filter(f => !sharedHabits.some(sh => sh.habit_id === habit.id && (sh.friend_id === f.id || sh.owner_id === f.id)))
+                                    .map(friend => (
+                                      <button
+                                        key={friend.id}
+                                        onClick={() => shareHabit(habit.id, friend.id)}
+                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-secondary transition-colors text-left"
+                                      >
+                                        <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+                                          {friend.avatar_url ? (
+                                            <img src={friend.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                                          ) : (
+                                            <span className="text-[10px] font-semibold text-accent">{(friend.display_name ?? '?')[0].toUpperCase()}</span>
+                                          )}
+                                        </div>
+                                        <span className="text-xs text-text-primary">{friend.display_name ?? friend.username}</span>
+                                      </button>
+                                    ))}
+                                  <button
+                                    onClick={() => setShowShareModal(null)}
+                                    className="text-xs text-text-tertiary mt-1"
+                                  >
+                                    {t('common.cancel')}
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setShowShareModal(habit.id)}
+                                  className="text-xs text-accent-text font-medium"
+                                >
+                                  {t('friends.shareHabit')}
+                                </button>
+                              )}
+                            </div>
+                          )}
                           <div className="flex gap-2">
                             <button
                               onClick={() => deleteHabit(habit.id)}
@@ -783,6 +960,34 @@ export default function DashboardPage() {
                       <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
                         {habit.name}
                       </span>
+                      {streakMap[habit.id]?.current_streak > 0 && (
+                        <span className="text-[10px] font-semibold text-orange-500 shrink-0">
+                          🔥{streakMap[habit.id].current_streak}
+                        </span>
+                      )}
+                      {(() => {
+                        const sharedFriends = getSharedFriendsForHabit(habit.id);
+                        if (sharedFriends.length === 0) return null;
+                        return (
+                          <div className="flex -space-x-1 shrink-0">
+                            {sharedFriends.slice(0, 2).map(f => (
+                              <div key={f.id} className="w-4 h-4 rounded-full bg-accent/10 border border-surface flex items-center justify-center">
+                                {f.avatar_url ? (
+                                  <img src={f.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                                ) : (
+                                  <span className="text-[6px] font-bold text-accent">{(f.display_name ?? '?')[0].toUpperCase()}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                      {habit.is_private && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-text-tertiary">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                      )}
                       <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
                         <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
                         {habit.completed && (
