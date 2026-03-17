@@ -45,11 +45,15 @@ export default function OnboardingPage() {
 
     const load = async () => {
       const supabase = createClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
+
+      if (error) {
+        console.error('Failed to fetch profile for onboarding:', error.message);
+      }
 
       if (data?.onboarding_completed) {
         router.replace('/dashboard');

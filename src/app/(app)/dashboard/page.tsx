@@ -180,6 +180,8 @@ export default function DashboardPage() {
         .select()
         .single();
       if (newProfile) setProfile(newProfile);
+    } else if (profileError) {
+      console.error('Failed to fetch profile:', profileError.message);
     }
 
     const { data: habitsData, error: habitsError } = await supabase
