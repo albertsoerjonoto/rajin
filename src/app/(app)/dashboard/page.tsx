@@ -171,7 +171,7 @@ export default function DashboardPage() {
     if (habitsData) {
       const habitsWithLogs: HabitWithLog[] = habitsData.map((habit) => {
         const log = logsData?.find((l) => l.habit_id === habit.id);
-        return { ...habit, completed: log?.completed ?? false, log_id: log?.id };
+        return { ...habit, completed: log?.completed ?? false, log_id: log?.id, logged_at: log?.logged_at };
       });
       setHabits(habitsWithLogs);
     }
@@ -512,9 +512,16 @@ export default function DashboardPage() {
                       <span className={cn('text-base leading-none shrink-0', habit.completed && 'animate-checkmark inline-block')}>
                         {habit.emoji}
                       </span>
-                      <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
-                        {habit.name}
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <span className={cn('text-xs font-medium leading-snug block', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
+                          {habit.name}
+                        </span>
+                        {habit.completed && habit.logged_at && (
+                          <span className="text-[10px] text-positive-text/70">
+                            {new Date(habit.logged_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
                       <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
                         <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
                         {habit.completed && (

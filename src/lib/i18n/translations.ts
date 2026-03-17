@@ -305,6 +305,31 @@ export const translations: Translations = {
   'emoji.social': { id: 'Sosial', en: 'Social' },
   'emoji.nature': { id: 'Alam', en: 'Nature' },
 
+  // ── Log page habits tab ──
+  'log.habits': { id: '✅ Kebiasaan', en: '✅ Habits' },
+  'log.noHabitsLogged': { id: 'Belum ada kebiasaan. Tambah di Dashboard!', en: 'No habits yet. Add them on Dashboard!' },
+
+  // ── Log page measurements tab ──
+  'log.measurements': { id: '📏 Ukuran', en: '📏 Measurements' },
+  'log.addMeasurement': { id: 'Tambah Pengukuran', en: 'Add Measurement' },
+  'log.editMeasurement': { id: 'Edit Pengukuran', en: 'Edit Measurement' },
+  'log.noMeasurements': { id: 'Belum ada pengukuran hari ini', en: 'No measurements logged today' },
+  'log.heightCm': { id: 'Tinggi (cm)', en: 'Height (cm)' },
+  'log.weightKg': { id: 'Berat (kg)', en: 'Weight (kg)' },
+  'log.lastMeasurement': { id: 'Terakhir', en: 'Last' },
+  'log.on': { id: 'pada', en: 'on' },
+  'log.failedSaveMeasurement': { id: 'Gagal menyimpan pengukuran', en: 'Failed to save measurement' },
+  'log.failedUpdateMeasurement': { id: 'Gagal memperbarui pengukuran', en: 'Failed to update measurement' },
+  'log.failedDeleteMeasurement': { id: 'Gagal menghapus pengukuran', en: 'Failed to delete measurement' },
+  'log.failedLoadMeasurements': { id: 'Gagal memuat pengukuran', en: 'Failed to load measurements' },
+  'log.failedLoadHabits': { id: 'Gagal memuat kebiasaan', en: 'Failed to load habits' },
+  'log.heightOrWeightRequired': { id: 'Tinggi atau berat harus diisi', en: 'Height or weight is required' },
+  'log.loggedAt': { id: 'Waktu', en: 'Time' },
+
+  // ── Chat measurements ──
+  'chat.measurementItems': { id: 'item pengukuran', en: 'measurement(s)' },
+  'chat.measurementEdits': { id: 'edit pengukuran', en: 'measurement edit(s)' },
+
   // ── Voice input ──
   'voice.micPermissionDenied': { id: 'Akses mikrofon ditolak', en: 'Microphone access denied' },
   'voice.noSpeechDetected': { id: 'Tidak ada suara terdeteksi', en: 'No speech detected' },
