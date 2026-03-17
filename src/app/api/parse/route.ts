@@ -225,7 +225,9 @@ RESPOND ONLY WITH VALID JSON in this exact format:
 
 Rules:
 - Use "foods"/"exercises"/"drinks"/"measurements" for NEW entries the user wants to add
-- Use "food_edits"/"exercise_edits"/"drink_edits"/"measurement_edits" when the user wants to CHANGE an existing log. Reference the log by its # index from the context above. Only include fields that changed in "updated".
+- Use "food_edits"/"exercise_edits"/"drink_edits"/"measurement_edits" when the user wants to CHANGE an existing log. Reference the log by its # index from the context above.
+- CRITICAL EDIT RULE: In "updated", ONLY include the specific field(s) the user asked to change. For example, if the user says "change that to breakfast", return ONLY {"meal_type": "breakfast"} — do NOT also change calories, protein, carbs, or fat unless the user explicitly asked. Never recalculate or adjust fields the user didn't mention.
+- CRITICAL: You CANNOT apply changes yourself. The system applies changes ONLY when you return structured edit data (food_edits, etc.). If the user confirms, corrects, or adjusts a previously suggested edit, you MUST return a NEW food_edit/exercise_edit/drink_edit/measurement_edit with the corrected values. NEVER just say "I've updated it" or "Done" without returning the edit data — that will NOT actually change anything.
 - Use "message" for answering questions, giving recommendations, or any conversational response. Keep it concise and friendly.
 - CRITICAL LANGUAGE RULE: The "message" field MUST be written in the SAME language the user used. If the user writes in English, the message MUST be in English. If in Bahasa Indonesia, reply in Bahasa Indonesia. If in Chinese, reply in Chinese. Always match the user's language exactly.
 - Multiple arrays can be populated at once (e.g., add new food AND edit an existing one)
@@ -288,16 +290,21 @@ export async function POST(request: NextRequest) {
         } else if (msg.role === 'assistant' && typeof msg.content === 'string') {
           // Wrap assistant response as JSON with actual parsed data from history
           // This teaches the model the correct response format (structured data in arrays)
+          // Strip edit objects to just show updated fields (log_id/original are internal)
+          const stripEdits = (edits: unknown) =>
+            Array.isArray(edits) ? edits.map((e: Record<string, unknown>) => ({
+              updated: e.updated ?? {},
+            })) : [];
           const wrappedJson = JSON.stringify({
             message: msg.content,
             foods: Array.isArray(msg.parsedFoods) ? msg.parsedFoods : [],
             exercises: Array.isArray(msg.parsedExercises) ? msg.parsedExercises : [],
             drinks: Array.isArray(msg.parsedDrinks) ? msg.parsedDrinks : [],
             measurements: Array.isArray(msg.parsedMeasurements) ? msg.parsedMeasurements : [],
-            food_edits: Array.isArray(msg.foodEdits) ? msg.foodEdits : [],
-            exercise_edits: Array.isArray(msg.exerciseEdits) ? msg.exerciseEdits : [],
-            drink_edits: Array.isArray(msg.drinkEdits) ? msg.drinkEdits : [],
-            measurement_edits: Array.isArray(msg.measurementEdits) ? msg.measurementEdits : [],
+            food_edits: stripEdits(msg.foodEdits),
+            exercise_edits: stripEdits(msg.exerciseEdits),
+            drink_edits: stripEdits(msg.drinkEdits),
+            measurement_edits: stripEdits(msg.measurementEdits),
           });
           contents.push({ role: 'model', parts: [{ text: wrappedJson }] });
         }
