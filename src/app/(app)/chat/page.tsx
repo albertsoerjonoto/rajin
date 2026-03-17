@@ -437,13 +437,13 @@ export default function ChatPage() {
     const today = getToday();
 
     const [profileRes, foodRes, exerciseRes, drinkRes, habitsRes, habitLogsRes, measurementRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
-      supabase.from('food_logs').select('*').eq('user_id', user.id).eq('date', today).order('created_at'),
-      supabase.from('exercise_logs').select('*').eq('user_id', user.id).eq('date', today).order('created_at'),
-      supabase.from('drink_logs').select('*').eq('user_id', user.id).eq('date', today).order('created_at'),
-      supabase.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
-      supabase.from('habit_logs').select('*').eq('user_id', user.id).eq('date', today),
-      supabase.from('measurement_logs').select('*').eq('user_id', user.id).eq('date', today).order('logged_at', { ascending: false }),
+      supabase.from('profiles').select('display_name, daily_calorie_offset, daily_water_goal_ml, date_of_birth, gender, height_cm, weight_kg').eq('id', user.id).single(),
+      supabase.from('food_logs').select('id, description, meal_type, calories, protein_g, carbs_g, fat_g').eq('user_id', user.id).eq('date', today).order('created_at'),
+      supabase.from('exercise_logs').select('id, exercise_type, duration_minutes, calories_burned').eq('user_id', user.id).eq('date', today).order('created_at'),
+      supabase.from('drink_logs').select('id, drink_type, description, volume_ml, calories, protein_g, carbs_g, fat_g').eq('user_id', user.id).eq('date', today).order('created_at'),
+      supabase.from('habits').select('id, name, emoji').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
+      supabase.from('habit_logs').select('habit_id, completed, logged_at').eq('user_id', user.id).eq('date', today),
+      supabase.from('measurement_logs').select('id, height_cm, weight_kg, notes, logged_at').eq('user_id', user.id).eq('date', today).order('logged_at', { ascending: false }),
     ]);
 
     if (profileRes.error) {
