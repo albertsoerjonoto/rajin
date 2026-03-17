@@ -883,7 +883,7 @@ export default function LogPage() {
       {modal === 'food' && (
         <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
           <div
-            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">{editingFood ? t('log.editDiet') : t('log.addDiet')}</h2>
@@ -965,7 +965,7 @@ export default function LogPage() {
       {modal === 'exercise' && (
         <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
           <div
-            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">{editingExercise ? t('log.editExercise') : t('log.addExercise')}</h2>
@@ -1022,7 +1022,7 @@ export default function LogPage() {
       {modal === 'drink' && (
         <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
           <div
-            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">{editingDrink ? t('drink.editDrink') : t('drink.addDrink')}</h2>
@@ -1115,7 +1115,7 @@ export default function LogPage() {
       {modal === 'measurement' && (
         <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
           <div
-            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">{editingMeasurement ? t('log.editMeasurement') : t('log.addMeasurement')}</h2>
