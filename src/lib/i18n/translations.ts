@@ -287,6 +287,9 @@ export const translations: Translations = {
 
   // ── Dashboard drinks ──
   'dashboard.food': { id: 'Makanan', en: 'Food' },
+  'dashboard.breakfast': { id: 'Sarapan', en: 'Bfast' },
+  'dashboard.lunch': { id: 'Siang', en: 'Lunch' },
+  'dashboard.dinner': { id: 'Malam', en: 'Dinner' },
   'dashboard.snacks': { id: 'Camilan', en: 'Snacks' },
   'dashboard.drinks': { id: 'Minuman', en: 'Drinks' },
   'dashboard.failedLoadDrinks': { id: 'Gagal memuat log minuman', en: 'Failed to load drink logs' },
