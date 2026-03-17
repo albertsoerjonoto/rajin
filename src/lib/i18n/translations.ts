@@ -140,6 +140,7 @@ export const translations: Translations = {
   'profile.username': { id: 'Username', en: 'Username' },
   'profile.usernamePlaceholder': { id: 'username_kamu', en: 'your_username' },
   'profile.usernameHint': { id: '3-20 karakter, huruf, angka, underscore', en: '3-20 chars, letters, numbers, underscores' },
+  'profile.usernameTaken': { id: 'Username sudah digunakan', en: 'Username already taken' },
   'profile.email': { id: 'Email', en: 'Email' },
   'profile.calorieTarget': { id: 'Target Kalori', en: 'Calorie Target' },
   'profile.deficit': { id: 'Defisit', en: 'Deficit' },

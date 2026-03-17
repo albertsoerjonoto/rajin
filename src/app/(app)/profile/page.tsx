@@ -154,12 +154,21 @@ export default function ProfilePage() {
         gender: gender || null,
         height_cm: heightCm ? parseFloat(heightCm) : null,
         weight_kg: weightKg ? parseFloat(weightKg) : null,
-        locale,
       })
       .eq('id', user.id);
 
     if (updateError) {
-      showToast('error', t('profile.failedSave'));
+      console.error('Profile save error:', JSON.stringify(updateError));
+
+      if (updateError.code === '23505') {
+        setErrors((prev) => ({ ...prev, username: t('profile.usernameTaken') }));
+        showToast('error', t('profile.usernameTaken'));
+      } else {
+        const detail = process.env.NODE_ENV === 'development'
+          ? ` [${updateError.code}: ${updateError.message}]`
+          : '';
+        showToast('error', t('profile.failedSave') + detail);
+      }
       setSaving(false);
       return;
     }
