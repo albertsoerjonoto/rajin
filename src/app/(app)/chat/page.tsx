@@ -287,7 +287,7 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
           <div className="mt-3 space-y-2">
             {msg.parsedMeasurements.map((m, i) => (
               <div key={i} className="bg-purple-50 dark:bg-purple-950/30 rounded-xl p-3">
-                <span className="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase">📏 Measurement</span>
+                <span className="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase">{t('log.measurements')}</span>
                 <div className="flex gap-3 mt-1 text-xs text-text-secondary">
                   {m.weight_kg !== null && <span>{m.weight_kg} kg</span>}
                   {m.height_cm !== null && <span>{m.height_cm} cm</span>}
