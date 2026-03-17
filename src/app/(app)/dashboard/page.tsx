@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { getToday, cn } from '@/lib/utils';
+import { getToday, cn, getDateRange, getDatesInRange } from '@/lib/utils';
 import type { Period } from '@/lib/utils';
 import DateNav from '@/components/DateNav';
 import { computeNutritionTargets } from '@/lib/nutrition';
@@ -23,7 +23,17 @@ import {
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, Profile } from '@/lib/types';
+import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile } from '@/lib/types';
+import { buildDayDataMap } from '@/components/analytics/types';
+import type { DayData } from '@/components/analytics/types';
+import StreakCard from '@/components/analytics/StreakCard';
+import HabitHeatmap from '@/components/analytics/HabitHeatmap';
+import CalorieBarChart from '@/components/analytics/CalorieBarChart';
+import MacroDonutChart from '@/components/analytics/MacroDonutChart';
+import ExerciseChart from '@/components/analytics/ExerciseChart';
+import WaterProgressChart from '@/components/analytics/WaterProgressChart';
+import WeightTrendChart from '@/components/analytics/WeightTrendChart';
+import HabitBreakdown from '@/components/analytics/HabitBreakdown';
 
 function HabitCardContent({ habit, isDragging }: { habit: HabitWithLog; isDragging?: boolean }) {
   return (
@@ -66,6 +76,19 @@ function SortableHabitCard({ habit, onEdit }: { habit: HabitWithLog; onEdit: (h:
   );
 }
 
+function ComparisonBadge({ current, previous, unit, invert }: { current: number; previous: number; unit?: string; invert?: boolean }) {
+  if (previous === 0 && current === 0) return null;
+  const diff = previous > 0 ? Math.round(((current - previous) / previous) * 100) : 0;
+  if (diff === 0) return <span className="text-text-tertiary">{' '}→</span>;
+  const isUp = diff > 0;
+  const isGood = invert ? !isUp : isUp;
+  return (
+    <span className={cn('text-[10px] font-medium', isGood ? 'text-positive-text' : 'text-warning')}>
+      {' '}{isUp ? '↑' : '↓'} {Math.abs(diff)}%
+    </span>
+  );
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const { showToast, ToastContainer } = useToast();
@@ -89,6 +112,13 @@ export default function DashboardPage() {
   const [activeHabit, setActiveHabit] = useState<HabitWithLog | null>(null);
   const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
 
+  // Analytics state (for period != day)
+  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
+  const [allHabitLogs, setAllHabitLogs] = useState<{ date: string; completed: number; total: number }[]>([]);
+  const [measurements, setMeasurements] = useState<MeasurementLog[]>([]);
+  const [prevPeriodData, setPrevPeriodData] = useState<{ foodLogs: FoodLog[]; exerciseLogs: ExerciseLog[]; drinkLogs: DrinkLog[]; habitLogs: HabitLog[] } | null>(null);
+  const [totalHabits, setTotalHabits] = useState(0);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
@@ -108,10 +138,8 @@ export default function DashboardPage() {
     const newIndex = habits.findIndex((h) => h.id === over.id);
     const reordered = arrayMove(habits, oldIndex, newIndex);
 
-    // Optimistic update
     setHabits(reordered);
 
-    // Persist new sort_order
     const supabase = createClient();
     const results = await Promise.all(
       reordered.map((h, i) =>
@@ -123,6 +151,9 @@ export default function DashboardPage() {
       fetchData();
     }
   };
+
+  const range = useMemo(() => getDateRange(date, period), [date, period]);
+  const dates = useMemo(() => getDatesInRange(range.start, range.end), [range]);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -162,49 +193,136 @@ export default function DashboardPage() {
       showToast('error', t('dashboard.failedLoadHabits'));
     }
 
-    const { data: logsData } = await supabase
-      .from('habit_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('date', date);
+    const activeHabitCount = habitsData?.length ?? 0;
+    setTotalHabits(activeHabitCount);
 
-    if (habitsData) {
-      const habitsWithLogs: HabitWithLog[] = habitsData.map((habit) => {
-        const log = logsData?.find((l) => l.habit_id === habit.id);
-        return { ...habit, completed: log?.completed ?? false, log_id: log?.id, logged_at: log?.logged_at };
-      });
-      setHabits(habitsWithLogs);
+    if (period === 'day') {
+      // Single day fetch (existing behavior)
+      const { data: logsData } = await supabase
+        .from('habit_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', date);
+
+      if (habitsData) {
+        const habitsWithLogs: HabitWithLog[] = habitsData.map((habit) => {
+          const log = logsData?.find((l) => l.habit_id === habit.id);
+          return { ...habit, completed: log?.completed ?? false, log_id: log?.id, logged_at: log?.logged_at };
+        });
+        setHabits(habitsWithLogs);
+      }
+
+      const { data: foodData, error: foodError } = await supabase
+        .from('food_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', date)
+        .order('created_at');
+      if (foodError) showToast('error', t('dashboard.failedLoadFood'));
+      if (foodData) setFoodLogs(foodData);
+
+      const { data: exerciseData, error: exerciseError } = await supabase
+        .from('exercise_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', date)
+        .order('created_at');
+      if (exerciseError) showToast('error', t('dashboard.failedLoadExercise'));
+      if (exerciseData) setExerciseLogs(exerciseData);
+
+      const { data: drinkData, error: drinkError } = await supabase
+        .from('drink_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', date)
+        .order('created_at');
+      if (drinkError) showToast('error', t('dashboard.failedLoadDrinks'));
+      if (drinkData) setDrinkLogs(drinkData);
+    } else {
+      // Range fetch for analytics
+      const { start, end } = range;
+
+      const [foodRes, exerciseRes, drinkRes, habitLogRes, measurementRes] = await Promise.all([
+        supabase.from('food_logs').select('*').eq('user_id', user.id).gte('date', start).lte('date', end).order('created_at'),
+        supabase.from('exercise_logs').select('*').eq('user_id', user.id).gte('date', start).lte('date', end).order('created_at'),
+        supabase.from('drink_logs').select('*').eq('user_id', user.id).gte('date', start).lte('date', end).order('created_at'),
+        supabase.from('habit_logs').select('*').eq('user_id', user.id).gte('date', start).lte('date', end),
+        supabase.from('measurement_logs').select('*').eq('user_id', user.id).gte('date', start).lte('date', end).order('date'),
+      ]);
+
+      if (foodRes.data) setFoodLogs(foodRes.data);
+      if (exerciseRes.data) setExerciseLogs(exerciseRes.data);
+      if (drinkRes.data) setDrinkLogs(drinkRes.data);
+      if (habitLogRes.data) setHabitLogs(habitLogRes.data);
+      if (measurementRes.data) setMeasurements(measurementRes.data);
+
+      // Fetch all habit_logs for streak calculation (last 365 days)
+      const streakStart = new Date();
+      streakStart.setFullYear(streakStart.getFullYear() - 1);
+      const streakStartStr = streakStart.toISOString().split('T')[0];
+      const { data: allHLogs } = await supabase
+        .from('habit_logs')
+        .select('date, completed')
+        .eq('user_id', user.id)
+        .gte('date', streakStartStr)
+        .eq('completed', true);
+
+      if (allHLogs && activeHabitCount > 0) {
+        // Group by date
+        const dateMap = new Map<string, number>();
+        for (const hl of allHLogs) {
+          dateMap.set(hl.date, (dateMap.get(hl.date) ?? 0) + 1);
+        }
+        const sorted = [...dateMap.entries()]
+          .map(([d, count]) => ({ date: d, completed: count, total: activeHabitCount }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        setAllHabitLogs(sorted);
+      } else {
+        setAllHabitLogs([]);
+      }
+
+      // Fetch previous period data for comparisons (week/month only)
+      if (period === 'week' || period === 'month') {
+        let prevDateStr: string;
+        if (period === 'week') {
+          prevDateStr = new Date(new Date(start + 'T12:00:00Z').getTime() - 7 * 86400000).toISOString().split('T')[0];
+        } else {
+          const d = new Date(start + 'T12:00:00Z');
+          d.setUTCMonth(d.getUTCMonth() - 1);
+          prevDateStr = d.toISOString().split('T')[0];
+        }
+        const prevRange = getDateRange(prevDateStr, period);
+
+        const [prevFood, prevExercise, prevDrink, prevHabit] = await Promise.all([
+          supabase.from('food_logs').select('*').eq('user_id', user.id).gte('date', prevRange.start).lte('date', prevRange.end),
+          supabase.from('exercise_logs').select('*').eq('user_id', user.id).gte('date', prevRange.start).lte('date', prevRange.end),
+          supabase.from('drink_logs').select('*').eq('user_id', user.id).gte('date', prevRange.start).lte('date', prevRange.end),
+          supabase.from('habit_logs').select('*').eq('user_id', user.id).gte('date', prevRange.start).lte('date', prevRange.end),
+        ]);
+
+        setPrevPeriodData({
+          foodLogs: prevFood.data ?? [],
+          exerciseLogs: prevExercise.data ?? [],
+          drinkLogs: prevDrink.data ?? [],
+          habitLogs: prevHabit.data ?? [],
+        });
+      } else {
+        setPrevPeriodData(null);
+      }
+
+      if (habitsData) {
+        const habitsWithLogs: HabitWithLog[] = habitsData.map((habit) => ({
+          ...habit,
+          completed: false,
+          log_id: undefined,
+          logged_at: undefined,
+        }));
+        setHabits(habitsWithLogs);
+      }
     }
 
-    const { data: foodData, error: foodError } = await supabase
-      .from('food_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('date', date)
-      .order('created_at');
-    if (foodError) showToast('error', t('dashboard.failedLoadFood'));
-    if (foodData) setFoodLogs(foodData);
-
-    const { data: exerciseData, error: exerciseError } = await supabase
-      .from('exercise_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('date', date)
-      .order('created_at');
-    if (exerciseError) showToast('error', t('dashboard.failedLoadExercise'));
-    if (exerciseData) setExerciseLogs(exerciseData);
-
-    const { data: drinkData, error: drinkError } = await supabase
-      .from('drink_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('date', date)
-      .order('created_at');
-    if (drinkError) showToast('error', t('dashboard.failedLoadDrinks'));
-    if (drinkData) setDrinkLogs(drinkData);
-
     setLoading(false);
-  }, [user, date, showToast, t]);
+  }, [user, date, period, range, showToast, t]);
 
   useEffect(() => {
     fetchData();
@@ -215,7 +333,6 @@ export default function DashboardPage() {
     setTogglingId(habit.id);
     const supabase = createClient();
 
-    // Optimistic update
     const wasCompleted = habit.completed;
     setHabits((prev) =>
       prev.map((h) => (h.id === habit.id ? { ...h, completed: !h.completed } : h))
@@ -313,6 +430,7 @@ export default function DashboardPage() {
     fetchData();
   };
 
+  // Day view computations
   const totalFoodCalories = foodLogs.reduce((sum, f) => sum + f.calories, 0);
   const totalDrinkCalories = drinkLogs.reduce((sum, d) => sum + d.calories, 0);
   const totalCalories = totalFoodCalories + totalDrinkCalories;
@@ -332,7 +450,7 @@ export default function DashboardPage() {
   };
 
   const filteredLogs = selectedMeal === 'drinks'
-    ? [] // drinks don't use foodLogs
+    ? []
     : selectedMeal
       ? selectedMeal === 'snacks'
         ? foodLogs.filter((f) => f.meal_type === 'snack')
@@ -379,6 +497,58 @@ export default function DashboardPage() {
         : `${targets.calorieOffset} ${t('nutrition.calSurplus')}`
   ) : '';
 
+  // Analytics computations
+  const dayDataMap = useMemo(() => {
+    if (period === 'day') return new Map<string, DayData>();
+    return buildDayDataMap(dates, foodLogs, exerciseLogs, drinkLogs, habitLogs, totalHabits);
+  }, [period, dates, foodLogs, exerciseLogs, drinkLogs, habitLogs, totalHabits]);
+
+  const prevDayDataMap = useMemo(() => {
+    if (!prevPeriodData) return null;
+    const prevDates = getDatesInRange(
+      period === 'week'
+        ? getDateRange(new Date(new Date(range.start + 'T12:00:00Z').getTime() - 7 * 86400000).toISOString().split('T')[0], period).start
+        : (() => {
+            const d = new Date(range.start + 'T12:00:00Z');
+            d.setUTCMonth(d.getUTCMonth() - 1);
+            return getDateRange(d.toISOString().split('T')[0], period).start;
+          })(),
+      period === 'week'
+        ? getDateRange(new Date(new Date(range.start + 'T12:00:00Z').getTime() - 7 * 86400000).toISOString().split('T')[0], period).end
+        : (() => {
+            const d = new Date(range.start + 'T12:00:00Z');
+            d.setUTCMonth(d.getUTCMonth() - 1);
+            return getDateRange(d.toISOString().split('T')[0], period).end;
+          })(),
+    );
+    return buildDayDataMap(prevDates, prevPeriodData.foodLogs, prevPeriodData.exerciseLogs, prevPeriodData.drinkLogs, prevPeriodData.habitLogs, totalHabits);
+  }, [prevPeriodData, period, range, totalHabits]);
+
+  const comparisonStats = useMemo(() => {
+    if (!prevDayDataMap || period === 'year') return null;
+    const current = Array.from(dayDataMap.values());
+    const prev = Array.from(prevDayDataMap.values());
+    const curCount = current.length || 1;
+    const prevCount = prev.length || 1;
+
+    const curAvgCal = Math.round(current.reduce((s, d) => s + d.totalCalories, 0) / curCount);
+    const prevAvgCal = Math.round(prev.reduce((s, d) => s + d.totalCalories, 0) / prevCount);
+
+    const curHabitPossible = current.reduce((s, d) => s + d.habitsTotal, 0);
+    const curHabitDone = current.reduce((s, d) => s + d.habitsCompleted, 0);
+    const prevHabitPossible = prev.reduce((s, d) => s + d.habitsTotal, 0);
+    const prevHabitDone = prev.reduce((s, d) => s + d.habitsCompleted, 0);
+    const curHabitPct = curHabitPossible > 0 ? Math.round((curHabitDone / curHabitPossible) * 100) : 0;
+    const prevHabitPct = prevHabitPossible > 0 ? Math.round((prevHabitDone / prevHabitPossible) * 100) : 0;
+
+    const curActiveDays = current.filter((d) => d.exerciseLogs.length > 0).length;
+    const prevActiveDays = prev.filter((d) => d.exerciseLogs.length > 0).length;
+
+    return { curAvgCal, prevAvgCal, curHabitPct, prevHabitPct, curActiveDays, prevActiveDays };
+  }, [dayDataMap, prevDayDataMap, period]);
+
+  const isAnalyticsView = period !== 'day';
+
   return (
     <div className="max-w-lg mx-auto px-4">
       {ToastContainer}
@@ -389,7 +559,85 @@ export default function DashboardPage() {
 
       {loading ? (
         <PageSkeleton />
+      ) : isAnalyticsView ? (
+        /* ──── Analytics View (Week / Month / Year) ──── */
+        <div className="space-y-4 pb-6">
+          {/* Comparison Stats */}
+          {comparisonStats && (
+            <div className="bg-surface rounded-xl p-4 shadow-sm animate-fade-in">
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <p className="text-[10px] text-text-tertiary leading-tight">{t('analytics.avgDailyIntake')}</p>
+                  <p className="text-lg font-bold text-text-primary">{comparisonStats.curAvgCal}</p>
+                  <p className="text-[10px] text-text-tertiary">{t('common.cal')}{t('analytics.perDay')}</p>
+                  <ComparisonBadge current={comparisonStats.curAvgCal} previous={comparisonStats.prevAvgCal} invert />
+                </div>
+                <div>
+                  <p className="text-[10px] text-text-tertiary leading-tight">{t('analytics.habitCompletionRate')}</p>
+                  <p className="text-lg font-bold text-text-primary">{comparisonStats.curHabitPct}%</p>
+                  <p className="text-[10px] text-text-tertiary">{t('analytics.of')} {t('analytics.days')}</p>
+                  <ComparisonBadge current={comparisonStats.curHabitPct} previous={comparisonStats.prevHabitPct} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-text-tertiary leading-tight">{t('analytics.activeDays')}</p>
+                  <p className="text-lg font-bold text-text-primary">{comparisonStats.curActiveDays}</p>
+                  <p className="text-[10px] text-text-tertiary">{t('analytics.of')} {dates.length} {t('analytics.days')}</p>
+                  <ComparisonBadge current={comparisonStats.curActiveDays} previous={comparisonStats.prevActiveDays} />
+                </div>
+              </div>
+              <p className="text-[10px] text-text-tertiary text-center mt-2">
+                {period === 'week' ? t('analytics.vsLastWeek') : t('analytics.vsLastMonth')}
+              </p>
+            </div>
+          )}
+
+          <StreakCard dayDataMap={dayDataMap} allHabitLogs={allHabitLogs} />
+
+          <HabitHeatmap
+            dayDataMap={dayDataMap}
+            dates={dates}
+            period={period as 'week' | 'month' | 'year'}
+          />
+
+          <CalorieBarChart
+            dayDataMap={dayDataMap}
+            dates={dates}
+            period={period as 'week' | 'month' | 'year'}
+            calorieTarget={calorieTarget}
+          />
+
+          <MacroDonutChart dayDataMap={dayDataMap} />
+
+          <ExerciseChart
+            dayDataMap={dayDataMap}
+            dates={dates}
+            period={period as 'week' | 'month' | 'year'}
+          />
+
+          <WaterProgressChart
+            dayDataMap={dayDataMap}
+            dates={dates}
+            period={period as 'week' | 'month' | 'year'}
+            waterGoalMl={waterGoalMl}
+          />
+
+          {habits.length > 0 && (
+            <HabitBreakdown
+              habits={habits}
+              habitLogs={habitLogs}
+              totalDays={dates.length}
+            />
+          )}
+
+          {measurements.length > 0 && (
+            <WeightTrendChart
+              measurements={measurements}
+              period={period as 'week' | 'month' | 'year'}
+            />
+          )}
+        </div>
       ) : (
+        /* ──── Day View (unchanged) ──── */
         <>
           {/* Habits Section */}
           <section className="mb-6 animate-stagger-in" style={{ animationDelay: '0ms' }}>
