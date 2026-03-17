@@ -310,6 +310,11 @@ export async function POST(request: NextRequest) {
 
     if (image_url && typeof image_url === 'string') {
       try {
+        // Only fetch images from our Supabase storage to prevent SSRF
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        if (!supabaseUrl || !image_url.startsWith(supabaseUrl)) {
+          throw new Error('Invalid image URL origin');
+        }
         const imgResponse = await fetch(image_url);
         const imgBuffer = await imgResponse.arrayBuffer();
         const base64 = Buffer.from(imgBuffer).toString('base64');
