@@ -1,9 +1,14 @@
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+
 /**
  * Compress and crop an image file to a 256×256 square avatar.
  * Uses browser Canvas API — no external dependencies.
  * Outputs WebP (JPEG fallback for older browsers).
  */
 export async function compressAvatar(file: File): Promise<Blob> {
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error('Image file is too large (max 20 MB)');
+  }
   const SIZE = 256;
 
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -13,7 +18,10 @@ export async function compressAvatar(file: File): Promise<Blob> {
       URL.revokeObjectURL(url);
       resolve(el);
     };
-    el.onerror = reject;
+    el.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image'));
+    };
     el.src = url;
   });
 
@@ -63,6 +71,9 @@ export async function compressAvatar(file: File): Promise<Blob> {
  * Preserves aspect ratio (no cropping). Outputs JPEG for smaller size.
  */
 export async function compressChatImage(file: File): Promise<Blob> {
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error('Image file is too large (max 20 MB)');
+  }
   const MAX = 800;
 
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -72,7 +83,10 @@ export async function compressChatImage(file: File): Promise<Blob> {
       URL.revokeObjectURL(url);
       resolve(el);
     };
-    el.onerror = reject;
+    el.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image'));
+    };
     el.src = url;
   });
 

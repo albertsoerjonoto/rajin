@@ -24,6 +24,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No audio provided' }, { status: 400 });
     }
 
+    if (audio.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Audio file too large (max 10 MB)' }, { status: 413 });
+    }
+
     const buffer = await audio.arrayBuffer();
     const base64 = Buffer.from(buffer).toString('base64');
     const mimeType = audio.type || 'audio/webm';
@@ -31,18 +35,21 @@ export async function POST(req: NextRequest) {
     const language = locale === 'en' ? 'English' : 'Indonesian (Bahasa Indonesia)';
 
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { inlineData: { mimeType, data: base64 } },
-            { text: `Transcribe this audio exactly as spoken. Return ONLY the transcription text, nothing else. No quotes, no labels, no explanation. The speaker is likely speaking in ${language}.` },
-          ],
-        },
-      ],
-    });
+    const response = await Promise.race([
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { inlineData: { mimeType, data: base64 } },
+              { text: `Transcribe this audio exactly as spoken. Return ONLY the transcription text, nothing else. No quotes, no labels, no explanation. The speaker is likely speaking in ${language}.` },
+            ],
+          },
+        ],
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Transcription timeout')), 30000)),
+    ]);
 
     const text = (response.text ?? '').trim();
 
