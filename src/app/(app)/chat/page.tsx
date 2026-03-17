@@ -400,11 +400,6 @@ export default function ChatPage() {
   const isToday = date === getToday();
   const [hasHistoryMessages, setHasHistoryMessages] = useState(false);
 
-  // Prevent body scroll while on chat page (fixes scroll leak to other pages)
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
 
   // Fetch messages from DB for the selected date
   const fetchMessages = useCallback(async () => {
@@ -412,12 +407,18 @@ export default function ChatPage() {
     shouldAutoScroll.current = false;
     setLoadingMessages(true);
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('chat_messages')
       .select('*')
       .eq('user_id', user.id)
       .eq('date', date)
       .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Failed to fetch messages:', error.message);
+      setLoadingMessages(false);
+      return;
+    }
 
     if (data && data.length > 0) {
       setMessages(data.map((row: ChatMessage) => dbRowToMessage(row)));
@@ -444,6 +445,10 @@ export default function ChatPage() {
       supabase.from('habit_logs').select('*').eq('user_id', user.id).eq('date', today),
       supabase.from('measurement_logs').select('*').eq('user_id', user.id).eq('date', today).order('logged_at', { ascending: false }),
     ]);
+
+    if (profileRes.error) {
+      console.error('Failed to fetch chat context profile:', profileRes.error.message);
+    }
 
     const profile = profileRes.data as Profile | null;
     const foodLogs = foodRes.data || [];
@@ -628,11 +633,15 @@ export default function ChatPage() {
     }
 
     // Insert user message to DB
-    const { data: userRow } = await supabase
+    const { data: userRow, error: userInsertError } = await supabase
       .from('chat_messages')
       .insert({ user_id: user!.id, date, role: 'user', content: userContent, image_url: uploadedImageUrl })
       .select()
       .single();
+
+    if (userInsertError) {
+      console.error('Failed to insert user message:', userInsertError.message);
+    }
 
     const userMsg: Message = userRow
       ? dbRowToMessage(userRow)
