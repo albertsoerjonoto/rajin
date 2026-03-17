@@ -397,6 +397,7 @@ export default function ChatPage() {
   const shouldAutoScroll = useRef(false);
   const imagePreviewRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const savingLockRef = useRef(false);
 
   const isToday = date === getToday();
   const [hasHistoryMessages, setHasHistoryMessages] = useState(false);
@@ -413,10 +414,10 @@ export default function ChatPage() {
     };
   }, []);
 
-  // Abort any in-flight API call on unmount
+  // Abort any in-flight API call on unmount or date change
   useEffect(() => {
     return () => { abortRef.current?.abort(); };
-  }, []);
+  }, [date]);
 
   // Fetch messages from DB for the selected date
   const fetchMessages = useCallback(async () => {
@@ -563,12 +564,12 @@ export default function ChatPage() {
 
   // Load messages when date or user changes
   useEffect(() => {
-    if (user) fetchMessages();
+    if (user) queueMicrotask(() => fetchMessages());
   }, [user, date, fetchMessages]);
 
   // Fetch context on mount
   useEffect(() => {
-    if (user) fetchContext();
+    if (user) queueMicrotask(() => fetchContext());
   }, [user, fetchContext]);
 
   // Scroll to bottom when messages change
@@ -576,7 +577,7 @@ export default function ChatPage() {
     const container = messagesContainerRef.current;
     if (!container) return;
     if (shouldAutoScroll.current) {
-      // Smooth scroll for new messages (send/receive)
+      // Instant scroll to bottom for new messages (send/receive)
       container.scrollTop = container.scrollHeight;
     }
   }, [messages, loading]);
@@ -707,7 +708,7 @@ export default function ChatPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userContent, context: contextRef.current, history: recentMessages, image_url: uploadedImageUrl, locale }),
-        signal: controller.signal,
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]),
       });
 
       const data = await res.json();
@@ -814,10 +815,11 @@ export default function ChatPage() {
         setLoading(false);
         return;
       }
-      // Show error in UI but don't persist to DB
+      // Show timeout-specific message vs generic error
+      const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
       setMessages((prev) => [
         ...prev,
-        { id: `error-${Date.now()}`, role: 'assistant', content: t('chat.somethingWrong') },
+        { id: `error-${Date.now()}`, role: 'assistant', content: isTimeout ? t('chat.requestTimeout') : t('chat.somethingWrong') },
       ]);
     }
 
@@ -835,7 +837,8 @@ export default function ChatPage() {
   };
 
   const saveResults = useCallback(async (msgId: string, foods: ParsedFood[], exercises: ParsedExercise[], drinks: ParsedDrink[] = [], measurements: ParsedMeasurement[] = []) => {
-    if (!user || savingId) return;
+    if (!user || savingLockRef.current) return;
+    savingLockRef.current = true;
     setSavingId(msgId);
     const supabase = createClient();
     const today = getToday();
@@ -885,17 +888,19 @@ export default function ChatPage() {
     if (hasError) {
       showToast('error', t('chat.failedSave'));
       setSavingId(null);
+      savingLockRef.current = false;
       return;
     }
 
     await markSaved(msgId);
     setSavingId(null);
+    savingLockRef.current = false;
     fetchContext();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, showToast, fetchContext, t]);
 
   const confirmEdits = useCallback(async (msgId: string, foodEdits: FoodEdit[], exerciseEdits: ExerciseEdit[], drinkEdits: DrinkEdit[] = [], measurementEdits: MeasurementEdit[] = []) => {
-    if (!user || savingId) return;
+    if (!user || savingLockRef.current) return;
+    savingLockRef.current = true;
     setSavingId(msgId);
     const supabase = createClient();
     let hasError = false;
@@ -923,17 +928,19 @@ export default function ChatPage() {
     if (hasError) {
       showToast('error', t('chat.failedApply'));
       setSavingId(null);
+      savingLockRef.current = false;
       return;
     }
 
     await markSaved(msgId);
     setSavingId(null);
+    savingLockRef.current = false;
     fetchContext();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, showToast, fetchContext, t]);
 
   const handleSaveAndApply = useCallback(async (msg: Message) => {
-    if (!user || savingId) return;
+    if (!user || savingLockRef.current) return;
+    savingLockRef.current = true;
     setSavingId(msg.id);
     const supabase = createClient();
     const today = getToday();
@@ -1005,13 +1012,14 @@ export default function ChatPage() {
     if (hasError) {
       showToast('error', t('chat.failedSave'));
       setSavingId(null);
+      savingLockRef.current = false;
       return;
     }
 
     await markSaved(msg.id);
     setSavingId(null);
+    savingLockRef.current = false;
     fetchContext();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, showToast, fetchContext, t]);
 
   const updateFood = useCallback((msgId: string, index: number, field: keyof ParsedFood, value: string | number) => {
