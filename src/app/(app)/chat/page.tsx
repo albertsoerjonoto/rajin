@@ -49,8 +49,8 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
     (msg.measurementEdits?.length ?? 0) > 0;
 
   const getLabel = () => {
-    const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0 || (msg.parsedDrinks?.length ?? 0) > 0;
-    const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0 || (msg.drinkEdits?.length ?? 0) > 0;
+    const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0 || (msg.parsedDrinks?.length ?? 0) > 0 || (msg.parsedMeasurements?.length ?? 0) > 0;
+    const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0 || (msg.drinkEdits?.length ?? 0) > 0 || (msg.measurementEdits?.length ?? 0) > 0;
     if (hasAdds && hasEdits) return t('chat.saveAndApply');
     if (hasEdits) return t('chat.applyChanges');
     return t('chat.saveToLog');
