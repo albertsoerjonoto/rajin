@@ -66,10 +66,10 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   return (
-    <div className={cn('min-h-screen bg-bg', isExpanded ? 'md:flex' : '')}>
+    <div className={cn('min-h-screen bg-bg', isExpanded ? 'sm:flex' : '')}>
       {/* Desktop sidebar — narrow (icon-only) at md, full at xl */}
       {isExpanded && (
-        <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-16 xl:w-60 md:bg-surface md:border-r md:border-border md:z-50">
+        <aside className="hidden sm:flex sm:flex-col sm:fixed sm:inset-y-0 sm:left-0 sm:w-16 xl:w-60 sm:bg-surface sm:border-r sm:border-border sm:z-50">
           {/* Logo */}
           <div className="flex items-center justify-center xl:justify-start xl:px-6 h-16 border-b border-border">
             <span className="text-lg font-bold text-text-primary xl:hidden">R</span>
@@ -108,7 +108,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content */}
-      <main className={cn('flex-1 pb-20', isExpanded && 'md:pb-0 md:ml-16 xl:ml-60')}>
+      <main className={cn('flex-1 pb-20', isExpanded && 'sm:pb-0 sm:ml-16 xl:ml-60')}>
         <ServiceWorkerRegister />
         {children}
       </main>
@@ -116,7 +116,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Bottom tab nav — visible on mobile, hidden on md+ when expanded */}
       <nav className={cn(
         'fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl safe-area-bottom z-50',
-        isExpanded ? 'md:hidden' : ''
+        isExpanded ? 'sm:hidden' : ''
       )}>
         <div className="max-w-lg mx-auto flex justify-around items-center h-16">
           {TAB_DEFS.map((tab) => {
