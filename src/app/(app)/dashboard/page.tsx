@@ -324,7 +324,9 @@ export default function DashboardPage() {
   const waterGoalMl = profile?.daily_water_goal_ml ?? 2000;
 
   const categoryBreakdown = {
-    food: foodLogs.filter((f) => f.meal_type !== 'snack').reduce((s, f) => s + f.calories, 0),
+    breakfast: foodLogs.filter((f) => f.meal_type === 'breakfast').reduce((s, f) => s + f.calories, 0),
+    lunch: foodLogs.filter((f) => f.meal_type === 'lunch').reduce((s, f) => s + f.calories, 0),
+    dinner: foodLogs.filter((f) => f.meal_type === 'dinner').reduce((s, f) => s + f.calories, 0),
     snacks: foodLogs.filter((f) => f.meal_type === 'snack').reduce((s, f) => s + f.calories, 0),
     drinks: totalDrinkCalories,
   };
@@ -332,9 +334,9 @@ export default function DashboardPage() {
   const filteredLogs = selectedMeal === 'drinks'
     ? [] // drinks don't use foodLogs
     : selectedMeal
-      ? selectedMeal === 'food'
-        ? foodLogs.filter((f) => f.meal_type !== 'snack')
-        : foodLogs.filter((f) => f.meal_type === 'snack')
+      ? selectedMeal === 'snacks'
+        ? foodLogs.filter((f) => f.meal_type === 'snack')
+        : foodLogs.filter((f) => f.meal_type === selectedMeal)
       : foodLogs;
   const displayCalories = selectedMeal ? categoryBreakdown[selectedMeal as keyof typeof categoryBreakdown] : netCalories;
   const displayProtein = selectedMeal === 'drinks'
@@ -355,7 +357,9 @@ export default function DashboardPage() {
   const remainingCalories = calorieTarget - netCalories;
 
   const categoryKeys = [
-    { key: 'food', labelKey: 'dashboard.food' },
+    { key: 'breakfast', labelKey: 'dashboard.breakfast' },
+    { key: 'lunch', labelKey: 'dashboard.lunch' },
+    { key: 'dinner', labelKey: 'dashboard.dinner' },
     { key: 'snacks', labelKey: 'dashboard.snacks' },
     { key: 'drinks', labelKey: 'dashboard.drinks' },
   ] as const;
@@ -512,16 +516,9 @@ export default function DashboardPage() {
                       <span className={cn('text-base leading-none shrink-0', habit.completed && 'animate-checkmark inline-block')}>
                         {habit.emoji}
                       </span>
-                      <div className="flex-1 min-w-0">
-                        <span className={cn('text-xs font-medium leading-snug block', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
-                          {habit.name}
-                        </span>
-                        {habit.completed && habit.logged_at && (
-                          <span className="text-[10px] text-positive-text/70">
-                            {new Date(habit.logged_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                          </span>
-                        )}
-                      </div>
+                      <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
+                        {habit.name}
+                      </span>
                       <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
                         <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
                         {habit.completed && (
@@ -626,7 +623,7 @@ export default function DashboardPage() {
               )}
 
               {/* Category Breakdown */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-5 gap-1">
                 {categoryKeys.map(({ key, labelKey }) => (
                   <button
                     key={key}
