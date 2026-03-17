@@ -309,14 +309,18 @@ export async function POST(request: NextRequest) {
     const userParts: any[] = [{ text: message }];
 
     if (image_url && typeof image_url === 'string') {
-      try {
-        const imgResponse = await fetch(image_url, { signal: AbortSignal.timeout(5000) });
-        const imgBuffer = await imgResponse.arrayBuffer();
-        const base64 = Buffer.from(imgBuffer).toString('base64');
-        const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg';
-        userParts.push({ inlineData: { mimeType, data: base64 } });
-      } catch {
-        // If image fetch fails, proceed with text only
+      // Only fetch images from our own Supabase storage to prevent SSRF
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (supabaseUrl && image_url.startsWith(supabaseUrl)) {
+        try {
+          const imgResponse = await fetch(image_url, { signal: AbortSignal.timeout(5000) });
+          const imgBuffer = await imgResponse.arrayBuffer();
+          const base64 = Buffer.from(imgBuffer).toString('base64');
+          const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg';
+          userParts.push({ inlineData: { mimeType, data: base64 } });
+        } catch {
+          // If image fetch fails, proceed with text only
+        }
       }
     }
 

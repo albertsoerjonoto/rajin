@@ -395,22 +395,27 @@ export default function ChatPage() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<ChatContext | null>(null);
   const shouldAutoScroll = useRef(false);
+  const imagePreviewRef = useRef<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const isToday = date === getToday();
   const [hasHistoryMessages, setHasHistoryMessages] = useState(false);
 
-  // Prevent body scroll while on chat page (fixes scroll leak to other pages)
+  // Track imagePreview in ref so cleanup always has the latest value
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
+    imagePreviewRef.current = imagePreview;
+  }, [imagePreview]);
 
-  // Revoke image preview blob URL on unmount to prevent memory leaks
+  // Revoke image preview blob URL on unmount
   useEffect(() => {
     return () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Abort any in-flight API call on unmount
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
   }, []);
 
   // Fetch messages from DB for the selected date
@@ -419,12 +424,18 @@ export default function ChatPage() {
     shouldAutoScroll.current = false;
     setLoadingMessages(true);
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('chat_messages')
-      .select('*')
+      .select('id,user_id,role,content,image_url,parsed_foods,parsed_exercises,parsed_drinks,parsed_measurements,food_edits,exercise_edits,drink_edits,measurement_edits,saved,date,created_at')
       .eq('user_id', user.id)
       .eq('date', date)
       .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Failed to fetch messages:', error.message);
+      setLoadingMessages(false);
+      return;
+    }
 
     if (data && data.length > 0) {
       setMessages(data.map((row: ChatMessage) => dbRowToMessage(row)));
@@ -443,15 +454,18 @@ export default function ChatPage() {
     const today = getToday();
 
     const [profileRes, foodRes, exerciseRes, drinkRes, habitsRes, habitLogsRes, measurementRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
-      supabase.from('food_logs').select('*').eq('user_id', user.id).eq('date', today).order('created_at'),
-      supabase.from('exercise_logs').select('*').eq('user_id', user.id).eq('date', today).order('created_at'),
-      supabase.from('drink_logs').select('*').eq('user_id', user.id).eq('date', today).order('created_at'),
-      supabase.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
-      supabase.from('habit_logs').select('*').eq('user_id', user.id).eq('date', today),
-      supabase.from('measurement_logs').select('*').eq('user_id', user.id).eq('date', today).order('logged_at', { ascending: false }),
+      supabase.from('profiles').select('id,display_name,daily_calorie_goal,daily_calorie_offset,daily_water_goal_ml,date_of_birth,gender,height_cm,weight_kg,activity_level').eq('id', user.id).single(),
+      supabase.from('food_logs').select('id,description,meal_type,calories,protein_g,carbs_g,fat_g').eq('user_id', user.id).eq('date', today).order('created_at'),
+      supabase.from('exercise_logs').select('id,exercise_type,duration_minutes,calories_burned').eq('user_id', user.id).eq('date', today).order('created_at'),
+      supabase.from('drink_logs').select('id,drink_type,description,volume_ml,calories,protein_g,carbs_g,fat_g').eq('user_id', user.id).eq('date', today).order('created_at'),
+      supabase.from('habits').select('id,name,emoji').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
+      supabase.from('habit_logs').select('habit_id,completed,logged_at').eq('user_id', user.id).eq('date', today),
+      supabase.from('measurement_logs').select('id,height_cm,weight_kg,notes,logged_at').eq('user_id', user.id).eq('date', today).order('logged_at', { ascending: false }),
     ]);
 
+    if (profileRes.error) {
+      console.error('Failed to fetch profile for chat context:', profileRes.error.message);
+    }
     const profile = profileRes.data as Profile | null;
     const foodLogs = foodRes.data || [];
     const exerciseLogs = exerciseRes.data || [];
@@ -581,6 +595,8 @@ export default function ChatPage() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Revoke previous preview URL before creating a new one
+    if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
     setImageFile(file);
     const url = URL.createObjectURL(file);
     setImagePreview(url);
@@ -588,7 +604,7 @@ export default function ChatPage() {
 
   const clearImage = () => {
     setImageFile(null);
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -602,6 +618,11 @@ export default function ChatPage() {
       return;
     }
 
+    // Abort any previous in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     const userContent = messageText.trim() || (imageFile ? t('chat.whatsInPhoto') : '');
     const currentImageFile = imageFile;
     const currentImagePreview = imagePreview;
@@ -612,6 +633,8 @@ export default function ChatPage() {
 
     // Refresh context before sending
     await fetchContext();
+
+    if (controller.signal.aborted) { setLoading(false); return; }
 
     const supabase = createClient();
 
@@ -684,6 +707,7 @@ export default function ChatPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userContent, context: contextRef.current, history: recentMessages, image_url: uploadedImageUrl, locale }),
+        signal: controller.signal,
       });
 
       const data = await res.json();
@@ -784,7 +808,12 @@ export default function ChatPage() {
           };
 
       setMessages((prev) => [...prev, assistantMsg]);
-    } catch {
+    } catch (err) {
+      // Don't show error if request was intentionally aborted (e.g., date change, unmount)
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setLoading(false);
+        return;
+      }
       // Show error in UI but don't persist to DB
       setMessages((prev) => [
         ...prev,
@@ -1110,7 +1139,9 @@ export default function ChatPage() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) sendMessage();
+                }}
                 className="flex-1 py-3 bg-transparent focus:outline-none text-sm text-text-primary placeholder:text-text-tertiary"
                 placeholder={t('chat.placeholder')}
               />
