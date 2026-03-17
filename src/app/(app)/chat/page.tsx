@@ -405,6 +405,14 @@ export default function ChatPage() {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
+  // Revoke image preview blob URL on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Fetch messages from DB for the selected date
   const fetchMessages = useCallback(async () => {
     if (!user) return;
