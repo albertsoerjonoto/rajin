@@ -23,7 +23,8 @@ import {
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile, FriendProfile, SharedHabit } from '@/lib/types';
+import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile, FriendProfile, SharedHabit, HabitStreak } from '@/lib/types';
+import { updateHabitStreak } from '@/lib/streaks';
 import { buildDayDataMap } from '@/components/analytics/types';
 import type { DayData } from '@/components/analytics/types';
 import StreakCard from '@/components/analytics/StreakCard';
@@ -122,6 +123,7 @@ export default function DashboardPage() {
   const [showShareModal, setShowShareModal] = useState<string | null>(null); // habit id
   const [acceptedFriends, setAcceptedFriends] = useState<FriendProfile[]>([]);
   const [sharedHabits, setSharedHabits] = useState<SharedHabit[]>([]);
+  const [streakMap, setStreakMap] = useState<Record<string, HabitStreak>>({});
 
   // Analytics state (for period != day)
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
@@ -362,6 +364,15 @@ export default function DashboardPage() {
       .then(({ data }) => {
         setSharedHabits((data ?? []) as SharedHabit[]);
       });
+    // Load streaks
+    sb.from('habit_streaks')
+      .select('*')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        const map: Record<string, HabitStreak> = {};
+        (data ?? []).forEach((s: HabitStreak) => { map[s.habit_id] = s; });
+        setStreakMap(map);
+      });
   }, [user]);
 
   const shareHabit = async (habitId: string, friendId: string) => {
@@ -424,6 +435,12 @@ export default function DashboardPage() {
           );
         }
       }
+      // Update streak in background
+      updateHabitStreak(user.id, habit.id, date).then(streakData => {
+        if (streakData) {
+          setStreakMap(prev => ({ ...prev, [habit.id]: streakData }));
+        }
+      });
     } catch {
       setHabits((prev) =>
         prev.map((h) => (h.id === habit.id ? { ...h, completed: wasCompleted } : h))
@@ -907,6 +924,11 @@ export default function DashboardPage() {
                       <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
                         {habit.name}
                       </span>
+                      {streakMap[habit.id]?.current_streak > 0 && (
+                        <span className="text-[10px] font-semibold text-orange-500 shrink-0">
+                          🔥{streakMap[habit.id].current_streak}
+                        </span>
+                      )}
                       {(() => {
                         const sharedFriends = getSharedFriendsForHabit(habit.id);
                         if (sharedFriends.length === 0) return null;
