@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/Toast';
 import { getToday } from '@/lib/utils';
 import {
-  validateCalorieOffset,
+  validateCalorieRangeAmount,
   validateDOB,
   validateBodyStat,
 } from '@/lib/validation';
@@ -26,7 +26,9 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [calorieMode, setCalorieMode] = useState<'deficit' | 'maintenance' | 'surplus'>('maintenance');
-  const [calorieAmount, setCalorieAmount] = useState('500');
+  const [calorieAmountLow, setCalorieAmountLow] = useState('500');
+  const [calorieAmountHigh, setCalorieAmountHigh] = useState('1000');
+  const [maintenanceRange, setMaintenanceRange] = useState('200');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState<Gender | ''>('');
   const [heightCm, setHeightCm] = useState('');
@@ -47,16 +49,22 @@ export default function ProfilePage() {
     setDisplayName(p.display_name || '');
     setUsername(p.username || '');
     setAvatarUrl(p.avatar_url || null);
-    const offset = p.daily_calorie_offset ?? 0;
-    if (offset === 0) {
-      setCalorieMode('maintenance');
-      setCalorieAmount('500');
-    } else if (offset < 0) {
+    const offMin = p.calorie_offset_min ?? -200;
+    const offMax = p.calorie_offset_max ?? 200;
+    if (offMax <= 0 && offMin < 0) {
+      // Pure deficit: offMin=-1000, offMax=-500 → show low=500, high=1000
       setCalorieMode('deficit');
-      setCalorieAmount(String(Math.abs(offset)));
-    } else {
+      setCalorieAmountLow(String(Math.abs(offMax)));
+      setCalorieAmountHigh(String(Math.abs(offMin)));
+    } else if (offMin >= 0 && offMax > 0) {
+      // Pure surplus: offMin=300, offMax=500 → show low=300, high=500
       setCalorieMode('surplus');
-      setCalorieAmount(String(offset));
+      setCalorieAmountLow(String(offMin));
+      setCalorieAmountHigh(String(offMax));
+    } else {
+      // Maintenance: offMin=-200, offMax=200 → show range=200
+      setCalorieMode('maintenance');
+      setMaintenanceRange(String(Math.max(Math.abs(offMin), Math.abs(offMax))));
     }
     setWaterGoalMl(String(p.daily_water_goal_ml ?? 2000));
     setDateOfBirth(p.date_of_birth || '');
@@ -91,7 +99,8 @@ export default function ProfilePage() {
             id: user.id,
             email: user.email!,
             display_name: user.email!.split('@')[0],
-            daily_calorie_offset: 0,
+            calorie_offset_min: -200,
+            calorie_offset_max: 200,
           })
           .select()
           .single();
@@ -112,10 +121,22 @@ export default function ProfilePage() {
 
     const newErrors: Record<string, string> = {};
 
-    if (calorieMode !== 'maintenance') {
-      const offsetVal = validateCalorieOffset(calorieAmount);
-      if (offsetVal === null || offsetVal <= 0) {
-        newErrors.calorieAmount = t('profile.calorieError');
+    if (calorieMode === 'maintenance') {
+      const rangeVal = validateCalorieRangeAmount(maintenanceRange);
+      if (rangeVal === null || rangeVal <= 0) {
+        newErrors.maintenanceRange = t('profile.calorieError');
+      }
+    } else {
+      const lowVal = validateCalorieRangeAmount(calorieAmountLow);
+      const highVal = validateCalorieRangeAmount(calorieAmountHigh);
+      if (lowVal === null || lowVal <= 0) {
+        newErrors.calorieAmountLow = t('profile.calorieError');
+      }
+      if (highVal === null || highVal <= 0) {
+        newErrors.calorieAmountHigh = t('profile.calorieError');
+      }
+      if (lowVal !== null && highVal !== null && lowVal > highVal) {
+        newErrors.calorieAmountLow = t('profile.rangeError');
       }
     }
 
@@ -146,9 +167,16 @@ export default function ProfilePage() {
       .update({
         display_name: displayName.trim() || null,
         username: username.trim().toLowerCase() || null,
-        daily_calorie_offset: calorieMode === 'maintenance' ? 0 :
-          calorieMode === 'deficit' ? -(parseInt(calorieAmount) || 500) :
-          (parseInt(calorieAmount) || 500),
+        calorie_offset_min: calorieMode === 'maintenance'
+          ? -(parseInt(maintenanceRange) || 200)
+          : calorieMode === 'deficit'
+            ? -(parseInt(calorieAmountHigh) || 1000)
+            : (parseInt(calorieAmountLow) || 300),
+        calorie_offset_max: calorieMode === 'maintenance'
+          ? (parseInt(maintenanceRange) || 200)
+          : calorieMode === 'deficit'
+            ? -(parseInt(calorieAmountLow) || 500)
+            : (parseInt(calorieAmountHigh) || 500),
         daily_water_goal_ml: parseInt(waterGoalMl) || 2000,
         date_of_birth: dateOfBirth || null,
         gender: gender || null,
@@ -391,7 +419,7 @@ export default function ProfilePage() {
             )}
 
             {/* Calorie Target */}
-            <div className={calorieMode !== 'maintenance' ? dividerClass : ''}>
+            <div className={dividerClass}>
               <div className={`${rowClass}`}>
                 <span className="text-sm text-text-primary shrink-0 mr-3">{t('profile.calorieTarget')}</span>
                 <div className="flex gap-1">
@@ -401,7 +429,13 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => {
                         setCalorieMode(mode);
-                        setErrors((prev) => ({ ...prev, calorieAmount: '' }));
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.calorieAmountLow;
+                          delete next.calorieAmountHigh;
+                          delete next.maintenanceRange;
+                          return next;
+                        });
                       }}
                       className={`px-2.5 py-1 rounded-lg text-xs transition-all capitalize ${
                         calorieMode === mode
@@ -414,33 +448,76 @@ export default function ProfilePage() {
                   ))}
                 </div>
               </div>
-              {calorieMode !== 'maintenance' && (
-                <div className="px-4 pb-3.5 -mt-1">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="100"
-                      max="2000"
-                      step="50"
-                      value={calorieAmount}
-                      onChange={(e) => {
-                        setCalorieAmount(e.target.value);
-                        setErrors((prev) => ({ ...prev, calorieAmount: '' }));
-                      }}
-                      className={`w-20 text-sm text-right bg-surface-secondary rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 ${
-                        errors.calorieAmount ? 'ring-1 ring-danger' : 'focus:ring-input-ring'
-                      }`}
-                      placeholder="500"
-                    />
-                    <span className="text-xs text-text-tertiary">
-                      {calorieMode === 'deficit' ? t('profile.belowTdee') : t('profile.aboveTdee')}
-                    </span>
-                  </div>
-                  {errors.calorieAmount && (
-                    <p className="text-xs text-danger-text mt-1">{errors.calorieAmount}</p>
-                  )}
-                </div>
-              )}
+              <div className="px-4 pb-3.5 -mt-1">
+                {calorieMode === 'maintenance' ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-text-tertiary">±</span>
+                      <input
+                        type="number"
+                        min="50"
+                        max="2000"
+                        step="50"
+                        value={maintenanceRange}
+                        onChange={(e) => {
+                          setMaintenanceRange(e.target.value);
+                          setErrors((prev) => ({ ...prev, maintenanceRange: '' }));
+                        }}
+                        className={`w-20 text-sm text-right bg-surface-secondary rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 ${
+                          errors.maintenanceRange ? 'ring-1 ring-danger' : 'focus:ring-input-ring'
+                        }`}
+                        placeholder="200"
+                      />
+                      <span className="text-xs text-text-tertiary">{t('profile.calOfTdee')}</span>
+                    </div>
+                    {errors.maintenanceRange && (
+                      <p className="text-xs text-danger-text mt-1">{errors.maintenanceRange}</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="2000"
+                        step="50"
+                        value={calorieAmountLow}
+                        onChange={(e) => {
+                          setCalorieAmountLow(e.target.value);
+                          setErrors((prev) => ({ ...prev, calorieAmountLow: '', calorieAmountHigh: '' }));
+                        }}
+                        className={`w-16 text-sm text-right bg-surface-secondary rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 ${
+                          errors.calorieAmountLow ? 'ring-1 ring-danger' : 'focus:ring-input-ring'
+                        }`}
+                        placeholder="500"
+                      />
+                      <span className="text-xs text-text-tertiary">{t('profile.to')}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="2000"
+                        step="50"
+                        value={calorieAmountHigh}
+                        onChange={(e) => {
+                          setCalorieAmountHigh(e.target.value);
+                          setErrors((prev) => ({ ...prev, calorieAmountLow: '', calorieAmountHigh: '' }));
+                        }}
+                        className={`w-16 text-sm text-right bg-surface-secondary rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 ${
+                          errors.calorieAmountHigh ? 'ring-1 ring-danger' : 'focus:ring-input-ring'
+                        }`}
+                        placeholder="1000"
+                      />
+                      <span className="text-xs text-text-tertiary">
+                        {calorieMode === 'deficit' ? t('profile.belowTdee') : t('profile.aboveTdee')}
+                      </span>
+                    </div>
+                    {(errors.calorieAmountLow || errors.calorieAmountHigh) && (
+                      <p className="text-xs text-danger-text mt-1">{errors.calorieAmountLow || errors.calorieAmountHigh}</p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

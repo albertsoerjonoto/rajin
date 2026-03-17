@@ -455,7 +455,7 @@ export default function ChatPage() {
     const today = getToday();
 
     const [profileRes, foodRes, exerciseRes, drinkRes, habitsRes, habitLogsRes, measurementRes] = await Promise.all([
-      supabase.from('profiles').select('id,display_name,daily_calorie_goal,daily_calorie_offset,daily_water_goal_ml,date_of_birth,gender,height_cm,weight_kg,activity_level').eq('id', user.id).single(),
+      supabase.from('profiles').select('id,display_name,calorie_offset_min,calorie_offset_max,daily_water_goal_ml,date_of_birth,gender,height_cm,weight_kg').eq('id', user.id).single(),
       supabase.from('food_logs').select('id,description,meal_type,calories,protein_g,carbs_g,fat_g').eq('user_id', user.id).eq('date', today).order('created_at'),
       supabase.from('exercise_logs').select('id,exercise_type,duration_minutes,calories_burned').eq('user_id', user.id).eq('date', today).order('created_at'),
       supabase.from('drink_logs').select('id,drink_type,description,volume_ml,calories,protein_g,carbs_g,fat_g').eq('user_id', user.id).eq('date', today).order('created_at'),
@@ -490,7 +490,7 @@ export default function ChatPage() {
       } else {
         profileContext = {
           display_name: profile.display_name,
-          calorieTarget: 2000 + (profile.daily_calorie_offset ?? 0),
+          calorieTarget: 2000 + Math.round(((profile.calorie_offset_min ?? -200) + (profile.calorie_offset_max ?? 200)) / 2),
           tdee: 2000,
           proteinTarget: 'not set',
           carbsTarget: 'not set',

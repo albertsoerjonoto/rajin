@@ -62,6 +62,13 @@ export function validateVolume(val: string): number | null {
   return Math.round(n);
 }
 
+/** Validate a calorie offset amount (positive number, 0–2000). */
+export function validateCalorieRangeAmount(val: string): number | null {
+  const n = parseInt(val, 10);
+  if (isNaN(n) || n < 0 || n > 2000) return null;
+  return n;
+}
+
 /** Clamp a number into [min, max]. */
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));

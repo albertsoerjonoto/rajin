@@ -62,13 +62,15 @@ export interface CalorieRange {
 export interface NutritionTargets {
   bmr: number;
   tdee: number;
-  /** Calorie target = TDEE + offset */
+  /** Calorie target = midpoint of range */
   calorieTarget: number;
-  /** Healthy range = target ± 10% */
+  /** User-defined calorie range from offset min/max */
   calorieRange: CalorieRange;
-  /** User's offset from TDEE (negative = deficit, positive = surplus) */
-  calorieOffset: number;
-  /** Human-readable label: "Maintenance", "500 cal deficit", etc. */
+  /** Min offset from TDEE */
+  calorieOffsetMin: number;
+  /** Max offset from TDEE */
+  calorieOffsetMax: number;
+  /** Human-readable label: "Maintenance", "500–1,000 cal deficit", etc. */
   deltaLabel: string;
   protein: MacroRange;
   fat: MacroRange;
@@ -80,17 +82,19 @@ export interface NutritionTargets {
 /**
  * Compute full nutrition targets from a profile.
  * Uses light activity as the default assumption.
- * Calorie target = TDEE + offset (offset: 0 = maintenance, -500 = deficit, etc.)
+ * Calorie range = TDEE + offset_min to TDEE + offset_max
  */
 export function computeNutritionTargets(profile: Profile): NutritionTargets {
-  const offset = profile.daily_calorie_offset ?? 0;
+  const offsetMin = profile.calorie_offset_min ?? -200;
+  const offsetMax = profile.calorie_offset_max ?? 200;
 
   const empty: NutritionTargets = {
     bmr: 0,
     tdee: 0,
     calorieTarget: 0,
     calorieRange: { min: 0, max: 0, target: 0 },
-    calorieOffset: offset,
+    calorieOffsetMin: offsetMin,
+    calorieOffsetMax: offsetMax,
     deltaLabel: '',
     protein: { label: 'Protein', min: 0, max: 0, unit: 'g' },
     fat: { label: 'Fat', min: 0, max: 0, unit: 'g' },
@@ -107,8 +111,9 @@ export function computeNutritionTargets(profile: Profile): NutritionTargets {
 
   const bmr = calculateBMR(profile.gender, profile.weight_kg, profile.height_cm, age);
   const tdee = calculateTDEE(bmr, 'light');
-  const target = tdee + offset;
-  const rangeMargin = Math.round(target * 0.1);
+  const rangeMin = tdee + offsetMin;
+  const rangeMax = tdee + offsetMax;
+  const target = Math.round((rangeMin + rangeMax) / 2);
 
   // Macro recommendations based on the calorie target:
   // Protein: 1.6-2.2 g per kg body weight (active range)
@@ -130,12 +135,23 @@ export function computeNutritionTargets(profile: Profile): NutritionTargets {
   const carbsMax = Math.round(Math.max(carbsCal * 1.15, 0) / 4);
 
   let deltaLabel: string;
-  if (Math.abs(offset) <= 50) {
+  if (offsetMin >= -50 && offsetMax <= 50) {
     deltaLabel = 'Maintenance';
-  } else if (offset < 0) {
-    deltaLabel = `${Math.abs(offset)} cal deficit`;
+  } else if (offsetMax <= 0) {
+    // Pure deficit
+    const absMin = Math.abs(offsetMin);
+    const absMax = Math.abs(offsetMax);
+    deltaLabel = absMin === absMax
+      ? `${absMin} cal deficit`
+      : `${Math.min(absMin, absMax)}–${Math.max(absMin, absMax)} cal deficit`;
+  } else if (offsetMin >= 0) {
+    // Pure surplus
+    deltaLabel = offsetMin === offsetMax
+      ? `${offsetMax} cal surplus`
+      : `${Math.min(offsetMin, offsetMax)}–${Math.max(offsetMin, offsetMax)} cal surplus`;
   } else {
-    deltaLabel = `${offset} cal surplus`;
+    // Mixed (e.g. -200 to +200 maintenance-style)
+    deltaLabel = `±${Math.max(Math.abs(offsetMin), Math.abs(offsetMax))} cal`;
   }
 
   return {
@@ -143,11 +159,12 @@ export function computeNutritionTargets(profile: Profile): NutritionTargets {
     tdee,
     calorieTarget: target,
     calorieRange: {
-      min: target - rangeMargin,
-      max: target + rangeMargin,
+      min: rangeMin,
+      max: rangeMax,
       target,
     },
-    calorieOffset: offset,
+    calorieOffsetMin: offsetMin,
+    calorieOffsetMax: offsetMax,
     deltaLabel,
     protein: { label: 'Protein', min: proteinMin, max: proteinMax, unit: 'g' },
     fat: { label: 'Fat', min: fatMin, max: fatMax, unit: 'g' },
