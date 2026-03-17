@@ -105,7 +105,6 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
 
   const transcribe = useCallback(async (blob: Blob) => {
     setState('transcribing');
-    onRecordingChangeRef.current(false);
 
     try {
       const formData = new FormData();
@@ -121,14 +120,17 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
 
       if (!res.ok || !data.text) {
         onErrorRef.current(data.error === 'No speech detected' ? 'voice.noSpeechDetected' : 'voice.transcriptionFailed');
+        onRecordingChangeRef.current(false);
         setState('idle');
         return;
       }
 
       onTranscriptRef.current(data.text);
+      onRecordingChangeRef.current(false);
       setState('idle');
     } catch {
       onErrorRef.current('voice.transcriptionFailed');
+      onRecordingChangeRef.current(false);
       setState('idle');
     }
   }, [lang]);
