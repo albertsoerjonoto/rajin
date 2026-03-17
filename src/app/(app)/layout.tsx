@@ -67,16 +67,17 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={cn('min-h-screen bg-bg', isExpanded ? 'lg:flex' : '')}>
-      {/* Desktop sidebar — only visible on lg+ when expanded */}
+      {/* Desktop sidebar — narrow (icon-only) at lg, full at xl */}
       {isExpanded && (
-        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-60 lg:bg-surface lg:border-r lg:border-border lg:z-50">
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-16 xl:w-60 lg:bg-surface lg:border-r lg:border-border lg:z-50">
           {/* Logo */}
-          <div className="flex items-center px-6 h-16 border-b border-border">
-            <span className="text-lg font-bold text-text-primary">Rajin</span>
+          <div className="flex items-center justify-center xl:justify-start xl:px-6 h-16 border-b border-border">
+            <span className="text-lg font-bold text-text-primary xl:hidden">R</span>
+            <span className="text-lg font-bold text-text-primary hidden xl:inline">Rajin</span>
           </div>
 
           {/* Nav items */}
-          <nav className="flex-1 px-3 py-4 space-y-1">
+          <nav className="flex-1 px-2 xl:px-3 py-4 space-y-1">
             {TAB_DEFS.map((tab) => {
               const isActive = pathname === tab.href;
               const showBadge = tab.href === '/friends' && pendingCount > 0;
@@ -84,8 +85,9 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 <Link
                   key={tab.href}
                   href={tab.href}
+                  title={t(tab.labelKey)}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative',
+                    'flex items-center justify-center xl:justify-start gap-3 px-0 xl:px-3 py-2.5 rounded-xl transition-all duration-200 relative',
                     isActive
                       ? 'bg-accent-surface text-nav-active font-semibold'
                       : 'text-nav-inactive hover:bg-surface-hover hover:text-nav-inactive-hover'
@@ -97,7 +99,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                       <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
                     )}
                   </div>
-                  <span className="text-sm">{t(tab.labelKey)}</span>
+                  <span className="text-sm hidden xl:inline">{t(tab.labelKey)}</span>
                 </Link>
               );
             })}
@@ -106,7 +108,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content */}
-      <main className={cn('flex-1 pb-20', isExpanded && 'lg:pb-0 lg:ml-60')}>
+      <main className={cn('flex-1 pb-20', isExpanded && 'lg:pb-0 lg:ml-16 xl:ml-60')}>
         <ServiceWorkerRegister />
         {children}
       </main>
