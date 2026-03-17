@@ -76,7 +76,7 @@ function SortableHabitCard({ habit, onEdit }: { habit: HabitWithLog; onEdit: (h:
   );
 }
 
-function ComparisonBadge({ current, previous, unit, invert }: { current: number; previous: number; unit?: string; invert?: boolean }) {
+function ComparisonBadge({ current, previous, invert }: { current: number; previous: number; unit?: string; invert?: boolean }) {
   if (previous === 0 && current === 0) return null;
   const diff = previous > 0 ? Math.round(((current - previous) / previous) * 100) : 0;
   if (diff === 0) return <span className="text-text-tertiary">{' '}→</span>;

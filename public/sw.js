@@ -3,6 +3,7 @@ const STATIC_ASSETS = [
   '/dashboard',
   '/log',
   '/chat',
+  '/friends',
   '/profile',
   '/manifest.json',
   '/icons/icon-192.png',

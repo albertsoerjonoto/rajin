@@ -16,12 +16,17 @@ export default function LoginPage() {
   const supabase = createClient();
   const { t } = useLocale();
 
-  useEffect(() => {
+  const [initialError] = useState(() => {
+    if (typeof window === 'undefined') return '';
     const params = new URLSearchParams(window.location.search);
-    if (params.get('error') === 'auth') {
-      setError(t('auth.emailConfirmFailed'));
+    return params.get('error') === 'auth' ? 'auth' : '';
+  });
+
+  useEffect(() => {
+    if (initialError === 'auth') {
+      queueMicrotask(() => setError(t('auth.emailConfirmFailed')));
     }
-  }, []);
+  }, [initialError, t]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

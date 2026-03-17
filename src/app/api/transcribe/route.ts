@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth check — prevent unauthenticated API credit consumption
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Gemini API key not configured' }, { status: 500 });
+    }
+
     const formData = await req.formData();
     const audio = formData.get('audio') as File | null;
     const locale = (formData.get('locale') as string) || 'id';
@@ -13,24 +24,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No audio provided' }, { status: 400 });
     }
 
+    if (audio.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Audio file too large (max 10 MB)' }, { status: 413 });
+    }
+
     const buffer = await audio.arrayBuffer();
     const base64 = Buffer.from(buffer).toString('base64');
     const mimeType = audio.type || 'audio/webm';
 
     const language = locale === 'en' ? 'English' : 'Indonesian (Bahasa Indonesia)';
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { inlineData: { mimeType, data: base64 } },
-            { text: `Transcribe this audio exactly as spoken. Return ONLY the transcription text, nothing else. No quotes, no labels, no explanation. The speaker is likely speaking in ${language}.` },
-          ],
-        },
-      ],
-    });
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await Promise.race([
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { inlineData: { mimeType, data: base64 } },
+              { text: `Transcribe this audio exactly as spoken. Return ONLY the transcription text, nothing else. No quotes, no labels, no explanation. The speaker is likely speaking in ${language}.` },
+            ],
+          },
+        ],
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Transcription timeout')), 30000)),
+    ]);
 
     const text = (response.text ?? '').trim();
 

@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import { useLocale } from '@/lib/i18n';
 import { useToast } from '@/components/Toast';
-import { cn } from '@/lib/utils';
+import { cn, getToday } from '@/lib/utils';
 import type { Friendship, FriendProfile, FriendActivity } from '@/lib/types';
 
 type Tab = 'feed' | 'friends' | 'add';
@@ -36,14 +36,13 @@ export default function FriendsPage() {
   const [searching, setSearching] = useState(false);
   const [friendshipMap, setFriendshipMap] = useState<Record<string, { status: string; isRequester: boolean; id: string }>>({});
 
-  const supabase = createClient();
-
-  const today = new Date().toISOString().split('T')[0];
+  const today = getToday();
 
   const loadFriendships = useCallback(async () => {
     if (!user) return;
     try {
-      const { data, error } = await supabase
+      const sb = createClient();
+      const { data, error } = await sb
         .from('friendships')
         .select('*')
         .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
@@ -58,7 +57,7 @@ export default function FriendsPage() {
       // Fetch profiles for all related users
       let profiles: FriendProfile[] = [];
       if (otherIds.length > 0) {
-        const { data: profileData } = await supabase
+        const { data: profileData } = await sb
           .from('profiles')
           .select('id, username, display_name, avatar_url')
           .in('id', otherIds);
@@ -89,18 +88,19 @@ export default function FriendsPage() {
     } catch {
       showToast('error', t('friends.failedLoad'));
     }
-  }, [user, supabase, showToast, t]);
+  }, [user, showToast, t]);
 
   const loadActivity = useCallback(async () => {
     if (!user) return;
     try {
-      const { data, error } = await supabase.rpc('get_friend_activity', { for_date: today });
+      const sb = createClient();
+      const { data, error } = await sb.rpc('get_friend_activity', { for_date: today });
       if (error) throw error;
       setActivities((data ?? []) as FriendActivity[]);
     } catch {
       // Activity feed is non-critical, silently fail
     }
-  }, [user, supabase, today]);
+  }, [user, today]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -129,7 +129,8 @@ export default function FriendsPage() {
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const { data, error } = await supabase.rpc('search_users_by_username', {
+        const sb = createClient();
+        const { data, error } = await sb.rpc('search_users_by_username', {
           search_term: searchQuery.trim(),
         });
         if (error) throw error;
@@ -142,12 +143,13 @@ export default function FriendsPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, tab, supabase, showToast, t]);
+  }, [searchQuery, tab, showToast, t]);
 
   const sendRequest = async (addresseeId: string) => {
     if (!user) return;
     try {
-      const { error } = await supabase.from('friendships').insert({
+      const sb = createClient();
+      const { error } = await sb.from('friendships').insert({
         requester_id: user.id,
         addressee_id: addresseeId,
       });
@@ -161,7 +163,8 @@ export default function FriendsPage() {
 
   const acceptRequest = async (friendshipId: string) => {
     try {
-      const { error } = await supabase
+      const sb = createClient();
+      const { error } = await sb
         .from('friendships')
         .update({ status: 'accepted', updated_at: new Date().toISOString() })
         .eq('id', friendshipId);
@@ -175,7 +178,8 @@ export default function FriendsPage() {
 
   const declineRequest = async (friendshipId: string) => {
     try {
-      const { error } = await supabase.from('friendships').delete().eq('id', friendshipId);
+      const sb = createClient();
+      const { error } = await sb.from('friendships').delete().eq('id', friendshipId);
       if (error) throw error;
       await loadFriendships();
     } catch {
@@ -185,7 +189,8 @@ export default function FriendsPage() {
 
   const unfriend = async (friendshipId: string) => {
     try {
-      const { error } = await supabase.from('friendships').delete().eq('id', friendshipId);
+      const sb = createClient();
+      const { error } = await sb.from('friendships').delete().eq('id', friendshipId);
       if (error) throw error;
       showToast('success', t('friends.unfriended'));
       await loadAll();

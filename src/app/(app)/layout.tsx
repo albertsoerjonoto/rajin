@@ -69,11 +69,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!ready || !user) return;
-    fetchPendingCount();
+    // Use a microtask to avoid synchronous setState in effect body
+    const controller = new AbortController();
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) fetchPendingCount();
+    });
 
     const handleFocus = () => fetchPendingCount();
     window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+    return () => {
+      controller.abort();
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [ready, user, fetchPendingCount]);
 
   // Scroll to top on every page navigation (RAF + timeout for iOS reliability)

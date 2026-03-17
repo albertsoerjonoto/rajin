@@ -24,10 +24,14 @@ export async function DELETE() {
 
   // Delete user data from all tables (RLS won't apply with service role)
   const userId = user.id;
+  await admin.from('chat_messages').delete().eq('user_id', userId);
+  await admin.from('measurement_logs').delete().eq('user_id', userId);
+  await admin.from('drink_logs').delete().eq('user_id', userId);
   await admin.from('habit_logs').delete().eq('user_id', userId);
   await admin.from('habits').delete().eq('user_id', userId);
   await admin.from('food_logs').delete().eq('user_id', userId);
   await admin.from('exercise_logs').delete().eq('user_id', userId);
+  await admin.from('friendships').delete().or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
   await admin.from('profiles').delete().eq('id', userId);
 
   // Clean up avatar from storage

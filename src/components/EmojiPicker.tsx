@@ -53,7 +53,7 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
 
   useEffect(() => {
     if (!open) return;
-    updatePosition();
+    const raf = requestAnimationFrame(updatePosition);
     const handleClickOutside = (e: MouseEvent) => {
       if (
         buttonRef.current?.contains(e.target as Node) ||
@@ -64,6 +64,7 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('scroll', updatePosition, true);
     return () => {
+      cancelAnimationFrame(raf);
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('scroll', updatePosition, true);
     };

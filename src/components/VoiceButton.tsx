@@ -14,7 +14,9 @@ type VoiceState = 'idle' | 'recording' | 'transcribing';
 
 export default function VoiceButton({ onTranscript, onRecordingChange, onError, disabled, lang }: VoiceButtonProps) {
   const [state, setState] = useState<VoiceState>('idle');
-  const [supported, setSupported] = useState(false);
+  const [supported] = useState(() =>
+    typeof navigator !== 'undefined' && !!(navigator.mediaDevices?.getUserMedia)
+  );
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -31,10 +33,6 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
   useEffect(() => { onTranscriptRef.current = onTranscript; }, [onTranscript]);
   useEffect(() => { onRecordingChangeRef.current = onRecordingChange; }, [onRecordingChange]);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
-
-  useEffect(() => {
-    setSupported(!!(navigator.mediaDevices?.getUserMedia));
-  }, []);
 
   const drawWaveform = useCallback(() => {
     const analyser = analyserRef.current;
