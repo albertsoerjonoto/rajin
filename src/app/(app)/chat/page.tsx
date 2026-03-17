@@ -11,6 +11,7 @@ import { compressChatImage } from '@/lib/image';
 import { useLocale } from '@/lib/i18n';
 import MarkdownContent from '@/components/MarkdownContent';
 import VoiceButton from '@/components/VoiceButton';
+import { useDesktopLayout } from '@/hooks/useDesktopLayout';
 import type { ParsedFood, ParsedExercise, ParsedDrink, ParsedMeasurement, MealType, DrinkType, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
 
 interface Message {
@@ -1046,9 +1047,14 @@ export default function ChatPage() {
     }
   }, [handleSaveAndApply, confirmEdits, saveResults]);
 
+  const { isExpanded } = useDesktopLayout();
+
   return (
-    <div className="fixed top-0 bottom-16 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col">
-      <div className="max-w-lg mx-auto flex flex-col h-full w-full">
+    <div className={cn(
+      'fixed top-0 bottom-16 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col',
+      isExpanded && 'lg:bottom-0 lg:left-60'
+    )}>
+      <div className="max-w-3xl mx-auto flex flex-col h-full w-full">
       {ToastContainer}
 
       {/* Header */}

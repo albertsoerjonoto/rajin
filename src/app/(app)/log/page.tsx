@@ -10,6 +10,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import { validateCalories, validateDuration, validateMacro, validateVolume } from '@/lib/validation';
 import { useLocale } from '@/lib/i18n';
+import { useDesktopLayout } from '@/hooks/useDesktopLayout';
 import type { FoodLog, ExerciseLog, DrinkLog, MealType, DrinkType, Profile, HabitWithLog, MeasurementLog } from '@/lib/types';
 
 type Tab = 'food' | 'exercise' | 'habits' | 'measurements';
@@ -540,8 +541,10 @@ export default function LogPage() {
   };
   const fabAction = getFloatingButtonAction();
 
+  const { isExpanded } = useDesktopLayout();
+
   return (
-    <div className="max-w-lg mx-auto px-4">
+    <div className={cn('max-w-lg mx-auto px-4', isExpanded && 'lg:max-w-5xl lg:px-8')}>
       {ToastContainer}
       <div className="sticky top-0 z-20 bg-bg -mx-4 px-4 pt-6 pb-3">
         <div className="flex items-center justify-between mb-3">
@@ -550,7 +553,7 @@ export default function LogPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-surface-secondary rounded-xl p-1">
+        <div className={cn('flex bg-surface-secondary rounded-xl p-1', isExpanded && 'lg:max-w-md')}>
           {tabKeys.map((tabKey) => (
             <button
               key={tabKey}
@@ -572,7 +575,7 @@ export default function LogPage() {
         <>
           {/* Food Tab */}
           {tab === 'food' && (
-            <div className="space-y-6">
+            <div className={cn('space-y-6', isExpanded && 'lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0')}>
               {/* Meals Section */}
               <section>
                 <div className="flex items-center justify-between mb-2">
@@ -614,7 +617,8 @@ export default function LogPage() {
                 )}
               </section>
 
-              {/* Snacks Section */}
+              {/* Snacks + Drinks (right column on desktop) */}
+              <div className="space-y-6">
               <section>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">{t('log.snacks')}</h3>
@@ -730,6 +734,7 @@ export default function LogPage() {
                   </div>
                 )}
               </section>
+              </div>{/* end snacks+drinks wrapper */}
             </div>
           )}
 
@@ -770,7 +775,7 @@ export default function LogPage() {
                   <p className="text-text-tertiary text-sm">{t('log.noHabitsLogged')}</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
+                <div className={cn('grid grid-cols-2 gap-2', isExpanded && 'lg:grid-cols-3 xl:grid-cols-4')}>
                   {habits.map((habit) => (
                     <button
                       key={habit.id}
@@ -888,9 +893,9 @@ export default function LogPage() {
 
       {/* Food Modal */}
       {modal === 'food' && (
-        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
+        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center lg:items-center" onClick={closeModal}>
           <div
-            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom lg:rounded-3xl lg:max-w-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">{editingFood ? t('log.editDiet') : t('log.addDiet')}</h2>
@@ -970,9 +975,9 @@ export default function LogPage() {
 
       {/* Exercise Modal */}
       {modal === 'exercise' && (
-        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
+        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center lg:items-center" onClick={closeModal}>
           <div
-            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom lg:rounded-3xl lg:max-w-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">{editingExercise ? t('log.editExercise') : t('log.addExercise')}</h2>
@@ -1027,9 +1032,9 @@ export default function LogPage() {
 
       {/* Drink Modal */}
       {modal === 'drink' && (
-        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
+        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center lg:items-center" onClick={closeModal}>
           <div
-            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom lg:rounded-3xl lg:max-w-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">{editingDrink ? t('drink.editDrink') : t('drink.addDrink')}</h2>
@@ -1149,9 +1154,9 @@ export default function LogPage() {
 
       {/* Measurement Modal */}
       {modal === 'measurement' && (
-        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
+        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center lg:items-center" onClick={closeModal}>
           <div
-            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom"
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85dvh] overflow-y-auto animate-slide-up safe-area-bottom lg:rounded-3xl lg:max-w-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-text-primary mb-4">{editingMeasurement ? t('log.editMeasurement') : t('log.addMeasurement')}</h2>

@@ -7,8 +7,9 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import { useLocale } from '@/lib/i18n';
+import { DesktopLayoutProvider, useDesktopLayout } from '@/hooks/useDesktopLayout';
 import { ServiceWorkerRegister } from './sw-register';
-import type { Locale } from '@/lib/types';
+import type { Locale, DesktopLayout } from '@/lib/types';
 
 const TAB_DEFS = [
   { href: '/dashboard', labelKey: 'nav.overview', icon: DashboardIcon },
@@ -18,42 +19,12 @@ const TAB_DEFS = [
   { href: '/profile', labelKey: 'nav.profile', icon: ProfileIcon },
 ];
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const { t, setLocale } = useLocale();
-  const [ready, setReady] = useState(false);
-  const checkedRef = useRef(false);
+  const { t } = useLocale();
+  const { isExpanded } = useDesktopLayout();
   const [pendingCount, setPendingCount] = useState(0);
-
-  // Check if the user has completed onboarding + sync locale
-  useEffect(() => {
-    if (authLoading || !user || checkedRef.current) return;
-    checkedRef.current = true;
-
-    const checkOnboarding = async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (data?.locale) {
-        setLocale(data.locale as Locale);
-      }
-
-      if (data && data.onboarding_completed === false) {
-        router.replace('/onboarding');
-        return;
-      }
-
-      setReady(true);
-    };
-
-    checkOnboarding();
-  }, [user, authLoading, router, setLocale]);
+  const { user } = useAuth();
 
   // Fetch pending friend request count
   const fetchPendingCount = useCallback(async () => {
@@ -68,22 +39,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    if (!ready || !user) return;
-    // Use a microtask to avoid synchronous setState in effect body
+    if (!user) return;
     const controller = new AbortController();
     queueMicrotask(() => {
       if (!controller.signal.aborted) fetchPendingCount();
     });
-
     const handleFocus = () => fetchPendingCount();
     window.addEventListener('focus', handleFocus);
     return () => {
       controller.abort();
       window.removeEventListener('focus', handleFocus);
     };
-  }, [ready, user, fetchPendingCount]);
+  }, [user, fetchPendingCount]);
 
-  // Scroll to top on every page navigation (RAF + timeout for iOS reliability)
+  // Scroll to top on page navigation
   useEffect(() => {
     const scrollTop = () => {
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
@@ -96,16 +65,60 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [pathname]);
 
-  // Show blank screen while checking (prevents flash of dashboard)
-  if (!ready) {
-    return <div className="min-h-screen bg-bg" />;
-  }
-
   return (
-    <div className="min-h-screen bg-bg pb-20">
-      <ServiceWorkerRegister />
-      {children}
-      <nav className="fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl safe-area-bottom z-50">
+    <div className={cn('min-h-screen bg-bg', isExpanded ? 'lg:flex' : '')}>
+      {/* Desktop sidebar — only visible on lg+ when expanded */}
+      {isExpanded && (
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-60 lg:bg-surface lg:border-r lg:border-border lg:z-50">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 px-6 h-16 border-b border-border">
+            <div className="w-8 h-8 bg-positive rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">R</span>
+            </div>
+            <span className="text-lg font-bold text-text-primary">Rajin</span>
+          </div>
+
+          {/* Nav items */}
+          <nav className="flex-1 px-3 py-4 space-y-1">
+            {TAB_DEFS.map((tab) => {
+              const isActive = pathname === tab.href;
+              const showBadge = tab.href === '/friends' && pendingCount > 0;
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative',
+                    isActive
+                      ? 'bg-accent-surface text-nav-active font-semibold'
+                      : 'text-nav-inactive hover:bg-surface-hover hover:text-nav-inactive-hover'
+                  )}
+                >
+                  <div className="relative">
+                    <tab.icon className="w-5 h-5" filled={isActive} />
+                    {showBadge && (
+                      <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
+                    )}
+                  </div>
+                  <span className="text-sm">{t(tab.labelKey)}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </aside>
+      )}
+
+      {/* Main content */}
+      <main className={cn('flex-1 pb-20 lg:pb-0', isExpanded ? 'lg:ml-60' : '')}>
+        <ServiceWorkerRegister />
+        {children}
+      </main>
+
+      {/* Bottom tab nav — visible on mobile, hidden on lg+ when expanded */}
+      <nav className={cn(
+        'fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl safe-area-bottom z-50',
+        isExpanded ? 'lg:hidden' : ''
+      )}>
         <div className="max-w-lg mx-auto flex justify-around items-center h-16">
           {TAB_DEFS.map((tab) => {
             const isActive = pathname === tab.href;
@@ -132,6 +145,58 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
     </div>
+  );
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const { setLocale } = useLocale();
+  const [ready, setReady] = useState(false);
+  const [desktopLayout, setDesktopLayout] = useState<DesktopLayout>('expanded');
+  const checkedRef = useRef(false);
+
+  // Check if the user has completed onboarding + sync locale + desktop layout
+  useEffect(() => {
+    if (authLoading || !user || checkedRef.current) return;
+    checkedRef.current = true;
+
+    const checkOnboarding = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (data?.locale) {
+        setLocale(data.locale as Locale);
+      }
+
+      if (data?.desktop_layout) {
+        setDesktopLayout(data.desktop_layout as DesktopLayout);
+      }
+
+      if (data && data.onboarding_completed === false) {
+        router.replace('/onboarding');
+        return;
+      }
+
+      setReady(true);
+    };
+
+    checkOnboarding();
+  }, [user, authLoading, router, setLocale]);
+
+  if (!ready) {
+    return <div className="min-h-screen bg-bg" />;
+  }
+
+  return (
+    <DesktopLayoutProvider initialLayout={desktopLayout}>
+      <AppLayoutInner>{children}</AppLayoutInner>
+    </DesktopLayoutProvider>
   );
 }
 
