@@ -294,10 +294,10 @@ export async function POST(request: NextRequest) {
             exercises: Array.isArray(msg.parsedExercises) ? msg.parsedExercises : [],
             drinks: Array.isArray(msg.parsedDrinks) ? msg.parsedDrinks : [],
             measurements: Array.isArray(msg.parsedMeasurements) ? msg.parsedMeasurements : [],
-            food_edits: [],
-            exercise_edits: [],
-            drink_edits: [],
-            measurement_edits: [],
+            food_edits: Array.isArray(msg.foodEdits) ? msg.foodEdits : [],
+            exercise_edits: Array.isArray(msg.exerciseEdits) ? msg.exerciseEdits : [],
+            drink_edits: Array.isArray(msg.drinkEdits) ? msg.drinkEdits : [],
+            measurement_edits: Array.isArray(msg.measurementEdits) ? msg.measurementEdits : [],
           });
           contents.push({ role: 'model', parts: [{ text: wrappedJson }] });
         }
@@ -557,20 +557,11 @@ export async function POST(request: NextRequest) {
     const isOverloaded = errorMsg.includes('503') || errorMsg.includes('UNAVAILABLE') || errorMsg.includes('high demand') || errorMsg.includes('overloaded');
 
     let userMessage = 'Sorry, something went wrong. Please try again.';
-    if (isTimeout) userMessage = 'The request took too long. Please try a shorter message.';
-    if (isRateLimit) userMessage = "I've hit my usage limit. Please wait a minute and try again, or try a shorter message.";
-    if (isOverloaded) userMessage = "The AI service is busy right now. Please try again in a few seconds.";
+    let statusCode = 500;
+    if (isTimeout) { userMessage = 'The request took too long. Please try a shorter message.'; statusCode = 504; }
+    if (isRateLimit) { userMessage = "I've hit my usage limit. Please wait a minute and try again, or try a shorter message."; statusCode = 429; }
+    if (isOverloaded) { userMessage = "The AI service is busy right now. Please try again in a few seconds."; statusCode = 503; }
 
-    return NextResponse.json({
-      message: userMessage,
-      foods: [],
-      exercises: [],
-      drinks: [],
-      measurements: [],
-      food_edits: [],
-      exercise_edits: [],
-      drink_edits: [],
-      measurement_edits: [],
-    });
+    return NextResponse.json({ error: userMessage }, { status: statusCode });
   }
 }
