@@ -7,9 +7,14 @@ import { useLocale } from '@/lib/i18n';
 import { useToast } from '@/components/Toast';
 import { cn, getToday } from '@/lib/utils';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import type { Friendship, FriendProfile, FriendActivity, SharedHabit } from '@/lib/types';
+import type { Friendship, FriendProfile, FriendActivity, SharedHabit, FeedEvent } from '@/lib/types';
 
 type Tab = 'feed' | 'friends' | 'add';
+type FeedFilter = 'all' | 'mine' | 'friends';
+
+interface FeedEventWithProfile extends FeedEvent {
+  profile: FriendProfile;
+}
 
 interface FriendWithProfile extends Friendship {
   profile: FriendProfile;
@@ -25,6 +30,11 @@ export default function FriendsPage() {
 
   // Feed state
   const [activities, setActivities] = useState<FriendActivity[]>([]);
+  const [feedEvents, setFeedEvents] = useState<FeedEventWithProfile[]>([]);
+  const [feedFilter, setFeedFilter] = useState<FeedFilter>('all');
+  const [feedPage, setFeedPage] = useState(0);
+  const [hasMoreFeed, setHasMoreFeed] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Friends list state
   const [friends, setFriends] = useState<FriendWithProfile[]>([]);
@@ -99,6 +109,7 @@ export default function FriendsPage() {
     if (!user) return;
     try {
       const sb = createClient();
+      // Load old-style activity for backward compat
       const { data, error } = await sb.rpc('get_friend_activity', { for_date: today });
       if (error) throw error;
       setActivities((data ?? []) as FriendActivity[]);
@@ -106,6 +117,52 @@ export default function FriendsPage() {
       // Activity feed is non-critical, silently fail
     }
   }, [user, today]);
+
+  const loadFeedEvents = useCallback(async (page = 0, append = false) => {
+    if (!user) return;
+    const PAGE_SIZE = 20;
+    try {
+      const sb = createClient();
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      const { data, error } = await sb
+        .from('feed_events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+      const events = (data ?? []) as FeedEvent[];
+
+      // Fetch profiles for all user_ids
+      const userIds = [...new Set(events.map(e => e.user_id))];
+      let profiles: FriendProfile[] = [];
+      if (userIds.length > 0) {
+        const { data: profileData } = await sb
+          .from('profiles')
+          .select('id, username, display_name, avatar_url')
+          .in('id', userIds);
+        profiles = (profileData ?? []) as FriendProfile[];
+      }
+      const profileMap = new Map(profiles.map(p => [p.id, p]));
+
+      const withProfiles: FeedEventWithProfile[] = events.map(e => ({
+        ...e,
+        profile: profileMap.get(e.user_id) ?? { id: e.user_id, username: null, display_name: null, avatar_url: null },
+      }));
+
+      if (append) {
+        setFeedEvents(prev => [...prev, ...withProfiles]);
+      } else {
+        setFeedEvents(withProfiles);
+      }
+      setHasMoreFeed(events.length === PAGE_SIZE);
+      setFeedPage(page);
+    } catch {
+      // Non-critical
+    }
+  }, [user]);
 
   const loadSharedInvites = useCallback(async () => {
     if (!user) return;
@@ -141,9 +198,9 @@ export default function FriendsPage() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    await Promise.all([loadFriendships(), loadActivity(), loadSharedInvites()]);
+    await Promise.all([loadFriendships(), loadActivity(), loadSharedInvites(), loadFeedEvents(0)]);
     setLoading(false);
-  }, [loadFriendships, loadActivity, loadSharedInvites]);
+  }, [loadFriendships, loadActivity, loadSharedInvites, loadFeedEvents]);
 
   useEffect(() => {
     loadAll();
@@ -280,6 +337,70 @@ export default function FriendsPage() {
     }
   };
 
+  const loadMoreFeed = async () => {
+    setLoadingMore(true);
+    await loadFeedEvents(feedPage + 1, true);
+    setLoadingMore(false);
+  };
+
+  const relativeTime = (dateStr: string) => {
+    const now = Date.now();
+    const then = new Date(dateStr).getTime();
+    const diffMs = now - then;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return t('friends.justNow');
+    if (diffMin < 60) return `${diffMin} ${t('friends.minutesAgo')}`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr} ${t('friends.hoursAgo')}`;
+    const diffDay = Math.floor(diffHr / 24);
+    return `${diffDay} ${t('friends.daysAgo')}`;
+  };
+
+  const renderFeedEvent = (event: FeedEventWithProfile) => {
+    const data = event.data as Record<string, string | number>;
+    const name = event.profile.display_name ?? 'User';
+    const isMe = event.user_id === user?.id;
+
+    let description = '';
+    let emoji = '';
+
+    switch (event.event_type) {
+      case 'habit_completed':
+        emoji = (data.habit_emoji as string) ?? '✅';
+        description = `${name} ${t('friends.completed')} ${emoji} ${data.habit_name}`;
+        break;
+      case 'streak_milestone':
+        description = `${name} ${t('friends.hitStreak')} 🔥 ${data.streak} ${t('friends.dayStreak')} ${data.habit_name}!`;
+        break;
+      case 'friend_added':
+        description = `${data.user1_name} ${t('friends.nowFriends')} ${data.user2_name}`;
+        emoji = '🤝';
+        break;
+      case 'shared_habit_started':
+        description = `${name} shared ${(data.habit_emoji as string) ?? ''} ${data.habit_name}`;
+        break;
+      case 'shared_streak':
+        description = `${data.user1_name} & ${data.user2_name} ${t('friends.sharedStreak')} ${(data.habit_emoji as string) ?? ''} ${data.habit_name}! 🔥 ${data.streak}`;
+        break;
+    }
+
+    return (
+      <div key={event.id} className={cn('bg-surface rounded-xl p-4 shadow-xs flex items-start gap-3', isMe && 'border-l-2 border-accent')}>
+        <Avatar url={event.profile.avatar_url} name={event.profile.display_name} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-text-primary">{description}</p>
+          <p className="text-xs text-text-tertiary mt-1">{relativeTime(event.created_at)}</p>
+        </div>
+      </div>
+    );
+  };
+
+  const filteredFeedEvents = feedEvents.filter(e => {
+    if (feedFilter === 'mine') return e.user_id === user?.id;
+    if (feedFilter === 'friends') return e.user_id !== user?.id;
+    return true;
+  });
+
   const activityIcon = (type: string) => {
     switch (type) {
       case 'food': return '🍽️';
@@ -357,34 +478,53 @@ export default function FriendsPage() {
           {/* ── Feed Tab ── */}
           {tab === 'feed' && (
             <div className="space-y-3">
-              {friends.length === 0 ? (
+              {/* Filter tabs */}
+              <div className="flex gap-2 mb-2">
+                {([
+                  { key: 'all' as FeedFilter, labelKey: 'friends.feedAll' },
+                  { key: 'mine' as FeedFilter, labelKey: 'friends.feedMine' },
+                  { key: 'friends' as FeedFilter, labelKey: 'friends.feedFriends' },
+                ] as const).map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => setFeedFilter(f.key)}
+                    className={cn(
+                      'px-3 py-1 text-xs font-medium rounded-full transition-all duration-200',
+                      feedFilter === f.key
+                        ? 'bg-accent text-accent-fg'
+                        : 'bg-surface-secondary text-text-secondary'
+                    )}
+                  >
+                    {t(f.labelKey)}
+                  </button>
+                ))}
+              </div>
+
+              {friends.length === 0 && feedEvents.length === 0 ? (
                 <EmptyState
-                  message={t('friends.addFriendsHint')}
+                  message={t('friends.noFeedYet')}
                   action={() => setTab('add')}
                   actionLabel={t('friends.addFriend')}
                 />
-              ) : activities.length === 0 ? (
+              ) : filteredFeedEvents.length === 0 ? (
                 <p className="text-center text-text-secondary py-8">{t('friends.noActivity')}</p>
               ) : (
-                activities.map((activity, i) => (
-                  <div key={i} className="bg-surface rounded-xl p-4 shadow-xs flex items-start gap-3">
-                    <Avatar url={activity.friend_avatar_url} name={activity.friend_display_name} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-sm text-text-primary truncate">
-                          {activity.friend_display_name ?? 'User'}
-                        </span>
-                        <span className="text-xs text-text-secondary">{activityLabel(activity.activity_type)}</span>
-                        <span>{activityIcon(activity.activity_type)}</span>
-                      </div>
-                      <p className="text-sm text-text-primary mt-0.5">{activity.description}</p>
-                      {activity.detail && (
-                        <p className="text-xs text-text-secondary mt-0.5">{activity.detail}</p>
+                <>
+                  {filteredFeedEvents.map(event => renderFeedEvent(event))}
+                  {hasMoreFeed && (
+                    <button
+                      onClick={loadMoreFeed}
+                      disabled={loadingMore}
+                      className="w-full py-3 text-sm text-accent-text font-medium rounded-xl bg-surface hover:bg-surface-secondary transition-colors"
+                    >
+                      {loadingMore ? (
+                        <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
+                      ) : (
+                        t('friends.loadMore')
                       )}
-                      <p className="text-xs text-text-tertiary mt-1">{formatTime(activity.logged_at)}</p>
-                    </div>
-                  </div>
-                ))
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )}

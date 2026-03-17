@@ -24,7 +24,7 @@ import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile, FriendProfile, SharedHabit, HabitStreak } from '@/lib/types';
-import { updateHabitStreak } from '@/lib/streaks';
+import { updateHabitStreak, isStreakMilestone } from '@/lib/streaks';
 import { buildDayDataMap } from '@/components/analytics/types';
 import type { DayData } from '@/components/analytics/types';
 import StreakCard from '@/components/analytics/StreakCard';
@@ -435,10 +435,30 @@ export default function DashboardPage() {
           );
         }
       }
-      // Update streak in background
-      updateHabitStreak(user.id, habit.id, date).then(streakData => {
+      // Update streak and create feed events in background
+      updateHabitStreak(user.id, habit.id, date).then(async (streakData) => {
         if (streakData) {
           setStreakMap(prev => ({ ...prev, [habit.id]: streakData }));
+        }
+        // Create feed events only when completing (not uncompleting)
+        if (!wasCompleted && !habit.is_private) {
+          const sb = createClient();
+          // Habit completed event
+          await sb.from('feed_events').insert({
+            user_id: user.id,
+            event_type: 'habit_completed',
+            data: { habit_id: habit.id, habit_name: habit.name, habit_emoji: habit.emoji },
+            is_private: false,
+          });
+          // Streak milestone event
+          if (streakData && isStreakMilestone(streakData.current_streak)) {
+            await sb.from('feed_events').insert({
+              user_id: user.id,
+              event_type: 'streak_milestone',
+              data: { habit_id: habit.id, habit_name: habit.name, habit_emoji: habit.emoji, streak: streakData.current_streak },
+              is_private: false,
+            });
+          }
         }
       });
     } catch {
