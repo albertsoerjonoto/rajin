@@ -176,7 +176,8 @@ export default function DashboardPage() {
           id: user.id,
           email: user.email!,
           display_name: user.email!.split('@')[0],
-          daily_calorie_offset: 0,
+          calorie_offset_min: -200,
+          calorie_offset_max: 200,
         })
         .select()
         .single();
@@ -491,11 +492,23 @@ export default function DashboardPage() {
   };
 
   const deltaLabel = targets ? (
-    Math.abs(targets.calorieOffset) <= 50
+    targets.calorieOffsetMin >= -50 && targets.calorieOffsetMax <= 50
       ? t('nutrition.maintenance')
-      : targets.calorieOffset < 0
-        ? `${Math.abs(targets.calorieOffset)} ${t('nutrition.calDeficit')}`
-        : `${targets.calorieOffset} ${t('nutrition.calSurplus')}`
+      : targets.calorieOffsetMax <= 0
+        ? (() => {
+            const absMin = Math.abs(targets.calorieOffsetMin);
+            const absMax = Math.abs(targets.calorieOffsetMax);
+            return absMin === absMax
+              ? `${absMin} ${t('nutrition.calDeficit')}`
+              : `${Math.min(absMin, absMax)}–${Math.max(absMin, absMax)} ${t('nutrition.calDeficit')}`;
+          })()
+        : targets.calorieOffsetMin >= 0
+          ? (() => {
+              return targets.calorieOffsetMin === targets.calorieOffsetMax
+                ? `${targets.calorieOffsetMax} ${t('nutrition.calSurplus')}`
+                : `${Math.min(targets.calorieOffsetMin, targets.calorieOffsetMax)}–${Math.max(targets.calorieOffsetMin, targets.calorieOffsetMax)} ${t('nutrition.calSurplus')}`;
+            })()
+          : `±${Math.max(Math.abs(targets.calorieOffsetMin), Math.abs(targets.calorieOffsetMax))} ${t('common.cal')}`
   ) : '';
 
   // Analytics computations
@@ -903,8 +916,8 @@ export default function DashboardPage() {
                       <span>·</span>
                       <span className={cn(
                         'font-semibold',
-                        targets.calorieOffset < -50 ? 'text-info' :
-                        targets.calorieOffset > 50 ? 'text-warning' : 'text-positive-text'
+                        targets.calorieOffsetMax <= 0 ? 'text-info' :
+                        targets.calorieOffsetMin >= 0 ? 'text-warning' : 'text-positive-text'
                       )}>
                         {deltaLabel}
                       </span>
