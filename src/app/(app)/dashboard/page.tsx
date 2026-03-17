@@ -772,14 +772,14 @@ export default function DashboardPage() {
                     autoFocus
                   />
                 </div>
-                <label className="flex items-center gap-2 mb-3 cursor-pointer">
-                  <button
-                    type="button"
+                <div className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setNewHabitPrivate(!newHabitPrivate)}>
+                  <div
                     role="switch"
                     aria-checked={newHabitPrivate}
-                    onClick={() => setNewHabitPrivate(!newHabitPrivate)}
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setNewHabitPrivate(!newHabitPrivate); } }}
                     className={cn(
-                      'relative w-9 h-5 rounded-full transition-colors duration-200',
+                      'relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0',
                       newHabitPrivate ? 'bg-accent' : 'bg-surface-secondary'
                     )}
                   >
@@ -787,9 +787,9 @@ export default function DashboardPage() {
                       'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200',
                       newHabitPrivate && 'translate-x-4'
                     )} />
-                  </button>
+                  </div>
                   <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
-                </label>
+                </div>
                 <div className="flex gap-2">
                   <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-text-secondary rounded-xl hover:bg-surface-hover transition-all duration-200">
                     {t('common.cancel')}
@@ -830,14 +830,14 @@ export default function DashboardPage() {
                               autoFocus
                             />
                           </div>
-                          <label className="flex items-center gap-2 mb-3 cursor-pointer">
-                            <button
-                              type="button"
+                          <div className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setEditPrivate(!editPrivate)}>
+                            <div
                               role="switch"
                               aria-checked={editPrivate}
-                              onClick={() => setEditPrivate(!editPrivate)}
+                              tabIndex={0}
+                              onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setEditPrivate(!editPrivate); } }}
                               className={cn(
-                                'relative w-9 h-5 rounded-full transition-colors duration-200',
+                                'relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0',
                                 editPrivate ? 'bg-accent' : 'bg-surface-secondary'
                               )}
                             >
@@ -845,9 +845,9 @@ export default function DashboardPage() {
                                 'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200',
                                 editPrivate && 'translate-x-4'
                               )} />
-                            </button>
+                            </div>
                             <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
-                          </label>
+                          </div>
                           {!editPrivate && acceptedFriends.length > 0 && (
                             <div className="mb-3">
                               {showShareModal === habit.id ? (
