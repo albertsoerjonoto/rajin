@@ -104,6 +104,65 @@ export function formatYearLabel(dateStr: string): string {
   return String(d.getUTCFullYear());
 }
 
+/**
+ * Get the start and end dates for a given period.
+ * Week = Mon–Sun, Month = 1st–last, Year = Jan 1–Dec 31.
+ */
+export function getDateRange(dateStr: string, period: Period): { start: string; end: string } {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  switch (period) {
+    case 'day':
+      return { start: dateStr, end: dateStr };
+    case 'week': {
+      const dow = d.getUTCDay();
+      const monOffset = dow === 0 ? -6 : 1 - dow;
+      const monday = addDays(dateStr, monOffset);
+      const sunday = addDays(monday, 6);
+      return { start: monday, end: sunday };
+    }
+    case 'month': {
+      const year = d.getUTCFullYear();
+      const month = d.getUTCMonth();
+      const start = new Date(Date.UTC(year, month, 1));
+      const end = new Date(Date.UTC(year, month + 1, 0));
+      return {
+        start: start.toISOString().split('T')[0],
+        end: end.toISOString().split('T')[0],
+      };
+    }
+    case 'year': {
+      const year = d.getUTCFullYear();
+      return { start: `${year}-01-01`, end: `${year}-12-31` };
+    }
+  }
+}
+
+/**
+ * Get all YYYY-MM-DD strings between start and end (inclusive).
+ */
+export function getDatesInRange(start: string, end: string): string[] {
+  const dates: string[] = [];
+  let current = start;
+  while (current <= end) {
+    dates.push(current);
+    current = addDays(current, 1);
+  }
+  return dates;
+}
+
+/**
+ * ISO week number for a given date string.
+ */
+export function getWeekNumber(dateStr: string): number {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  const dayOfYear = Math.floor((d.getTime() - Date.UTC(d.getUTCFullYear(), 0, 1)) / 86400000);
+  const dow = d.getUTCDay() || 7; // Mon=1, Sun=7
+  const jan4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const jan4Dow = jan4.getUTCDay() || 7;
+  const weekStart = dayOfYear + (jan4Dow - dow);
+  return Math.floor(weekStart / 7) + 1;
+}
+
 export function navigateByPeriod(dateStr: string, period: Period, direction: 1 | -1): string {
   const d = new Date(dateStr + 'T12:00:00Z');
   switch (period) {
