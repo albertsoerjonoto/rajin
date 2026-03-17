@@ -373,6 +373,7 @@ export const translations: Translations = {
   'friends.exercise': { id: 'Olahraga', en: 'Exercised' },
   'friends.drink': { id: 'Minum', en: 'Drank' },
   'friends.habit': { id: 'Selesai', en: 'Completed' },
+  'friends.defaultName': { id: 'Pengguna', en: 'User' },
 
   // ── Analytics ──
   'analytics.habitStreak': { id: 'Streak Kebiasaan', en: 'Habit Streak' },

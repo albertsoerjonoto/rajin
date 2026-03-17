@@ -281,7 +281,7 @@ export default function FriendsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium text-sm text-primary truncate">
-                          {activity.friend_display_name ?? 'User'}
+                          {activity.friend_display_name ?? t('friends.defaultName')}
                         </span>
                         <span className="text-xs text-secondary">{activityLabel(activity.activity_type)}</span>
                         <span>{activityIcon(activity.activity_type)}</span>
@@ -310,7 +310,7 @@ export default function FriendsPage() {
                       <div key={req.id} className="bg-white rounded-xl p-4 shadow-xs flex items-center gap-3">
                         <Avatar url={req.profile.avatar_url} name={req.profile.display_name} />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-primary truncate">{req.profile.display_name ?? 'User'}</p>
+                          <p className="font-medium text-sm text-primary truncate">{req.profile.display_name ?? t('friends.defaultName')}</p>
                           {req.profile.username && (
                             <p className="text-xs text-secondary">@{req.profile.username}</p>
                           )}
@@ -344,7 +344,7 @@ export default function FriendsPage() {
                       <div key={req.id} className="bg-white rounded-xl p-4 shadow-xs flex items-center gap-3">
                         <Avatar url={req.profile.avatar_url} name={req.profile.display_name} />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-primary truncate">{req.profile.display_name ?? 'User'}</p>
+                          <p className="font-medium text-sm text-primary truncate">{req.profile.display_name ?? t('friends.defaultName')}</p>
                           {req.profile.username && (
                             <p className="text-xs text-secondary">@{req.profile.username}</p>
                           )}
@@ -372,7 +372,7 @@ export default function FriendsPage() {
                       <div key={friend.id} className="bg-white rounded-xl p-4 shadow-xs flex items-center gap-3">
                         <Avatar url={friend.profile.avatar_url} name={friend.profile.display_name} />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-primary truncate">{friend.profile.display_name ?? 'User'}</p>
+                          <p className="font-medium text-sm text-primary truncate">{friend.profile.display_name ?? t('friends.defaultName')}</p>
                           {friend.profile.username && (
                             <p className="text-xs text-secondary">@{friend.profile.username}</p>
                           )}
@@ -423,7 +423,7 @@ export default function FriendsPage() {
                       <div key={result.id} className="bg-white rounded-xl p-4 shadow-xs flex items-center gap-3">
                         <Avatar url={result.avatar_url} name={result.display_name} />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-primary truncate">{result.display_name ?? 'User'}</p>
+                          <p className="font-medium text-sm text-primary truncate">{result.display_name ?? t('friends.defaultName')}</p>
                           {result.username && (
                             <p className="text-xs text-secondary">@{result.username}</p>
                           )}
