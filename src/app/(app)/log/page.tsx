@@ -17,11 +17,12 @@ type Modal = 'none' | 'food' | 'exercise' | 'drink' | 'measurement';
 
 const DRINK_TYPES: { value: DrinkType; labelKey: string }[] = [
   { value: 'water', labelKey: 'drink.water' },
-  { value: 'coffee', labelKey: 'drink.coffee' },
   { value: 'tea', labelKey: 'drink.tea' },
+  { value: 'coffee', labelKey: 'drink.coffee' },
   { value: 'juice', labelKey: 'drink.juice' },
-  { value: 'soda', labelKey: 'drink.soda' },
   { value: 'milk', labelKey: 'drink.milk' },
+  { value: 'smoothie', labelKey: 'drink.smoothie' },
+  { value: 'soda', labelKey: 'drink.soda' },
   { value: 'other', labelKey: 'drink.other' },
 ];
 
@@ -95,6 +96,7 @@ export default function LogPage() {
     if (type === 'breakfast') return t('meal.breakfast');
     if (type === 'lunch') return t('meal.lunch');
     if (type === 'dinner') return t('meal.dinner');
+    if (type === 'snack') return t('meal.snack');
     return t('meal.other');
   };
 
@@ -107,7 +109,7 @@ export default function LogPage() {
     { value: 'breakfast', label: t('meal.breakfast') },
     { value: 'lunch', label: t('meal.lunch') },
     { value: 'dinner', label: t('meal.dinner') },
-    { value: 'snack', label: t('meal.other') },
+    { value: 'snack', label: t('meal.snack') },
   ];
 
   const fetchData = useCallback(async () => {
@@ -579,12 +581,12 @@ export default function LogPage() {
                     onClick={() => { setMealType('lunch'); setModal('food'); }}
                     className="text-accent-text text-xs font-medium"
                   >
-                    + {t('common.add')}
+                    {t('common.add')}
                   </button>
                 </div>
                 {mealLogs.length === 0 ? (
                   <div className="bg-surface rounded-2xl p-4 text-center">
-                    <p className="text-text-tertiary text-sm">{t('log.noFoodLogged')}</p>
+                    <p className="text-text-tertiary text-sm">{t('log.noMealsLogged')}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -620,12 +622,12 @@ export default function LogPage() {
                     onClick={() => { setMealType('snack'); setModal('food'); }}
                     className="text-accent-text text-xs font-medium"
                   >
-                    + {t('common.add')}
+                    {t('common.add')}
                   </button>
                 </div>
                 {snackLogs.length === 0 ? (
                   <div className="bg-surface rounded-2xl p-4 text-center">
-                    <p className="text-text-tertiary text-sm">{t('log.noFoodLogged')}</p>
+                    <p className="text-text-tertiary text-sm">{t('log.noSnacksLogged')}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -641,6 +643,8 @@ export default function LogPage() {
                             <p className="text-xs text-text-tertiary mt-1">
                               {log.calories} {t('common.cal')}
                               {log.protein_g && ` · ${log.protein_g}g ${t('log.protein')}`}
+                              {log.carbs_g && ` · ${log.carbs_g}g ${t('log.carbs')}`}
+                              {log.fat_g && ` · ${log.fat_g}g ${t('log.fat')}`}
                             </p>
                           </div>
                           <DeleteButton type="food" id={log.id} />
@@ -659,7 +663,7 @@ export default function LogPage() {
                     onClick={() => setModal('drink')}
                     className="text-accent-text text-xs font-medium"
                   >
-                    + {t('common.add')}
+                    {t('common.add')}
                   </button>
                 </div>
 
@@ -713,7 +717,10 @@ export default function LogPage() {
                             <p className="text-sm font-medium text-text-primary mt-0.5">{log.description}</p>
                             <p className="text-xs text-text-tertiary mt-1">
                               {log.volume_ml}ml
-                              {log.calories > 0 && ` · ${log.calories} ${t('common.cal')}`}
+                              {log.drink_type !== 'water' && log.calories > 0 && ` · ${log.calories} ${t('common.cal')}`}
+                              {log.drink_type !== 'water' && log.protein_g != null && log.protein_g > 0 && ` · ${log.protein_g}g ${t('log.protein')}`}
+                              {log.drink_type !== 'water' && log.carbs_g != null && log.carbs_g > 0 && ` · ${log.carbs_g}g ${t('log.carbs')}`}
+                              {log.drink_type !== 'water' && log.fat_g != null && log.fat_g > 0 && ` · ${log.fat_g}g ${t('log.fat')}`}
                             </p>
                           </div>
                           <DeleteButton type="drink" id={log.id} />
@@ -1031,7 +1038,15 @@ export default function LogPage() {
               {DRINK_TYPES.map(({ value, labelKey }) => (
                 <button
                   key={value}
-                  onClick={() => setDrinkType(value)}
+                  onClick={() => {
+                    setDrinkType(value);
+                    if (value === 'water') {
+                      setDrinkCalories('0');
+                      setDrinkProtein('');
+                      setDrinkCarbs('');
+                      setDrinkFat('');
+                    }
+                  }}
                   className={cn(
                     'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all',
                     drinkType === value
@@ -1053,52 +1068,73 @@ export default function LogPage() {
                 placeholder={t('drink.whatDidYouDrink')}
                 autoFocus
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div>
                 <input
                   type="number"
                   min="0"
                   max="10000"
                   value={drinkVolume}
                   onChange={(e) => setDrinkVolume(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
+                  className={inputClass}
                   placeholder={t('drink.volumeMl')}
                 />
-                <input
-                  type="number"
-                  min="0"
-                  max="20000"
-                  value={drinkCalories}
-                  onChange={(e) => setDrinkCalories(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
-                  placeholder={t('log.calories')}
-                />
+                <div className="flex gap-2 mt-2">
+                  {[250, 330, 500].map((ml) => (
+                    <button
+                      key={ml}
+                      type="button"
+                      onClick={() => setDrinkVolume(String(ml))}
+                      className={cn(
+                        'flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                        drinkVolume === String(ml)
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-surface-secondary text-text-muted hover:bg-surface-hover'
+                      )}
+                    >
+                      {ml}ml
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  value={drinkProtein}
-                  onChange={(e) => setDrinkProtein(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                  placeholder={t('log.proteinG')}
-                />
-                <input
-                  type="number"
-                  min="0"
-                  value={drinkCarbs}
-                  onChange={(e) => setDrinkCarbs(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                  placeholder={t('log.carbsG')}
-                />
-                <input
-                  type="number"
-                  min="0"
-                  value={drinkFat}
-                  onChange={(e) => setDrinkFat(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                  placeholder={t('log.fatG')}
-                />
-              </div>
+              {drinkType !== 'water' && (
+                <>
+                  <input
+                    type="number"
+                    min="0"
+                    max="20000"
+                    value={drinkCalories}
+                    onChange={(e) => setDrinkCalories(e.target.value)}
+                    className={inputClass}
+                    placeholder={t('log.calories')}
+                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={drinkProtein}
+                      onChange={(e) => setDrinkProtein(e.target.value)}
+                      className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                      placeholder={t('log.proteinG')}
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      value={drinkCarbs}
+                      onChange={(e) => setDrinkCarbs(e.target.value)}
+                      className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                      placeholder={t('log.carbsG')}
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      value={drinkFat}
+                      onChange={(e) => setDrinkFat(e.target.value)}
+                      className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                      placeholder={t('log.fatG')}
+                    />
+                  </div>
+                </>
+              )}
               <button
                 onClick={saveDrinkLog}
                 disabled={saving || !drinkDescription.trim()}
