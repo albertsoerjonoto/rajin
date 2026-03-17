@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-
 export async function POST(req: NextRequest) {
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Gemini API key not configured' }, { status: 500 });
+    }
+
     const formData = await req.formData();
     const audio = formData.get('audio') as File | null;
     const locale = (formData.get('locale') as string) || 'id';
@@ -19,6 +22,7 @@ export async function POST(req: NextRequest) {
 
     const language = locale === 'en' ? 'English' : 'Indonesian (Bahasa Indonesia)';
 
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
