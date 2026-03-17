@@ -640,10 +640,20 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, userMsg]);
 
     // Build conversation history from recent messages (last 10, excluding welcome)
+    // Include parsed data so the LLM sees the correct response format
     const recentMessages = messages
       .filter((m) => m.id !== 'welcome')
       .slice(-10)
-      .map((m) => ({ role: m.role, content: m.content }));
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+        ...(m.role === 'assistant' ? {
+          parsedFoods: m.parsedFoods,
+          parsedExercises: m.parsedExercises,
+          parsedDrinks: m.parsedDrinks,
+          parsedMeasurements: m.parsedMeasurements,
+        } : {}),
+      }));
 
     try {
       const res = await fetch('/api/parse', {
@@ -710,25 +720,33 @@ export default function ChatPage() {
       }
 
       // Insert assistant message to DB
-      const { data: assistantRow } = await supabase
+      // Build insert object dynamically — only include measurement columns when there's data
+      // to stay backwards-compatible with DBs that haven't migrated those columns yet
+      const insertPayload: Record<string, unknown> = {
+        user_id: user!.id,
+        date,
+        role: 'assistant',
+        content: responseText,
+        parsed_foods: foods.length > 0 ? foods : null,
+        parsed_exercises: exercises.length > 0 ? exercises : null,
+        parsed_drinks: drinks.length > 0 ? drinks : null,
+        food_edits: foodEdits.length > 0 ? foodEdits : null,
+        exercise_edits: exerciseEdits.length > 0 ? exerciseEdits : null,
+        drink_edits: drinkEdits.length > 0 ? drinkEdits : null,
+        saved: false,
+      };
+      if (measurements.length > 0) insertPayload.parsed_measurements = measurements;
+      if (measurementEdits.length > 0) insertPayload.measurement_edits = measurementEdits;
+
+      const { data: assistantRow, error: insertError } = await supabase
         .from('chat_messages')
-        .insert({
-          user_id: user!.id,
-          date,
-          role: 'assistant',
-          content: responseText,
-          parsed_foods: foods.length > 0 ? foods : null,
-          parsed_exercises: exercises.length > 0 ? exercises : null,
-          parsed_drinks: drinks.length > 0 ? drinks : null,
-          parsed_measurements: measurements.length > 0 ? measurements : null,
-          food_edits: foodEdits.length > 0 ? foodEdits : null,
-          exercise_edits: exerciseEdits.length > 0 ? exerciseEdits : null,
-          drink_edits: drinkEdits.length > 0 ? drinkEdits : null,
-          measurement_edits: measurementEdits.length > 0 ? measurementEdits : null,
-          saved: false,
-        })
+        .insert(insertPayload)
         .select()
         .single();
+
+      if (insertError) {
+        console.error('Failed to insert assistant message:', insertError.message);
+      }
 
       const assistantMsg: Message = assistantRow
         ? dbRowToMessage(assistantRow)
