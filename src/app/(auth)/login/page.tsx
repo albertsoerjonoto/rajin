@@ -124,6 +124,7 @@ export default function LoginPage() {
 
           {!showEmailForm && (
             <>
+              {/* Apple OAuth hidden until Apple Developer account is active
               <button
                 onClick={() => handleOAuthLogin('apple')}
                 className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-surface border border-border-strong rounded-xl font-medium text-text-primary hover:bg-surface-hover transition-all"
@@ -133,6 +134,7 @@ export default function LoginPage() {
                 </svg>
                 {t('auth.loginWithApple')}
               </button>
+              */}
 
               <button
                 onClick={() => handleOAuthLogin('google')}

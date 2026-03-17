@@ -160,6 +160,7 @@ export default function SignupPage() {
 
           {!showEmailForm && (
             <>
+              {/* Apple OAuth hidden until Apple Developer account is active
               <button
                 onClick={() => handleOAuthSignup('apple')}
                 className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-surface border border-border-strong rounded-xl font-medium text-text-primary hover:bg-surface-hover transition-all"
@@ -169,6 +170,7 @@ export default function SignupPage() {
                 </svg>
                 {t('auth.signupWithApple')}
               </button>
+              */}
 
               <button
                 onClick={() => handleOAuthSignup('google')}
