@@ -640,9 +640,21 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, userMsg]);
 
     // Build conversation history from recent messages (last 10, excluding welcome)
-    // Include parsed data so the LLM sees the correct response format
+    // Skip error messages (no parsed data/edits) so they don't pollute the model's context
+    // Include parsed data + edits so the LLM sees the correct response format
     const recentMessages = messages
-      .filter((m) => m.id !== 'welcome')
+      .filter((m) => {
+        if (m.id === 'welcome') return false;
+        // Skip assistant error messages (no parsed data and no edits)
+        if (m.role === 'assistant') {
+          const hasData = (m.parsedFoods?.length ?? 0) > 0 || (m.parsedExercises?.length ?? 0) > 0 ||
+            (m.parsedDrinks?.length ?? 0) > 0 || (m.parsedMeasurements?.length ?? 0) > 0 ||
+            (m.foodEdits?.length ?? 0) > 0 || (m.exerciseEdits?.length ?? 0) > 0 ||
+            (m.drinkEdits?.length ?? 0) > 0 || (m.measurementEdits?.length ?? 0) > 0;
+          if (!hasData) return false;
+        }
+        return true;
+      })
       .slice(-10)
       .map((m) => ({
         role: m.role,
@@ -652,6 +664,10 @@ export default function ChatPage() {
           parsedExercises: m.parsedExercises,
           parsedDrinks: m.parsedDrinks,
           parsedMeasurements: m.parsedMeasurements,
+          foodEdits: m.foodEdits,
+          exerciseEdits: m.exerciseEdits,
+          drinkEdits: m.drinkEdits,
+          measurementEdits: m.measurementEdits,
         } : {}),
       }));
 
@@ -665,17 +681,11 @@ export default function ChatPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        // Insert error message to DB
+        // Show error in UI but don't persist to DB — error messages pollute conversation history
         const errorContent = data.error || t('chat.somethingWrong');
-        const { data: errRow } = await supabase
-          .from('chat_messages')
-          .insert({ user_id: user!.id, date, role: 'assistant', content: errorContent })
-          .select()
-          .single();
-
         setMessages((prev) => [
           ...prev,
-          errRow ? dbRowToMessage(errRow) : { id: `temp-${Date.now()}`, role: 'assistant', content: errorContent },
+          { id: `error-${Date.now()}`, role: 'assistant', content: errorContent },
         ]);
         setLoading(false);
         return;
@@ -767,16 +777,10 @@ export default function ChatPage() {
 
       setMessages((prev) => [...prev, assistantMsg]);
     } catch {
-      const errorContent = t('chat.somethingWrong');
-      const { data: errRow } = await supabase
-        .from('chat_messages')
-        .insert({ user_id: user!.id, date, role: 'assistant', content: errorContent })
-        .select()
-        .single();
-
+      // Show error in UI but don't persist to DB
       setMessages((prev) => [
         ...prev,
-        errRow ? dbRowToMessage(errRow) : { id: `temp-${Date.now()}`, role: 'assistant', content: errorContent },
+        { id: `error-${Date.now()}`, role: 'assistant', content: t('chat.somethingWrong') },
       ]);
     }
 
