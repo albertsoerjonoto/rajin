@@ -12,6 +12,8 @@ export interface Profile {
   gender: Gender | null;
   height_cm: number | null;
   weight_kg: number | null;
+  onboarding_completed: boolean;
+  onboarding_step: number | null;
   created_at: string;
 }
 
