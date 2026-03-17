@@ -327,13 +327,16 @@ export async function POST(request: NextRequest) {
 
     contents.push({ role: 'user', parts: userParts });
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      config: {
-        systemInstruction: systemPrompt,
-      },
-      contents,
-    });
+    const response = await Promise.race([
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        config: {
+          systemInstruction: systemPrompt,
+        },
+        contents,
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 30000)),
+    ]);
 
     const text = response.text ?? '';
 
