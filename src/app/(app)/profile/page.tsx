@@ -16,13 +16,15 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { compressAvatar } from '@/lib/image';
 import { useLocale } from '@/lib/i18n';
 import { useDesktopLayout } from '@/hooks/useDesktopLayout';
-import type { Profile, Gender, Locale, DesktopLayout } from '@/lib/types';
+import { useTour } from '@/components/tour/useTour';
+import type { Profile, Gender, Locale } from '@/lib/types';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const router = useRouter();
   const { showToast, ToastContainer } = useToast();
   const { t, locale, setLocale } = useLocale();
+  const { startTour } = useTour();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
@@ -713,8 +715,25 @@ export default function ProfilePage() {
       )}
 
       <button
+        onClick={() => {
+          if (!user) return;
+          // Reset tour_completed and navigate to chat with tour
+          const replayTour = async () => {
+            const supabase = createClient();
+            await supabase.from('profiles').update({ tour_completed: false }).eq('id', user.id);
+            startTour();
+            router.push('/chat');
+          };
+          replayTour();
+        }}
+        className="w-full mt-6 py-3 text-text-secondary hover:text-accent-text font-medium rounded-xl hover:bg-surface transition-all text-sm"
+      >
+        {t('tour.replayTour')}
+      </button>
+
+      <button
         onClick={handleSignOut}
-        className="w-full mt-10 py-3 text-text-secondary hover:text-danger-text font-medium rounded-xl hover:bg-danger-surface transition-all"
+        className="w-full mt-4 py-3 text-text-secondary hover:text-danger-text font-medium rounded-xl hover:bg-danger-surface transition-all"
       >
         {t('profile.signOut')}
       </button>

@@ -52,7 +52,7 @@ export default function OnboardingPage() {
         .single();
 
       if (data?.onboarding_completed) {
-        router.replace('/dashboard');
+        router.replace('/chat?tour=start');
         return;
       }
 
@@ -137,7 +137,7 @@ export default function OnboardingPage() {
 
       const ok = await saveStep(fields);
       if (!ok) return;
-      router.replace('/dashboard');
+      router.replace('/chat?tour=start');
       return;
     }
 
@@ -161,7 +161,7 @@ export default function OnboardingPage() {
       // Final step — mark onboarding as complete even when skipping
       const ok = await saveStep({ onboarding_completed: true, onboarding_step: nextStep });
       if (!ok) return;
-      router.replace('/dashboard');
+      router.replace('/chat?tour=start');
       return;
     }
     // Save step progress even when skipping

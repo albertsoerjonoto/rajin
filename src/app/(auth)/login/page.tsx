@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
 import { useLocale } from '@/lib/i18n';
 
 export default function LoginPage() {
@@ -14,7 +15,7 @@ export default function LoginPage() {
   const [showEmailForm, setShowEmailForm] = useState(false);
   const router = useRouter();
   const supabase = createClient();
-  const { t } = useLocale();
+  const { t, locale, setLocale } = useLocale();
 
   const [initialError] = useState(() => {
     if (typeof window === 'undefined') return '';
@@ -64,7 +65,27 @@ export default function LoginPage() {
     'w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg px-4">
+    <div className="min-h-screen flex items-center justify-center bg-bg px-4 relative">
+      {/* Language toggle */}
+      <div className="absolute top-4 right-4">
+        <div className="flex items-center bg-surface rounded-full border border-border-strong overflow-hidden">
+          {(['id', 'en'] as const).map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLocale(code)}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-all uppercase',
+                locale === code
+                  ? 'bg-text-primary text-bg'
+                  : 'text-text-tertiary hover:text-text-secondary'
+              )}
+            >
+              {code}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-text-primary">{t('auth.appName')}</h1>

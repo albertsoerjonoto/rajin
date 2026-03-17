@@ -12,6 +12,7 @@ import { useLocale } from '@/lib/i18n';
 import MarkdownContent from '@/components/MarkdownContent';
 import VoiceButton from '@/components/VoiceButton';
 import { useDesktopLayout } from '@/hooks/useDesktopLayout';
+import { useTour } from '@/components/tour/useTour';
 import type { ParsedFood, ParsedExercise, ParsedDrink, ParsedMeasurement, MealType, DrinkType, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
 
 interface Message {
@@ -375,13 +376,33 @@ export default function ChatPage() {
   const { user } = useAuth();
   const { t, locale } = useLocale();
   const { showToast, ToastContainer } = useToast();
+  const { isActive: tourActive, currentStep, nextStep, advanceToStep } = useTour();
   const [date, setDate] = useState(getToday());
+  const [displayName, setDisplayName] = useState('');
 
-  const welcomeMessage = useMemo<Message>(() => ({
-    id: 'welcome',
-    role: 'assistant',
-    content: t('chat.welcome'),
-  }), [t]);
+  // Fetch display name for tour welcome
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    supabase.from('profiles').select('display_name').eq('id', user.id).single().then(({ data }) => {
+      if (data?.display_name) setDisplayName(data.display_name);
+    });
+  }, [user]);
+
+  const welcomeMessage = useMemo<Message>(() => {
+    if (tourActive && displayName) {
+      return {
+        id: 'welcome',
+        role: 'assistant',
+        content: t('chat.welcomeTour').replace('{name}', displayName),
+      };
+    }
+    return {
+      id: 'welcome',
+      role: 'assistant',
+      content: t('chat.welcome'),
+    };
+  }, [t, tourActive, displayName]);
 
   const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
   const [input, setInput] = useState('');
@@ -633,6 +654,11 @@ export default function ChatPage() {
     setLoading(true);
     shouldAutoScroll.current = true;
 
+    // Tour: advance from chat-input step to ai-response step
+    if (tourActive && currentStep?.id === 'chat-input') {
+      advanceToStep('ai-response');
+    }
+
     // Refresh context before sending
     await fetchContext();
 
@@ -810,6 +836,15 @@ export default function ChatPage() {
           };
 
       setMessages((prev) => [...prev, assistantMsg]);
+
+      // Tour: advance from ai-response to parsed-result (or skip to log-page if no actionable items)
+      if (tourActive && currentStep?.id === 'ai-response') {
+        if (hasAdds || hasEdits) {
+          advanceToStep('parsed-result');
+        } else {
+          advanceToStep('log-page');
+        }
+      }
     } catch (err) {
       // Don't show error if request was intentionally aborted (e.g., date change, unmount)
       if (err instanceof DOMException && err.name === 'AbortError') {
@@ -897,7 +932,12 @@ export default function ChatPage() {
     setSavingId(null);
     savingLockRef.current = false;
     fetchContext();
-  }, [user, showToast, fetchContext, t]);
+
+    // Tour: advance after save
+    if (tourActive && currentStep?.id === 'parsed-result') {
+      nextStep();
+    }
+  }, [user, showToast, fetchContext, t, tourActive, currentStep, nextStep]);
 
   const confirmEdits = useCallback(async (msgId: string, foodEdits: FoodEdit[], exerciseEdits: ExerciseEdit[], drinkEdits: DrinkEdit[] = [], measurementEdits: MeasurementEdit[] = []) => {
     if (!user || savingLockRef.current) return;
@@ -937,7 +977,12 @@ export default function ChatPage() {
     setSavingId(null);
     savingLockRef.current = false;
     fetchContext();
-  }, [user, showToast, fetchContext, t]);
+
+    // Tour: advance after save
+    if (tourActive && currentStep?.id === 'parsed-result') {
+      nextStep();
+    }
+  }, [user, showToast, fetchContext, t, tourActive, currentStep, nextStep]);
 
   const handleSaveAndApply = useCallback(async (msg: Message) => {
     if (!user || savingLockRef.current) return;
@@ -1021,7 +1066,12 @@ export default function ChatPage() {
     setSavingId(null);
     savingLockRef.current = false;
     fetchContext();
-  }, [user, showToast, fetchContext, t]);
+
+    // Tour: advance after save
+    if (tourActive && currentStep?.id === 'parsed-result') {
+      nextStep();
+    }
+  }, [user, showToast, fetchContext, t, tourActive, currentStep, nextStep]);
 
   const updateFood = useCallback((msgId: string, index: number, field: keyof ParsedFood, value: string | number) => {
     setMessages((prev) =>
@@ -1087,16 +1137,25 @@ export default function ChatPage() {
             <p className="text-sm text-text-tertiary">{t('chat.noHistory')}</p>
           </div>
         ) : (
-          messages.map((msg) => (
-            <MessageBubble
-              key={msg.id}
-              msg={msg}
-              savingId={savingId}
-              onButtonClick={handleButtonClick}
-              onUpdateFood={updateFood}
-              t={t}
-            />
-          ))
+          messages.map((msg, idx) => {
+            const isWelcome = msg.id === 'welcome';
+            const isLastAssistant = msg.role === 'assistant' && idx === messages.length - 1 && !isWelcome;
+            const hasActionable = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0 || (msg.parsedDrinks?.length ?? 0) > 0 || (msg.parsedMeasurements?.length ?? 0) > 0;
+            return (
+              <div
+                key={msg.id}
+                data-tour={isWelcome ? 'welcome-message' : isLastAssistant && hasActionable ? 'parsed-result' : isLastAssistant ? 'ai-response' : undefined}
+              >
+                <MessageBubble
+                  msg={msg}
+                  savingId={savingId}
+                  onButtonClick={handleButtonClick}
+                  onUpdateFood={updateFood}
+                  t={t}
+                />
+              </div>
+            );
+          })
         )}
         {loading && (
           <div className="flex justify-start">
@@ -1114,7 +1173,7 @@ export default function ChatPage() {
 
       {/* Input — only visible for today */}
       {isToday && (
-      <div className="px-4 pt-2 pb-4">
+      <div className="px-4 pt-2 pb-4" data-tour="chat-input">
         {/* Image preview */}
         {imagePreview && (
           <div className="mb-2 relative inline-block">
