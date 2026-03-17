@@ -47,7 +47,11 @@ export default function StreakCard({ dayDataMap, allHabitLogs }: StreakCardProps
   }, [dayDataMap, allHabitLogs]);
 
   useEffect(() => {
-    if (currentStreak === 0) { setAnimatedCount(0); return; }
+    if (currentStreak === 0) {
+      // Schedule the state update asynchronously to avoid synchronous setState in effect
+      const frame = requestAnimationFrame(() => setAnimatedCount(0));
+      return () => cancelAnimationFrame(frame);
+    }
     let frame: number;
     const duration = 600;
     const start = performance.now();

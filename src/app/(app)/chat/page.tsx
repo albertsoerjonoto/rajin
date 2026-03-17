@@ -988,17 +988,6 @@ export default function ChatPage() {
     );
   }, []);
 
-  const updateExercise = useCallback((msgId: string, index: number, field: keyof ParsedExercise, value: string | number) => {
-    setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== msgId || !m.parsedExercises) return m;
-        const newExercises = [...m.parsedExercises];
-        newExercises[index] = { ...newExercises[index], [field]: value };
-        return { ...m, parsedExercises: newExercises };
-      })
-    );
-  }, []);
-
   const handleButtonClick = useCallback((msg: Message) => {
     const hasAdds = (msg.parsedFoods?.length ?? 0) > 0 || (msg.parsedExercises?.length ?? 0) > 0 || (msg.parsedDrinks?.length ?? 0) > 0 || (msg.parsedMeasurements?.length ?? 0) > 0;
     const hasEdits = (msg.foodEdits?.length ?? 0) > 0 || (msg.exerciseEdits?.length ?? 0) > 0 || (msg.drinkEdits?.length ?? 0) > 0 || (msg.measurementEdits?.length ?? 0) > 0;
