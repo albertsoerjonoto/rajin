@@ -245,7 +245,7 @@ export default function FriendsPage() {
     <div className={cn('max-w-lg mx-auto px-4 pt-6', isExpanded && 'lg:max-w-3xl lg:px-8')}>
       {ToastContainer}
 
-      <h1 className="text-2xl font-bold text-text-primary mb-4">{t('friends.title')}</h1>
+      <h1 className="text-xl font-bold text-text-primary mb-4">{t('friends.title')}</h1>
 
       {/* Pill tabs */}
       <div className="flex gap-1 bg-surface-secondary rounded-xl p-1 mb-5">
