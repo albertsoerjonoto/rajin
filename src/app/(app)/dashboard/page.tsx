@@ -460,7 +460,7 @@ export default function DashboardPage() {
             });
           }
         }
-      });
+      }).catch(() => { /* streak/feed tables may not exist pre-migration */ });
     } catch {
       setHabits((prev) =>
         prev.map((h) => (h.id === habit.id ? { ...h, completed: wasCompleted } : h))

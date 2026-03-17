@@ -85,13 +85,18 @@ export async function PATCH(request: NextRequest) {
   }
 
   const status = action === 'accept' ? 'accepted' : 'declined';
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from('friendships')
     .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', friendship_id);
+    .eq('id', friendship_id)
+    .eq('addressee_id', user.id);
 
   if (error) {
     return NextResponse.json({ error: 'Failed to update request' }, { status: 500 });
+  }
+
+  if (count === 0) {
+    return NextResponse.json({ error: 'Not authorized to update this request' }, { status: 403 });
   }
 
   return NextResponse.json({ success: true });
@@ -112,7 +117,8 @@ export async function DELETE(request: NextRequest) {
   const { error } = await supabase
     .from('friendships')
     .delete()
-    .eq('id', friendship_id);
+    .eq('id', friendship_id)
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
 
   if (error) {
     return NextResponse.json({ error: 'Failed to remove friend' }, { status: 500 });
