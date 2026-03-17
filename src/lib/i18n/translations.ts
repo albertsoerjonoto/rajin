@@ -374,6 +374,7 @@ export const translations: Translations = {
   'friends.requestSent': { id: 'Permintaan terkirim!', en: 'Request sent!' },
   'friends.requestAccepted': { id: 'Permintaan diterima!', en: 'Request accepted!' },
   'friends.unfriended': { id: 'Teman dihapus', en: 'Unfriended' },
+  'friends.unfriendConfirm': { id: 'Yakin ingin menghapus {name} dari daftar teman?', en: 'Are you sure you want to unfriend {name}?' },
   'friends.food': { id: 'Makan', en: 'Ate' },
   'friends.exercise': { id: 'Olahraga', en: 'Exercised' },
   'friends.drink': { id: 'Minum', en: 'Drank' },

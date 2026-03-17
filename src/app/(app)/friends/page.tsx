@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLocale } from '@/lib/i18n';
 import { useToast } from '@/components/Toast';
 import { cn, getToday } from '@/lib/utils';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import type { Friendship, FriendProfile, FriendActivity } from '@/lib/types';
 
 type Tab = 'feed' | 'friends' | 'add';
@@ -35,6 +36,7 @@ export default function FriendsPage() {
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [searching, setSearching] = useState(false);
   const [friendshipMap, setFriendshipMap] = useState<Record<string, { status: string; isRequester: boolean; id: string }>>({});
+  const [confirmUnfriend, setConfirmUnfriend] = useState<{ id: string; name: string } | null>(null);
 
   const today = getToday();
 
@@ -251,13 +253,18 @@ export default function FriendsPage() {
             key={tb.key}
             onClick={() => setTab(tb.key)}
             className={cn(
-              'flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200',
+              'flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200 relative',
               tab === tb.key
                 ? 'bg-surface text-text-text-primary shadow-sm'
                 : 'text-text-text-secondary'
             )}
           >
             {t(tb.labelKey)}
+            {tb.key === 'friends' && incomingRequests.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {incomingRequests.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -383,8 +390,8 @@ export default function FriendsPage() {
                           )}
                         </div>
                         <button
-                          onClick={() => unfriend(friend.id)}
-                          className="px-3 py-1.5 text-red-500 text-xs font-medium"
+                          onClick={() => setConfirmUnfriend({ id: friend.id, name: friend.profile.display_name ?? 'User' })}
+                          className="px-3 py-1.5 text-danger-text text-xs font-medium"
                         >
                           {t('friends.unfriend')}
                         </button>
@@ -454,6 +461,18 @@ export default function FriendsPage() {
           )}
         </>
       )}
+      <ConfirmDialog
+        open={!!confirmUnfriend}
+        title={t('friends.unfriend')}
+        message={t('friends.unfriendConfirm').replace('{name}', confirmUnfriend?.name ?? '')}
+        confirmLabel={t('friends.unfriend')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => {
+          if (confirmUnfriend) unfriend(confirmUnfriend.id);
+          setConfirmUnfriend(null);
+        }}
+        onCancel={() => setConfirmUnfriend(null)}
+      />
     </div>
   );
 }
