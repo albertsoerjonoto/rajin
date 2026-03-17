@@ -143,9 +143,9 @@ export default function LogPage() {
       setHabits(habitsWithLogs);
     }
 
-    if (measurementRes.error) showToast('error', t('log.failedLoadMeasurements'));
-    if (measurementRes.data) setMeasurementLogs(measurementRes.data);
-    if (lastMeasureRes.data && lastMeasureRes.data.length > 0) {
+    // measurement_logs table may not exist yet if migration hasn't been applied
+    if (!measurementRes.error && measurementRes.data) setMeasurementLogs(measurementRes.data);
+    if (!lastMeasureRes.error && lastMeasureRes.data && lastMeasureRes.data.length > 0) {
       setLastMeasurement(lastMeasureRes.data[0]);
     }
 
