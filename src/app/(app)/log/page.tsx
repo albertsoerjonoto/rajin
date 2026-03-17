@@ -10,10 +10,10 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import { validateCalories, validateDuration, validateMacro, validateVolume } from '@/lib/validation';
 import { useLocale } from '@/lib/i18n';
-import type { FoodLog, ExerciseLog, DrinkLog, MealType, DrinkType, Profile } from '@/lib/types';
+import type { FoodLog, ExerciseLog, DrinkLog, MealType, DrinkType, Profile, HabitWithLog, MeasurementLog } from '@/lib/types';
 
-type Tab = 'food' | 'exercise';
-type Modal = 'none' | 'food' | 'exercise' | 'drink';
+type Tab = 'food' | 'exercise' | 'habits' | 'measurements';
+type Modal = 'none' | 'food' | 'exercise' | 'drink' | 'measurement';
 
 const DRINK_TYPES: { value: DrinkType; labelKey: string }[] = [
   { value: 'water', labelKey: 'drink.water' },
@@ -25,6 +25,16 @@ const DRINK_TYPES: { value: DrinkType; labelKey: string }[] = [
   { value: 'other', labelKey: 'drink.other' },
 ];
 
+function formatTime(isoString: string | null | undefined): string {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
 export default function LogPage() {
   const { user } = useAuth();
   const { showToast, ToastContainer } = useToast();
@@ -34,6 +44,9 @@ export default function LogPage() {
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
   const [drinkLogs, setDrinkLogs] = useState<DrinkLog[]>([]);
+  const [habits, setHabits] = useState<HabitWithLog[]>([]);
+  const [measurementLogs, setMeasurementLogs] = useState<MeasurementLog[]>([]);
+  const [lastMeasurement, setLastMeasurement] = useState<{ weight_kg: number | null; date: string } | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(getToday());
@@ -61,15 +74,22 @@ export default function LogPage() {
   const [drinkCarbs, setDrinkCarbs] = useState('');
   const [drinkFat, setDrinkFat] = useState('');
 
+  // Measurement form state
+  const [measureHeightCm, setMeasureHeightCm] = useState('');
+  const [measureWeightKg, setMeasureWeightKg] = useState('');
+  const [measureNotes, setMeasureNotes] = useState('');
+
   const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   // Edit state
   const [editingFood, setEditingFood] = useState<FoodLog | null>(null);
   const [editingExercise, setEditingExercise] = useState<ExerciseLog | null>(null);
   const [editingDrink, setEditingDrink] = useState<DrinkLog | null>(null);
+  const [editingMeasurement, setEditingMeasurement] = useState<MeasurementLog | null>(null);
 
   // Delete confirmation state
-  const [deleteTarget, setDeleteTarget] = useState<{ type: 'food' | 'exercise' | 'drink'; id: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'food' | 'exercise' | 'drink' | 'measurement'; id: string } | null>(null);
 
   const mealLabel = (type: string) => {
     if (type === 'breakfast') return t('meal.breakfast');
@@ -95,11 +115,15 @@ export default function LogPage() {
     setLoading(true);
     const supabase = createClient();
 
-    const [foodRes, exerciseRes, drinkRes, profileRes] = await Promise.all([
+    const [foodRes, exerciseRes, drinkRes, profileRes, habitsRes, habitLogsRes, measurementRes, lastMeasureRes] = await Promise.all([
       supabase.from('food_logs').select('*').eq('user_id', user.id).eq('date', date).order('created_at', { ascending: false }),
       supabase.from('exercise_logs').select('*').eq('user_id', user.id).eq('date', date).order('created_at', { ascending: false }),
       supabase.from('drink_logs').select('*').eq('user_id', user.id).eq('date', date).order('created_at', { ascending: false }),
       supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
+      supabase.from('habit_logs').select('*').eq('user_id', user.id).eq('date', date),
+      supabase.from('measurement_logs').select('*').eq('user_id', user.id).eq('date', date).order('logged_at', { ascending: false }),
+      supabase.from('measurement_logs').select('weight_kg, date').eq('user_id', user.id).not('weight_kg', 'is', null).order('logged_at', { ascending: false }).limit(1),
     ]);
 
     if (foodRes.error) showToast('error', t('dashboard.failedLoadFood'));
@@ -109,6 +133,21 @@ export default function LogPage() {
     if (drinkRes.error) showToast('error', t('dashboard.failedLoadDrinks'));
     if (drinkRes.data) setDrinkLogs(drinkRes.data);
     if (profileRes.data) setProfile(profileRes.data);
+
+    if (habitsRes.error) showToast('error', t('log.failedLoadHabits'));
+    if (habitsRes.data) {
+      const habitsWithLogs: HabitWithLog[] = habitsRes.data.map((habit) => {
+        const log = habitLogsRes.data?.find((l) => l.habit_id === habit.id);
+        return { ...habit, completed: log?.completed ?? false, log_id: log?.id, logged_at: log?.logged_at };
+      });
+      setHabits(habitsWithLogs);
+    }
+
+    if (measurementRes.error) showToast('error', t('log.failedLoadMeasurements'));
+    if (measurementRes.data) setMeasurementLogs(measurementRes.data);
+    if (lastMeasureRes.data && lastMeasureRes.data.length > 0) {
+      setLastMeasurement(lastMeasureRes.data[0]);
+    }
 
     setLoading(false);
   }, [user, date, showToast, t]);
@@ -257,6 +296,48 @@ export default function LogPage() {
     fetchData();
   };
 
+  const saveMeasurementLog = async () => {
+    if (!user) return;
+    const h = measureHeightCm ? parseFloat(measureHeightCm) : null;
+    const w = measureWeightKg ? parseFloat(measureWeightKg) : null;
+
+    if (h === null && w === null) {
+      showToast('error', t('log.heightOrWeightRequired'));
+      return;
+    }
+    if (h !== null && (isNaN(h) || h < 50 || h > 300)) {
+      showToast('error', t('profile.heightError'));
+      return;
+    }
+    if (w !== null && (isNaN(w) || w < 10 || w > 500)) {
+      showToast('error', t('profile.weightError'));
+      return;
+    }
+
+    setSaving(true);
+    const supabase = createClient();
+
+    const fields = {
+      height_cm: h,
+      weight_kg: w,
+      notes: measureNotes.trim() || null,
+    };
+
+    const { error } = editingMeasurement
+      ? await supabase.from('measurement_logs').update(fields).eq('id', editingMeasurement.id)
+      : await supabase.from('measurement_logs').insert({ ...fields, user_id: user.id, date, source: 'manual' as const });
+
+    if (error) {
+      showToast('error', editingMeasurement ? t('log.failedUpdateMeasurement') : t('log.failedSaveMeasurement'));
+      setSaving(false);
+      return;
+    }
+
+    closeModal();
+    setSaving(false);
+    fetchData();
+  };
+
   const addQuickWater = async (ml: number) => {
     if (!user) return;
     const supabase = createClient();
@@ -276,16 +357,71 @@ export default function LogPage() {
     fetchData();
   };
 
+  const toggleHabit = async (habit: HabitWithLog) => {
+    if (!user || togglingId) return;
+    setTogglingId(habit.id);
+    const supabase = createClient();
+
+    const wasCompleted = habit.completed;
+    setHabits((prev) =>
+      prev.map((h) => (h.id === habit.id ? { ...h, completed: !h.completed } : h))
+    );
+
+    try {
+      if (wasCompleted && habit.log_id) {
+        const { error } = await supabase.from('habit_logs').delete().eq('id', habit.log_id);
+        if (error) throw error;
+        setHabits((prev) =>
+          prev.map((h) => (h.id === habit.id ? { ...h, log_id: undefined, logged_at: undefined } : h))
+        );
+      } else {
+        const { data, error } = await supabase
+          .from('habit_logs')
+          .insert({
+            habit_id: habit.id,
+            user_id: user.id,
+            date: date,
+            completed: true,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        if (data) {
+          setHabits((prev) =>
+            prev.map((h) => (h.id === habit.id ? { ...h, log_id: data.id, logged_at: data.logged_at } : h))
+          );
+        }
+      }
+    } catch {
+      setHabits((prev) =>
+        prev.map((h) => (h.id === habit.id ? { ...h, completed: wasCompleted } : h))
+      );
+      showToast('error', t('dashboard.failedUpdateHabit'));
+    }
+    setTogglingId(null);
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     const supabase = createClient();
 
-    const table = deleteTarget.type === 'food' ? 'food_logs' : deleteTarget.type === 'exercise' ? 'exercise_logs' : 'drink_logs';
+    const tableMap: Record<string, string> = {
+      food: 'food_logs',
+      exercise: 'exercise_logs',
+      drink: 'drink_logs',
+      measurement: 'measurement_logs',
+    };
+    const table = tableMap[deleteTarget.type];
     const { error } = await supabase.from(table).delete().eq('id', deleteTarget.id);
 
     if (error) {
-      const errKey = deleteTarget.type === 'food' ? 'log.failedDeleteFood' : deleteTarget.type === 'exercise' ? 'log.failedDeleteExercise' : 'drink.failedDelete';
-      showToast('error', t(errKey));
+      const errKeyMap: Record<string, string> = {
+        food: 'log.failedDeleteFood',
+        exercise: 'log.failedDeleteExercise',
+        drink: 'drink.failedDelete',
+        measurement: 'log.failedDeleteMeasurement',
+      };
+      showToast('error', t(errKeyMap[deleteTarget.type]));
     }
 
     setDeleteTarget(null);
@@ -324,11 +460,20 @@ export default function LogPage() {
     setModal('drink');
   };
 
+  const startEditMeasurement = (log: MeasurementLog) => {
+    setMeasureHeightCm(log.height_cm ? String(log.height_cm) : '');
+    setMeasureWeightKg(log.weight_kg ? String(log.weight_kg) : '');
+    setMeasureNotes(log.notes || '');
+    setEditingMeasurement(log);
+    setModal('measurement');
+  };
+
   const closeModal = () => {
     setModal('none');
     setEditingFood(null);
     setEditingExercise(null);
     setEditingDrink(null);
+    setEditingMeasurement(null);
     setDescription('');
     setCalories('');
     setProteinG('');
@@ -345,6 +490,9 @@ export default function LogPage() {
     setDrinkProtein('');
     setDrinkCarbs('');
     setDrinkFat('');
+    setMeasureHeightCm('');
+    setMeasureWeightKg('');
+    setMeasureNotes('');
   };
 
   // Derived data
@@ -356,7 +504,7 @@ export default function LogPage() {
   const inputClass =
     'w-full px-4 py-3.5 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
 
-  const DeleteButton = ({ type, id }: { type: 'food' | 'exercise' | 'drink'; id: string }) => (
+  const DeleteButton = ({ type, id }: { type: 'food' | 'exercise' | 'drink' | 'measurement'; id: string }) => (
     <button
       onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type, id }); }}
       className="text-text-tertiary hover:text-danger-text-muted transition-colors p-2.5"
@@ -367,6 +515,28 @@ export default function LogPage() {
       </svg>
     </button>
   );
+
+  const TimeStamp = ({ time }: { time: string | null | undefined }) => {
+    const formatted = formatTime(time);
+    if (!formatted) return null;
+    return <span className="text-[10px] text-text-tertiary ml-1">{formatted}</span>;
+  };
+
+  const tabKeys = ['food', 'exercise', 'habits', 'measurements'] as const;
+  const tabLabels: Record<Tab, string> = {
+    food: t('log.food'),
+    exercise: t('log.exercise'),
+    habits: t('log.habits'),
+    measurements: t('log.measurements'),
+  };
+
+  const getFloatingButtonAction = () => {
+    if (tab === 'exercise') return () => setModal('exercise');
+    if (tab === 'measurements') return () => setModal('measurement');
+    if (tab === 'habits') return undefined; // no FAB for habits
+    return () => setModal('food');
+  };
+  const fabAction = getFloatingButtonAction();
 
   return (
     <div className="max-w-lg mx-auto px-4">
@@ -379,16 +549,16 @@ export default function LogPage() {
 
         {/* Tab Switcher */}
         <div className="flex bg-surface-secondary rounded-xl p-1">
-          {(['food', 'exercise'] as const).map((tabKey) => (
+          {tabKeys.map((tabKey) => (
             <button
               key={tabKey}
               onClick={() => setTab(tabKey)}
               className={cn(
-                'flex-1 py-2 text-sm font-medium rounded-lg transition-all capitalize',
+                'flex-1 py-2 text-[11px] font-medium rounded-lg transition-all',
                 tab === tabKey ? 'bg-surface text-text-primary shadow-sm' : 'text-text-secondary'
               )}
             >
-              {tabKey === 'food' ? t('log.food') : t('log.exercise')}
+              {tabLabels[tabKey]}
             </button>
           ))}
         </div>
@@ -398,7 +568,7 @@ export default function LogPage() {
         <PageSkeleton />
       ) : (
         <>
-          {/* Food Tab — now with Meals, Snacks, and Drinks sections */}
+          {/* Food Tab */}
           {tab === 'food' && (
             <div className="space-y-6">
               {/* Meals Section */}
@@ -422,7 +592,10 @@ export default function LogPage() {
                       <div key={log.id} onClick={() => startEditFood(log)} className="bg-surface rounded-2xl p-4 animate-stagger-in cursor-pointer hover:bg-surface-hover transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-xs font-medium text-accent-text uppercase">{mealLabel(log.meal_type)}</span>
+                            <div className="flex items-center">
+                              <span className="text-xs font-medium text-accent-text uppercase">{mealLabel(log.meal_type)}</span>
+                              <TimeStamp time={log.logged_at} />
+                            </div>
                             <p className="text-sm font-medium text-text-primary mt-0.5">{log.description}</p>
                             <p className="text-xs text-text-tertiary mt-1">
                               {log.calories} {t('common.cal')}
@@ -460,7 +633,10 @@ export default function LogPage() {
                       <div key={log.id} onClick={() => startEditFood(log)} className="bg-surface rounded-2xl p-4 animate-stagger-in cursor-pointer hover:bg-surface-hover transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-xs font-medium text-accent-text uppercase">{mealLabel(log.meal_type)}</span>
+                            <div className="flex items-center">
+                              <span className="text-xs font-medium text-accent-text uppercase">{mealLabel(log.meal_type)}</span>
+                              <TimeStamp time={log.logged_at} />
+                            </div>
                             <p className="text-sm font-medium text-text-primary mt-0.5">{log.description}</p>
                             <p className="text-xs text-text-tertiary mt-1">
                               {log.calories} {t('common.cal')}
@@ -530,7 +706,10 @@ export default function LogPage() {
                       <div key={log.id} onClick={() => startEditDrink(log)} className="bg-surface rounded-2xl p-4 animate-stagger-in cursor-pointer hover:bg-surface-hover transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">{drinkTypeLabel(log.drink_type)}</span>
+                            <div className="flex items-center">
+                              <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">{drinkTypeLabel(log.drink_type)}</span>
+                              <TimeStamp time={log.logged_at} />
+                            </div>
                             <p className="text-sm font-medium text-text-primary mt-0.5">{log.description}</p>
                             <p className="text-xs text-text-tertiary mt-1">
                               {log.volume_ml}ml
@@ -559,7 +738,10 @@ export default function LogPage() {
                   <div key={log.id} onClick={() => startEditExercise(log)} className="bg-surface rounded-2xl p-5 animate-stagger-in cursor-pointer hover:bg-surface-hover transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm font-medium text-text-primary">{log.exercise_type}</p>
+                        <div className="flex items-center">
+                          <p className="text-sm font-medium text-text-primary">{log.exercise_type}</p>
+                          <TimeStamp time={log.logged_at} />
+                        </div>
                         <p className="text-xs text-text-tertiary mt-1">
                           {log.duration_minutes} {t('common.min')} · {log.calories_burned} {t('log.calBurned')}
                           {log.notes && ` · ${log.notes}`}
@@ -572,19 +754,119 @@ export default function LogPage() {
               )}
             </div>
           )}
+
+          {/* Habits Tab */}
+          {tab === 'habits' && (
+            <div>
+              {habits.length === 0 ? (
+                <div className="bg-surface rounded-2xl p-6 text-center">
+                  <p className="text-text-tertiary text-sm">{t('log.noHabitsLogged')}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {habits.map((habit) => (
+                    <button
+                      key={habit.id}
+                      onClick={() => toggleHabit(habit)}
+                      disabled={togglingId === habit.id}
+                      className={cn(
+                        'bg-surface rounded-xl px-3 py-2.5 text-left transition-all duration-200 active:scale-[0.97]',
+                        habit.completed && 'border border-positive-border bg-positive-surface',
+                        togglingId === habit.id && 'opacity-60'
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={cn('text-base leading-none shrink-0', habit.completed && 'animate-checkmark inline-block')}>
+                          {habit.emoji}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span className={cn('text-xs font-medium leading-snug block', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
+                            {habit.name}
+                          </span>
+                          {habit.completed && habit.logged_at && (
+                            <span className="text-[10px] text-positive-text/70">{formatTime(habit.logged_at)}</span>
+                          )}
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
+                          <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
+                          {habit.completed && (
+                            <g>
+                              <circle cx="12" cy="12" r="10" fill="var(--c-positive)" className="animate-circle-fill" />
+                              <path
+                                d="M7 12.5l3.5 3.5 6.5-7"
+                                fill="none"
+                                stroke="white"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="animate-check-draw"
+                              />
+                            </g>
+                          )}
+                        </svg>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Measurements Tab */}
+          {tab === 'measurements' && (
+            <div className="space-y-3">
+              {/* Last recorded measurement */}
+              {lastMeasurement && lastMeasurement.weight_kg && (
+                <div className="bg-surface rounded-2xl p-4 text-center">
+                  <p className="text-xs text-text-tertiary">
+                    {t('log.lastMeasurement')}: <span className="font-semibold text-text-primary">{lastMeasurement.weight_kg} kg</span> {t('log.on')} {lastMeasurement.date}
+                  </p>
+                </div>
+              )}
+
+              {measurementLogs.length === 0 ? (
+                <div className="bg-surface rounded-2xl p-5 text-center">
+                  <p className="text-text-tertiary text-sm">{t('log.noMeasurements')}</p>
+                </div>
+              ) : (
+                measurementLogs.map((log, i) => (
+                  <div key={log.id} onClick={() => startEditMeasurement(log)} className="bg-surface rounded-2xl p-5 animate-stagger-in cursor-pointer hover:bg-surface-hover transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-text-primary">
+                            {log.weight_kg !== null && `${log.weight_kg} kg`}
+                            {log.weight_kg !== null && log.height_cm !== null && ' · '}
+                            {log.height_cm !== null && `${log.height_cm} cm`}
+                          </span>
+                          <TimeStamp time={log.logged_at} />
+                        </div>
+                        {log.notes && (
+                          <p className="text-xs text-text-tertiary mt-1">{log.notes}</p>
+                        )}
+                      </div>
+                      <DeleteButton type="measurement" id={log.id} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </>
       )}
 
-      {/* Floating Add Button */}
-      <button
-        onClick={() => setModal(tab === 'exercise' ? 'exercise' : 'food')}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-accent hover:bg-accent-hover text-accent-fg rounded-full shadow-lg flex items-center justify-center transition-all active:scale-[0.98] z-40"
-        aria-label={`Add ${tab} log`}
-      >
-        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-      </button>
+      {/* Floating Add Button (hidden on Habits tab) */}
+      {fabAction && (
+        <button
+          onClick={fabAction}
+          className="fixed bottom-24 right-6 w-14 h-14 bg-accent hover:bg-accent-hover text-accent-fg rounded-full shadow-lg flex items-center justify-center transition-all active:scale-[0.98] z-40"
+          aria-label={`Add ${tab} log`}
+        >
+          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        </button>
+      )}
 
       {/* Delete Confirmation */}
       <ConfirmDialog
@@ -821,6 +1103,56 @@ export default function LogPage() {
                 onClick={saveDrinkLog}
                 disabled={saving || !drinkDescription.trim()}
                 className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {saving ? t('common.saving') : t('common.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Measurement Modal */}
+      {modal === 'measurement' && (
+        <div className="fixed inset-0 bg-overlay z-[60] flex items-end justify-center" onClick={closeModal}>
+          <div
+            className="bg-surface w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up safe-area-bottom"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold text-text-primary mb-4">{editingMeasurement ? t('log.editMeasurement') : t('log.addMeasurement')}</h2>
+
+            <div className="space-y-3">
+              <input
+                type="number"
+                min="50"
+                max="300"
+                step="0.1"
+                value={measureHeightCm}
+                onChange={(e) => setMeasureHeightCm(e.target.value)}
+                className={inputClass}
+                placeholder={t('log.heightCm')}
+                autoFocus
+              />
+              <input
+                type="number"
+                min="10"
+                max="500"
+                step="0.1"
+                value={measureWeightKg}
+                onChange={(e) => setMeasureWeightKg(e.target.value)}
+                className={inputClass}
+                placeholder={t('log.weightKg')}
+              />
+              <input
+                type="text"
+                value={measureNotes}
+                onChange={(e) => setMeasureNotes(e.target.value)}
+                className={inputClass}
+                placeholder={t('log.notesOptional')}
+              />
+              <button
+                onClick={saveMeasurementLog}
+                disabled={saving || (!measureHeightCm && !measureWeightKg)}
+                className="w-full py-3 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {saving ? t('common.saving') : t('common.save')}
               </button>
