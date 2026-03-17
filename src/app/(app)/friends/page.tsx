@@ -242,10 +242,10 @@ export default function FriendsPage() {
     <div className="max-w-lg mx-auto px-4 pt-6">
       {ToastContainer}
 
-      <h1 className="text-2xl font-bold text-primary mb-4">{t('friends.title')}</h1>
+      <h1 className="text-2xl font-bold text-text-primary mb-4">{t('friends.title')}</h1>
 
       {/* Pill tabs */}
-      <div className="flex gap-1 bg-card-bg rounded-xl p-1 mb-5">
+      <div className="flex gap-1 bg-surface-secondary rounded-xl p-1 mb-5">
         {tabs.map((tb) => (
           <button
             key={tb.key}
@@ -253,8 +253,8 @@ export default function FriendsPage() {
             className={cn(
               'flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200',
               tab === tb.key
-                ? 'bg-white text-primary shadow-sm'
-                : 'text-secondary'
+                ? 'bg-surface text-text-text-primary shadow-sm'
+                : 'text-text-text-secondary'
             )}
           >
             {t(tb.labelKey)}
@@ -278,24 +278,24 @@ export default function FriendsPage() {
                   actionLabel={t('friends.addFriend')}
                 />
               ) : activities.length === 0 ? (
-                <p className="text-center text-secondary py-8">{t('friends.noActivity')}</p>
+                <p className="text-center text-text-secondary py-8">{t('friends.noActivity')}</p>
               ) : (
                 activities.map((activity, i) => (
-                  <div key={i} className="bg-white rounded-xl p-4 shadow-xs flex items-start gap-3">
+                  <div key={i} className="bg-surface rounded-xl p-4 shadow-xs flex items-start gap-3">
                     <Avatar url={activity.friend_avatar_url} name={activity.friend_display_name} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-sm text-primary truncate">
+                        <span className="font-medium text-sm text-text-primary truncate">
                           {activity.friend_display_name ?? 'User'}
                         </span>
-                        <span className="text-xs text-secondary">{activityLabel(activity.activity_type)}</span>
+                        <span className="text-xs text-text-secondary">{activityLabel(activity.activity_type)}</span>
                         <span>{activityIcon(activity.activity_type)}</span>
                       </div>
-                      <p className="text-sm text-primary mt-0.5">{activity.description}</p>
+                      <p className="text-sm text-text-primary mt-0.5">{activity.description}</p>
                       {activity.detail && (
-                        <p className="text-xs text-secondary mt-0.5">{activity.detail}</p>
+                        <p className="text-xs text-text-secondary mt-0.5">{activity.detail}</p>
                       )}
-                      <p className="text-xs text-tertiary mt-1">{formatTime(activity.logged_at)}</p>
+                      <p className="text-xs text-text-tertiary mt-1">{formatTime(activity.logged_at)}</p>
                     </div>
                   </div>
                 ))
@@ -309,15 +309,15 @@ export default function FriendsPage() {
               {/* Incoming requests */}
               {incomingRequests.length > 0 && (
                 <div>
-                  <h2 className="text-sm font-semibold text-secondary mb-2">{t('friends.pendingRequests')}</h2>
+                  <h2 className="text-sm font-semibold text-text-secondary mb-2">{t('friends.pendingRequests')}</h2>
                   <div className="space-y-2">
                     {incomingRequests.map((req) => (
-                      <div key={req.id} className="bg-white rounded-xl p-4 shadow-xs flex items-center gap-3">
+                      <div key={req.id} className="bg-surface rounded-xl p-4 shadow-xs flex items-center gap-3">
                         <Avatar url={req.profile.avatar_url} name={req.profile.display_name} />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-primary truncate">{req.profile.display_name ?? 'User'}</p>
+                          <p className="font-medium text-sm text-text-primary truncate">{req.profile.display_name ?? 'User'}</p>
                           {req.profile.username && (
-                            <p className="text-xs text-secondary">@{req.profile.username}</p>
+                            <p className="text-xs text-text-secondary">@{req.profile.username}</p>
                           )}
                         </div>
                         <div className="flex gap-2">
@@ -329,7 +329,7 @@ export default function FriendsPage() {
                           </button>
                           <button
                             onClick={() => declineRequest(req.id)}
-                            className="px-3 py-1.5 bg-card-bg text-secondary text-xs font-medium rounded-lg"
+                            className="px-3 py-1.5 bg-surface-secondary text-text-secondary text-xs font-medium rounded-lg"
                           >
                             {t('friends.decline')}
                           </button>
@@ -343,20 +343,20 @@ export default function FriendsPage() {
               {/* Sent requests */}
               {sentRequests.length > 0 && (
                 <div>
-                  <h2 className="text-sm font-semibold text-secondary mb-2">{t('friends.sentRequests')}</h2>
+                  <h2 className="text-sm font-semibold text-text-secondary mb-2">{t('friends.sentRequests')}</h2>
                   <div className="space-y-2">
                     {sentRequests.map((req) => (
-                      <div key={req.id} className="bg-white rounded-xl p-4 shadow-xs flex items-center gap-3">
+                      <div key={req.id} className="bg-surface rounded-xl p-4 shadow-xs flex items-center gap-3">
                         <Avatar url={req.profile.avatar_url} name={req.profile.display_name} />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-primary truncate">{req.profile.display_name ?? 'User'}</p>
+                          <p className="font-medium text-sm text-text-primary truncate">{req.profile.display_name ?? 'User'}</p>
                           {req.profile.username && (
-                            <p className="text-xs text-secondary">@{req.profile.username}</p>
+                            <p className="text-xs text-text-secondary">@{req.profile.username}</p>
                           )}
                         </div>
                         <button
                           onClick={() => declineRequest(req.id)}
-                          className="px-3 py-1.5 bg-card-bg text-secondary text-xs font-medium rounded-lg"
+                          className="px-3 py-1.5 bg-surface-secondary text-text-secondary text-xs font-medium rounded-lg"
                         >
                           {t('friends.cancelRequest')}
                         </button>
@@ -370,16 +370,16 @@ export default function FriendsPage() {
               {friends.length > 0 ? (
                 <div>
                   {(incomingRequests.length > 0 || sentRequests.length > 0) && (
-                    <h2 className="text-sm font-semibold text-secondary mb-2">{t('friends.friendsList')}</h2>
+                    <h2 className="text-sm font-semibold text-text-secondary mb-2">{t('friends.friendsList')}</h2>
                   )}
                   <div className="space-y-2">
                     {friends.map((friend) => (
-                      <div key={friend.id} className="bg-white rounded-xl p-4 shadow-xs flex items-center gap-3">
+                      <div key={friend.id} className="bg-surface rounded-xl p-4 shadow-xs flex items-center gap-3">
                         <Avatar url={friend.profile.avatar_url} name={friend.profile.display_name} />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-primary truncate">{friend.profile.display_name ?? 'User'}</p>
+                          <p className="font-medium text-sm text-text-primary truncate">{friend.profile.display_name ?? 'User'}</p>
                           {friend.profile.username && (
-                            <p className="text-xs text-secondary">@{friend.profile.username}</p>
+                            <p className="text-xs text-text-secondary">@{friend.profile.username}</p>
                           )}
                         </div>
                         <button
@@ -410,7 +410,7 @@ export default function FriendsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('friends.searchPlaceholder')}
-                className="w-full px-4 py-3 bg-white rounded-xl border border-border text-sm text-primary placeholder:text-tertiary focus:outline-none focus:ring-2 focus:ring-accent/30 mb-4"
+                className="w-full px-4 py-3 bg-surface rounded-xl border border-border text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent/30 mb-4"
                 autoFocus
               />
 
@@ -419,24 +419,24 @@ export default function FriendsPage() {
                   <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : searchQuery.trim().length >= 2 && searchResults.length === 0 ? (
-                <p className="text-center text-secondary py-8">{t('friends.noResults')}</p>
+                <p className="text-center text-text-secondary py-8">{t('friends.noResults')}</p>
               ) : (
                 <div className="space-y-2">
                   {searchResults.map((result) => {
                     const state = getSearchButtonState(result.id);
                     return (
-                      <div key={result.id} className="bg-white rounded-xl p-4 shadow-xs flex items-center gap-3">
+                      <div key={result.id} className="bg-surface rounded-xl p-4 shadow-xs flex items-center gap-3">
                         <Avatar url={result.avatar_url} name={result.display_name} />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-primary truncate">{result.display_name ?? 'User'}</p>
+                          <p className="font-medium text-sm text-text-primary truncate">{result.display_name ?? 'User'}</p>
                           {result.username && (
-                            <p className="text-xs text-secondary">@{result.username}</p>
+                            <p className="text-xs text-text-secondary">@{result.username}</p>
                           )}
                         </div>
                         {state === 'friends' ? (
                           <span className="text-xs text-accent font-medium">{t('friends.alreadyFriends')}</span>
                         ) : state === 'pending' ? (
-                          <span className="text-xs text-secondary font-medium">{t('friends.pending')}</span>
+                          <span className="text-xs text-text-secondary font-medium">{t('friends.pending')}</span>
                         ) : (
                           <button
                             onClick={() => sendRequest(result.id)}
@@ -481,7 +481,7 @@ function Avatar({ url, name }: { url: string | null; name: string | null }) {
 function EmptyState({ message, action, actionLabel }: { message: string; action: () => void; actionLabel: string }) {
   return (
     <div className="text-center py-12">
-      <p className="text-secondary mb-4">{message}</p>
+      <p className="text-text-secondary mb-4">{message}</p>
       <button
         onClick={action}
         className="px-5 py-2.5 bg-accent text-accent-fg text-sm font-medium rounded-xl"
