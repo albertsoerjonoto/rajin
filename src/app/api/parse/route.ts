@@ -286,13 +286,14 @@ export async function POST(request: NextRequest) {
         if (msg.role === 'user' && typeof msg.content === 'string') {
           contents.push({ role: 'user', parts: [{ text: msg.content }] });
         } else if (msg.role === 'assistant' && typeof msg.content === 'string') {
-          // Wrap assistant text as JSON so it's consistent with the expected response format
+          // Wrap assistant response as JSON with actual parsed data from history
+          // This teaches the model the correct response format (structured data in arrays)
           const wrappedJson = JSON.stringify({
             message: msg.content,
-            foods: [],
-            exercises: [],
-            drinks: [],
-            measurements: [],
+            foods: Array.isArray(msg.parsedFoods) ? msg.parsedFoods : [],
+            exercises: Array.isArray(msg.parsedExercises) ? msg.parsedExercises : [],
+            drinks: Array.isArray(msg.parsedDrinks) ? msg.parsedDrinks : [],
+            measurements: Array.isArray(msg.parsedMeasurements) ? msg.parsedMeasurements : [],
             food_edits: [],
             exercise_edits: [],
             drink_edits: [],
