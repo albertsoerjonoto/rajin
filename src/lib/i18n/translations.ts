@@ -303,4 +303,10 @@ export const translations: Translations = {
   'emoji.productivity': { id: 'Produktivitas', en: 'Productivity' },
   'emoji.social': { id: 'Sosial', en: 'Social' },
   'emoji.nature': { id: 'Alam', en: 'Nature' },
+
+  // ── Voice input ──
+  'voice.micPermissionDenied': { id: 'Akses mikrofon ditolak', en: 'Microphone access denied' },
+  'voice.noSpeechDetected': { id: 'Tidak ada suara terdeteksi', en: 'No speech detected' },
+  'voice.transcriptionFailed': { id: 'Gagal menyalin suara', en: 'Transcription failed' },
+  'voice.networkError': { id: 'Kesalahan jaringan saat input suara', en: 'Network error during voice input' },
 };
