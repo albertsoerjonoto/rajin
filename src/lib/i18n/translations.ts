@@ -206,6 +206,13 @@ export const translations: Translations = {
   'auth.checkEmailAction': { id: 'Klik untuk mengaktifkan akun kamu.', en: 'Click it to activate your account.' },
   'auth.checkSpam': { id: 'Tidak menerima? Periksa folder spam.', en: "Didn't get it? Check your spam folder." },
   'auth.failedCreate': { id: 'Gagal membuat akun', en: 'Failed to create account' },
+  'auth.signupWithEmail': { id: 'Daftar dengan Email', en: 'Sign up with Email' },
+  'auth.signupWithApple': { id: 'Daftar dengan Apple', en: 'Sign up with Apple' },
+  'auth.signupWithGoogle': { id: 'Daftar dengan Google', en: 'Sign up with Google' },
+  'auth.loginWithEmail': { id: 'Masuk dengan Email', en: 'Sign in with Email' },
+  'auth.loginWithApple': { id: 'Masuk dengan Apple', en: 'Sign in with Apple' },
+  'auth.loginWithGoogle': { id: 'Masuk dengan Google', en: 'Sign in with Google' },
+  'auth.back': { id: 'Kembali', en: 'Back' },
 
   // ── Onboarding ──
   'onboarding.nameTitle': { id: 'Siapa nama kamu?', en: 'What should we call you?' },

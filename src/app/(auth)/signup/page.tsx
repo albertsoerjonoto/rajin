@@ -6,75 +6,17 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useLocale } from '@/lib/i18n';
 
-type SignupMode = 'username' | 'email';
-
 export default function SignupPage() {
-  const [mode, setMode] = useState<SignupMode>('username');
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const router = useRouter();
   const supabase = createClient();
   const { t } = useLocale();
-
-  const handleUsernameSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      setError(t('auth.usernameInvalid'));
-      return;
-    }
-
-    if (password.length < 6) {
-      setError(t('auth.passwordMinLength'));
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError(t('auth.passwordsNoMatch'));
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await fetch('/api/signup-username', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.toLowerCase(), password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || t('auth.failedCreate'));
-        setLoading(false);
-        return;
-      }
-
-      // Auto sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password,
-      });
-
-      if (signInError) {
-        setError(signInError.message);
-        setLoading(false);
-        return;
-      }
-
-      router.push('/onboarding');
-      router.refresh();
-    } catch {
-      setError(t('auth.somethingWrong'));
-      setLoading(false);
-    }
-  };
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +51,19 @@ export default function SignupPage() {
     }
   };
 
+  const handleOAuthSignup = async (provider: 'google' | 'apple') => {
+    setError('');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) {
+      setError(error.message);
+    }
+  };
+
   if (emailSent) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg px-4">
@@ -137,151 +92,99 @@ export default function SignupPage() {
           <p className="text-text-secondary mt-2">{t('auth.signupSubtitle')}</p>
         </div>
 
-        {/* Mode toggle */}
-        <div className="flex gap-2 mb-6">
-          {(['username', 'email'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => { setMode(m); setError(''); }}
-              className={`flex-1 py-2 rounded-xl text-sm transition-all capitalize ${
-                mode === m
-                  ? 'bg-surface-hover text-text-primary font-semibold'
-                  : 'bg-surface-secondary text-text-muted hover:bg-surface-hover'
-              }`}
-            >
-              {m === 'username' ? t('auth.username') : t('auth.email')}
-            </button>
-          ))}
-        </div>
-
-        {mode === 'username' ? (
-          <form onSubmit={handleUsernameSignup} className="space-y-4">
-            {error && (
-              <div className="bg-danger-surface text-danger-text text-sm p-3 rounded-xl">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-text-label mb-1">
-                {t('auth.username')}
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-                required
-                maxLength={20}
-                className={inputClass}
-                placeholder="your_username"
-                autoCapitalize="none"
-                autoCorrect="off"
-              />
-              <p className="text-xs text-text-tertiary mt-1">{t('auth.usernameRequirements')}</p>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-text-label mb-1">
-                {t('auth.password')}
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className={inputClass}
-                placeholder="••••••••"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-label mb-1">
-                {t('auth.confirmPassword')}
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className={inputClass}
-                placeholder="••••••••"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleEmailSignup} className="space-y-4">
-            {error && (
-              <div className="bg-danger-surface text-danger-text text-sm p-3 rounded-xl">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-text-label mb-1">
-                {t('auth.email')}
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className={inputClass}
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="emailPassword" className="block text-sm font-medium text-text-label mb-1">
-                {t('auth.password')}
-              </label>
-              <input
-                id="emailPassword"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className={inputClass}
-                placeholder="••••••••"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="emailConfirmPassword" className="block text-sm font-medium text-text-label mb-1">
-                {t('auth.confirmPassword')}
-              </label>
-              <input
-                id="emailConfirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className={inputClass}
-                placeholder="••••••••"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
-            </button>
-          </form>
+        {error && (
+          <div className="bg-danger-surface text-danger-text text-sm p-3 rounded-xl mb-4">
+            {error}
+          </div>
         )}
+
+        <div className="space-y-3">
+          {!showEmailForm ? (
+            <button
+              onClick={() => setShowEmailForm(true)}
+              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-surface border border-border-strong rounded-xl font-medium text-text-primary hover:bg-surface-hover transition-all"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              {t('auth.signupWithEmail')}
+            </button>
+          ) : (
+            <form onSubmit={handleEmailSignup} className="space-y-3">
+              <div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className={inputClass}
+                  placeholder={t('auth.email')}
+                />
+              </div>
+              <div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className={inputClass}
+                  placeholder={t('auth.password')}
+                />
+              </div>
+              <div>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className={inputClass}
+                  placeholder={t('auth.confirmPassword')}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 bg-accent hover:bg-accent-hover text-accent-fg font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowEmailForm(false); setError(''); }}
+                className="w-full text-sm text-text-tertiary font-medium hover:text-text-secondary transition-colors"
+              >
+                {t('auth.back')}
+              </button>
+            </form>
+          )}
+
+          {!showEmailForm && (
+            <>
+              <button
+                onClick={() => handleOAuthSignup('apple')}
+                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-surface border border-border-strong rounded-xl font-medium text-text-primary hover:bg-surface-hover transition-all"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                </svg>
+                {t('auth.signupWithApple')}
+              </button>
+
+              <button
+                onClick={() => handleOAuthSignup('google')}
+                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-surface border border-border-strong rounded-xl font-medium text-text-primary hover:bg-surface-hover transition-all"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+                {t('auth.signupWithGoogle')}
+              </button>
+            </>
+          )}
+        </div>
 
         <p className="text-center text-sm text-text-secondary mt-6">
           {t('auth.alreadyHaveAccount')}{' '}
