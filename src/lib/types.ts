@@ -1,6 +1,6 @@
 export type Frequency = 'daily' | 'weekly';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
-export type DrinkType = 'water' | 'coffee' | 'tea' | 'juice' | 'soda' | 'milk' | 'other';
+export type DrinkType = 'water' | 'coffee' | 'tea' | 'juice' | 'soda' | 'milk' | 'smoothie' | 'other';
 export type LogSource = 'manual' | 'chat';
 export type Gender = 'male' | 'female';
 export type FriendshipStatus = 'pending' | 'accepted' | 'declined';

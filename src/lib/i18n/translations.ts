@@ -34,6 +34,7 @@ export const translations: Translations = {
   'meal.lunch': { id: 'Makan Siang', en: 'Lunch' },
   'meal.dinner': { id: 'Makan Malam', en: 'Dinner' },
   'meal.other': { id: 'Lainnya', en: 'Other' },
+  'meal.snack': { id: 'Camilan', en: 'Snack' },
 
   // ── Dashboard ──
   'dashboard.habits': { id: 'Kebiasaan', en: 'Habits' },
@@ -85,6 +86,8 @@ export const translations: Translations = {
   'log.caloriesBurned': { id: 'Kalori terbakar', en: 'Calories burned' },
   'log.notesOptional': { id: 'Catatan (opsional)', en: 'Notes (optional)' },
   'log.noFoodLogged': { id: 'Belum ada makanan hari ini', en: 'No food logged today' },
+  'log.noMealsLogged': { id: 'Belum ada makanan hari ini', en: 'No meals logged today' },
+  'log.noSnacksLogged': { id: 'Belum ada camilan hari ini', en: 'No snacks logged today' },
   'log.noExerciseLogged': { id: 'Belum ada olahraga hari ini', en: 'No exercise logged today' },
   'log.deleteLog': { id: 'Hapus log', en: 'Delete log' },
   'log.deleteConfirm': { id: 'Yakin? Ini tidak bisa dibatalkan.', en: 'Are you sure? This cannot be undone.' },
@@ -274,6 +277,7 @@ export const translations: Translations = {
   'drink.juice': { id: 'Jus', en: 'Juice' },
   'drink.soda': { id: 'Soda', en: 'Soda' },
   'drink.milk': { id: 'Susu', en: 'Milk' },
+  'drink.smoothie': { id: 'Smoothie', en: 'Smoothie' },
   'drink.other': { id: 'Lainnya', en: 'Other' },
   'drink.drinks': { id: 'Minuman', en: 'Drinks' },
   'drink.addDrink': { id: 'Tambah Minuman', en: 'Add Drink' },
