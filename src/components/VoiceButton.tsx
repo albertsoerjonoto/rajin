@@ -114,6 +114,7 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
       const res = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData,
+        signal: AbortSignal.timeout(30000),
       });
 
       const data = await res.json();
