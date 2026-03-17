@@ -175,7 +175,8 @@ export default function DashboardPage() {
           id: user.id,
           email: user.email!,
           display_name: user.email!.split('@')[0],
-          daily_calorie_offset: 0,
+          calorie_offset_min: -200,
+          calorie_offset_max: 200,
         })
         .select()
         .single();
@@ -470,9 +471,12 @@ export default function DashboardPage() {
   const targets = profile ? computeNutritionTargets(profile) : null;
   const hasBodyStats = targets?.hasData ?? false;
   const calorieTarget = targets?.calorieTarget ?? 0;
-  const caloriePercent = calorieTarget > 0 ? Math.min((Math.max(displayCalories, 0) / calorieTarget) * 100, 100) : 0;
-  const isOverBudget = !selectedMeal && calorieTarget > 0 && netCalories > calorieTarget;
-  const remainingCalories = calorieTarget - netCalories;
+  const calorieRangeMin = targets?.calorieRange.min ?? 0;
+  const calorieRangeMax = targets?.calorieRange.max ?? 0;
+  // Progress bar fills towards the max of the range
+  const caloriePercent = calorieRangeMax > 0 ? Math.min((Math.max(displayCalories, 0) / calorieRangeMax) * 100, 100) : 0;
+  const isAboveRange = !selectedMeal && calorieRangeMax > 0 && netCalories > calorieRangeMax;
+  const isWithinRange = !selectedMeal && calorieRangeMin > 0 && netCalories >= calorieRangeMin && netCalories <= calorieRangeMax;
 
   const categoryKeys = [
     { key: 'breakfast', labelKey: 'dashboard.breakfast' },
@@ -490,11 +494,23 @@ export default function DashboardPage() {
   };
 
   const deltaLabel = targets ? (
-    Math.abs(targets.calorieOffset) <= 50
+    targets.calorieOffsetMin >= -50 && targets.calorieOffsetMax <= 50
       ? t('nutrition.maintenance')
-      : targets.calorieOffset < 0
-        ? `${Math.abs(targets.calorieOffset)} ${t('nutrition.calDeficit')}`
-        : `${targets.calorieOffset} ${t('nutrition.calSurplus')}`
+      : targets.calorieOffsetMax <= 0
+        ? (() => {
+            const absMin = Math.abs(targets.calorieOffsetMin);
+            const absMax = Math.abs(targets.calorieOffsetMax);
+            return absMin === absMax
+              ? `${absMin} ${t('nutrition.calDeficit')}`
+              : `${Math.min(absMin, absMax)}–${Math.max(absMin, absMax)} ${t('nutrition.calDeficit')}`;
+          })()
+        : targets.calorieOffsetMin >= 0
+          ? (() => {
+              return targets.calorieOffsetMin === targets.calorieOffsetMax
+                ? `${targets.calorieOffsetMax} ${t('nutrition.calSurplus')}`
+                : `${Math.min(targets.calorieOffsetMin, targets.calorieOffsetMax)}–${Math.max(targets.calorieOffsetMin, targets.calorieOffsetMax)} ${t('nutrition.calSurplus')}`;
+            })()
+          : `±${Math.max(Math.abs(targets.calorieOffsetMin), Math.abs(targets.calorieOffsetMax))} ${t('common.cal')}`
   ) : '';
 
   // Analytics computations
@@ -802,7 +818,7 @@ export default function DashboardPage() {
                     <div className="flex items-baseline gap-1.5">
                       <span className={cn(
                         'text-3xl font-bold transition-all duration-300',
-                        selectedMeal ? 'text-text-primary' : isOverBudget ? 'text-warning' : 'text-text-primary'
+                        selectedMeal ? 'text-text-primary' : isAboveRange ? 'text-warning' : 'text-text-primary'
                       )}>{displayCalories}</span>
                       <span className="text-sm text-text-tertiary">{t('common.cal')}</span>
                     </div>
@@ -811,28 +827,38 @@ export default function DashboardPage() {
                         {t(`dashboard.${selectedMeal}`)} {t('dashboard.only')}
                       </span>
                     ) : (
-                      <span className={cn('text-xs font-medium', isOverBudget ? 'text-warning' : 'text-positive-text')}>
-                        {isOverBudget
-                          ? `${Math.abs(remainingCalories)} ${t('common.cal')} ${t('dashboard.over')}`
-                          : `${remainingCalories} ${t('common.cal')} ${t('dashboard.remaining')}`
+                      <span className={cn('text-xs font-medium',
+                        isAboveRange ? 'text-warning' :
+                        isWithinRange ? 'text-positive-text' : 'text-info'
+                      )}>
+                        {isAboveRange
+                          ? `${netCalories - calorieRangeMax} ${t('common.cal')} ${t('dashboard.aboveRange')}`
+                          : isWithinRange
+                            ? `${t('dashboard.withinRange')} · ${calorieRangeMax - netCalories} ${t('common.cal')} ${t('dashboard.remaining')}`
+                            : `${calorieRangeMin - netCalories} ${t('common.cal')} ${t('dashboard.belowRange')}`
                         }
                       </span>
                     )}
                   </div>
                   {!selectedMeal && (
                     <>
-                      <div className="w-full h-3 bg-surface-secondary rounded-full overflow-hidden">
+                      <div className="w-full h-3 bg-surface-secondary rounded-full overflow-hidden relative">
                         <div
                           className={cn(
                             'h-full rounded-full transition-all duration-500',
-                            netCalories > targets!.calorieRange.max ? 'bg-warning-bar' :
-                            netCalories >= targets!.calorieRange.min ? 'bg-positive-bar' : 'bg-accent'
+                            isAboveRange ? 'bg-warning-bar' :
+                            isWithinRange ? 'bg-positive-bar' : 'bg-accent'
                           )}
                           style={{ width: `${caloriePercent}%` }}
                         />
                       </div>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className="text-[10px] text-text-tertiary">
+                          {t('dashboard.target')}: {calorieRangeMin.toLocaleString()}–{calorieRangeMax.toLocaleString()} {t('common.cal')}
+                        </span>
+                      </div>
                       {totalCaloriesBurned > 0 && (
-                        <div className="flex items-center justify-between mt-2 text-xs text-text-tertiary">
+                        <div className="flex items-center justify-between mt-1 text-xs text-text-tertiary">
                           <span>{t('dashboard.eaten')}: {totalCalories}</span>
                           <span>{t('dashboard.burned')}: -{totalCaloriesBurned}</span>
                           <span className="font-semibold text-text-secondary">{t('dashboard.netCal')}: {netCalories}</span>
@@ -899,8 +925,8 @@ export default function DashboardPage() {
                       <span>·</span>
                       <span className={cn(
                         'font-semibold',
-                        targets.calorieOffset < -50 ? 'text-info' :
-                        targets.calorieOffset > 50 ? 'text-warning' : 'text-positive-text'
+                        targets.calorieOffsetMax <= 0 ? 'text-info' :
+                        targets.calorieOffsetMin >= 0 ? 'text-warning' : 'text-positive-text'
                       )}>
                         {deltaLabel}
                       </span>
