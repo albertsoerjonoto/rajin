@@ -31,6 +31,7 @@ export default function ProfilePage() {
   const [gender, setGender] = useState<Gender | ''>('');
   const [heightCm, setHeightCm] = useState('');
   const [weightKg, setWeightKg] = useState('');
+  const [waterGoalMl, setWaterGoalMl] = useState('2000');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,6 +58,7 @@ export default function ProfilePage() {
       setCalorieMode('surplus');
       setCalorieAmount(String(offset));
     }
+    setWaterGoalMl(String(p.daily_water_goal_ml ?? 2000));
     setDateOfBirth(p.date_of_birth || '');
     setGender(p.gender || '');
     setHeightCm(p.height_cm ? String(p.height_cm) : '');
@@ -147,6 +149,7 @@ export default function ProfilePage() {
         daily_calorie_offset: calorieMode === 'maintenance' ? 0 :
           calorieMode === 'deficit' ? -(parseInt(calorieAmount) || 500) :
           (parseInt(calorieAmount) || 500),
+        daily_water_goal_ml: parseInt(waterGoalMl) || 2000,
         date_of_birth: dateOfBirth || null,
         gender: gender || null,
         height_cm: heightCm ? parseFloat(heightCm) : null,
@@ -429,6 +432,45 @@ export default function ProfilePage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Water Goal section */}
+          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">{t('profile.waterGoal')}</p>
+          <div className="bg-surface rounded-2xl overflow-hidden">
+            <div className={rowClass}>
+              <span className="text-sm text-text-primary shrink-0 mr-3">{t('profile.waterGoal')}</span>
+              <div className="flex gap-1">
+                {['1500', '2000', '2500', '3000'].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setWaterGoalMl(val)}
+                    className={`px-2.5 py-1 rounded-lg text-xs transition-all ${
+                      waterGoalMl === val
+                        ? 'bg-surface-hover text-text-primary font-semibold'
+                        : 'text-text-muted hover:text-text-secondary'
+                    }`}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="px-4 pb-3.5 -mt-1">
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="500"
+                  max="5000"
+                  step="100"
+                  value={waterGoalMl}
+                  onChange={(e) => setWaterGoalMl(e.target.value)}
+                  className="w-20 text-sm text-right bg-surface-secondary rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-input-ring"
+                  placeholder="2000"
+                />
+                <span className="text-xs text-text-tertiary">{t('profile.waterGoalUnit')}</span>
+              </div>
             </div>
           </div>
 
