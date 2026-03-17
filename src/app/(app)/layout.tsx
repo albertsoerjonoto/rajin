@@ -109,7 +109,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content */}
-      <main className={cn('flex-1 pb-20', isExpanded && 'lg:pb-0 lg:ml-60')}>
+      <main className={cn('flex-1 pb-20 lg:pb-0', isExpanded ? 'lg:ml-60' : '')}>
         <ServiceWorkerRegister />
         {children}
       </main>

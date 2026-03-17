@@ -678,10 +678,10 @@ export default function ProfilePage() {
 
           {/* Display section — only visible on desktop */}
           <div className="hidden lg:block">
-            <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">{t('profile.display')}</p>
+            <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">{t('profile.display') || 'Display'}</p>
             <div className="bg-surface rounded-2xl overflow-hidden">
               <div className={rowClass}>
-                <span className="text-sm text-text-primary shrink-0 mr-3">{t('profile.desktopLayout')}</span>
+                <span className="text-sm text-text-primary shrink-0 mr-3">{t('profile.desktopLayout') || 'Desktop Layout'}</span>
                 <div className="flex gap-1">
                   {(['compact', 'expanded'] as const).map((mode) => (
                     <button
@@ -694,7 +694,7 @@ export default function ProfilePage() {
                           : 'text-text-muted hover:text-text-secondary'
                       }`}
                     >
-                      {mode === 'compact' ? t('profile.compact') : t('profile.expanded')}
+                      {mode === 'compact' ? (t('profile.compact') || 'Compact') : (t('profile.expanded') || 'Expanded')}
                     </button>
                   ))}
                 </div>

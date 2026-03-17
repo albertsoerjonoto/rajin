@@ -544,7 +544,7 @@ export default function LogPage() {
   const { isExpanded } = useDesktopLayout();
 
   return (
-    <div className={cn('max-w-lg mx-auto px-4', isExpanded && 'lg:max-w-3xl lg:px-8')}>
+    <div className={cn('max-w-lg mx-auto px-4', isExpanded && 'lg:max-w-5xl lg:px-8')}>
       {ToastContainer}
       <div className="sticky top-0 z-20 bg-bg -mx-4 px-4 pt-6 pb-3">
         <div className="flex items-center justify-between mb-3">
@@ -575,7 +575,7 @@ export default function LogPage() {
         <>
           {/* Food Tab */}
           {tab === 'food' && (
-            <div className="space-y-6">
+            <div className={cn('space-y-6', isExpanded && 'lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0')}>
               {/* Meals Section */}
               <section>
                 <div className="flex items-center justify-between mb-2">
@@ -617,7 +617,8 @@ export default function LogPage() {
                 )}
               </section>
 
-              {/* Snacks Section */}
+              {/* Snacks + Drinks (right column on desktop) */}
+              <div className="space-y-6">
               <section>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">{t('log.snacks')}</h3>
@@ -733,6 +734,7 @@ export default function LogPage() {
                   </div>
                 )}
               </section>
+              </div>{/* end snacks+drinks wrapper */}
             </div>
           )}
 
