@@ -119,7 +119,7 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
       const data = await res.json();
 
       if (!res.ok || !data.text) {
-        onErrorRef.current(data.error === 'No speech detected' ? 'voice.noSpeechDetected' : 'voice.transcriptionFailed');
+        onErrorRef.current(res.status === 422 ? 'voice.noSpeechDetected' : 'voice.transcriptionFailed');
         onRecordingChangeRef.current(false);
         setState('idle');
         return;
@@ -170,6 +170,7 @@ export default function VoiceButton({ onTranscript, onRecordingChange, onError, 
           transcribe(blob);
         } else {
           onErrorRef.current('voice.noSpeechDetected');
+          onRecordingChangeRef.current(false);
           setState('idle');
         }
       };
