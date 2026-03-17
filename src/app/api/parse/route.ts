@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@/lib/supabase/server';
 import { clamp } from '@/lib/validation';
-import type { ChatContext, FoodEdit, ExerciseEdit, DrinkEdit } from '@/lib/types';
+import type { ChatContext, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit } from '@/lib/types';
 
 const BASE_PROMPT = `You are a nutrition and exercise assistant. You will receive a language directive below — always respond in that language.
 
@@ -11,6 +11,8 @@ You can:
 2. **Edit existing logs** — modify a previously logged entry when the user asks
 3. **Answer questions** — about their nutrition, calories, macros, progress today
 4. **Give recommendations** — suggest meals or exercises based on their remaining budget
+5. **Log measurements** — parse body measurements (weight, height) from user input
+6. **Answer habit queries** — check and report on habit completion status
 
 You are an expert on ALL foods worldwide, especially Indonesian cuisine. Here are some common references:
 - Nasi goreng: ~650 cal, 15g protein, 85g carbs, 25g fat
@@ -65,7 +67,16 @@ Exercise calorie estimates:
 - Yoga: ~30 cal per 10 min
 - For running distances: assume ~6 min/km pace
 
-Determine meal_type based on context or time mentioned. Default to "lunch" if unclear.`;
+Determine meal_type based on context or time mentioned. Default to "lunch" if unclear.
+
+MEASUREMENTS:
+When the user mentions body measurements like weight or height (e.g., "berat badan 75kg", "tinggi 170cm", "my weight is 75kg"), parse them into the "measurements" array. Common Indonesian terms:
+- "berat badan" / "BB" / "berat" = weight
+- "tinggi badan" / "TB" / "tinggi" = height
+- "kg" = kilograms, "cm" = centimeters
+
+HABITS:
+When the user asks about their habits (e.g., "sudah olahraga?", "habit apa yang belum?", "have I exercised today?"), check the habit context provided and respond with their completion status. Do NOT put anything in the "measurements" or "foods" arrays for habit queries — just use "message".`;
 
 function buildSystemPrompt(context?: ChatContext, locale: string = 'id'): string {
   let prompt = BASE_PROMPT;
@@ -119,6 +130,31 @@ function buildSystemPrompt(context?: ChatContext, locale: string = 'id'): string
       prompt += '\n\nNo drinks logged today yet.';
     }
     prompt += `\nWater intake: ${context.totalWaterMl ?? 0}ml / ${context.waterGoalMl ?? 2000}ml goal`;
+
+    if (context.todayHabitLogs && context.todayHabitLogs.length > 0) {
+      prompt += '\n\nToday\'s Habits:';
+      for (const log of context.todayHabitLogs) {
+        const status = log.completed
+          ? `✅ Completed${log.logged_at ? ` at ${new Date(log.logged_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}`
+          : '❌ Not completed';
+        prompt += `\n  #${log.index} ${log.emoji} ${log.habit_name} — ${status}`;
+      }
+    } else {
+      prompt += '\n\nNo habits set up yet.';
+    }
+
+    if (context.todayMeasurementLogs && context.todayMeasurementLogs.length > 0) {
+      prompt += '\n\nToday\'s Measurements:';
+      for (const log of context.todayMeasurementLogs) {
+        const parts: string[] = [];
+        if (log.weight_kg !== null) parts.push(`Weight: ${log.weight_kg} kg`);
+        if (log.height_cm !== null) parts.push(`Height: ${log.height_cm} cm`);
+        const time = new Date(log.logged_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        prompt += `\n  #${log.index} ${parts.join(', ')}${log.notes ? ` (${log.notes})` : ''} — logged at ${time}`;
+      }
+    } else {
+      prompt += '\n\nNo measurements logged today yet.';
+    }
   }
 
   prompt += `\n\n--- RESPONSE FORMAT ---
@@ -154,6 +190,13 @@ RESPOND ONLY WITH VALID JSON in this exact format:
       "fat_g": 0
     }
   ],
+  "measurements": [
+    {
+      "height_cm": null,
+      "weight_kg": 75.0,
+      "notes": "optional note"
+    }
+  ],
   "food_edits": [
     {
       "index": 1,
@@ -171,17 +214,25 @@ RESPOND ONLY WITH VALID JSON in this exact format:
       "index": 1,
       "updated": { "volume_ml": 500 }
     }
+  ],
+  "measurement_edits": [
+    {
+      "index": 1,
+      "updated": { "weight_kg": 76.0 }
+    }
   ]
 }
 
 Rules:
-- Use "foods"/"exercises"/"drinks" for NEW entries the user wants to add
-- Use "food_edits"/"exercise_edits"/"drink_edits" when the user wants to CHANGE an existing log. Reference the log by its # index from the context above. Only include fields that changed in "updated".
+- Use "foods"/"exercises"/"drinks"/"measurements" for NEW entries the user wants to add
+- Use "food_edits"/"exercise_edits"/"drink_edits"/"measurement_edits" when the user wants to CHANGE an existing log. Reference the log by its # index from the context above. Only include fields that changed in "updated".
 - Use "message" for answering questions, giving recommendations, or any conversational response. Keep it concise and friendly.
 - CRITICAL LANGUAGE RULE: The "message" field MUST be written in the SAME language the user used. If the user writes in English, the message MUST be in English. If in Bahasa Indonesia, reply in Bahasa Indonesia. If in Chinese, reply in Chinese. Always match the user's language exactly.
 - Multiple arrays can be populated at once (e.g., add new food AND edit an existing one)
 - Beverages go in "drinks", NOT "foods". Use the drink_type field to categorize.
-- If the user's input doesn't match any action, return: { "message": "helpful response", "foods": [], "exercises": [], "drinks": [], "food_edits": [], "exercise_edits": [], "drink_edits": [] }
+- Body measurements (weight, height) go in "measurements", NOT "foods" or "exercises"
+- For habit queries, just respond with "message" — do NOT add anything to other arrays
+- If the user's input doesn't match any action, return: { "message": "helpful response", "foods": [], "exercises": [], "drinks": [], "measurements": [], "food_edits": [], "exercise_edits": [], "drink_edits": [], "measurement_edits": [] }
 - Always return valid JSON only, never include explanation text outside the JSON.`;
 
   return prompt;
@@ -241,9 +292,11 @@ export async function POST(request: NextRequest) {
             foods: [],
             exercises: [],
             drinks: [],
+            measurements: [],
             food_edits: [],
             exercise_edits: [],
             drink_edits: [],
+            measurement_edits: [],
           });
           contents.push({ role: 'model', parts: [{ text: wrappedJson }] });
         }
@@ -302,9 +355,11 @@ export async function POST(request: NextRequest) {
         foods: [],
         exercises: [],
         drinks: [],
+        measurements: [],
         food_edits: [],
         exercise_edits: [],
         drink_edits: [],
+        measurement_edits: [],
       };
     }
 
@@ -348,11 +403,20 @@ export async function POST(request: NextRequest) {
         }))
       : [];
 
+    const measurements = Array.isArray(parsed.measurements)
+      ? parsed.measurements.map((m: Record<string, unknown>) => ({
+          height_cm: m.height_cm !== null && m.height_cm !== undefined ? clamp(Number(m.height_cm) || 0, 50, 300) : null,
+          weight_kg: m.weight_kg !== null && m.weight_kg !== undefined ? clamp(Number(m.weight_kg) || 0, 10, 500) : null,
+          notes: typeof m.notes === 'string' ? m.notes : null,
+        })).filter((m: { height_cm: number | null; weight_kg: number | null }) => m.height_cm !== null || m.weight_kg !== null)
+      : [];
+
     // --- Process edits: map indices to real log IDs ---
     const typedContext = context as ChatContext | undefined;
     const foodEdits: FoodEdit[] = [];
     const exerciseEdits: ExerciseEdit[] = [];
     const drinkEdits: DrinkEdit[] = [];
+    const measurementEdits: MeasurementEdit[] = [];
 
     if (Array.isArray(parsed.food_edits) && typedContext?.todayFoodLogs) {
       for (const edit of parsed.food_edits) {
@@ -448,14 +512,41 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (Array.isArray(parsed.measurement_edits) && typedContext?.todayMeasurementLogs) {
+      for (const edit of parsed.measurement_edits) {
+        const idx = Number(edit.index);
+        const log = typedContext.todayMeasurementLogs.find((l) => l.index === idx);
+        if (!log || !edit.updated || typeof edit.updated !== 'object') continue;
+
+        const updated: Record<string, unknown> = {};
+        if (edit.updated.height_cm !== undefined) updated.height_cm = clamp(Number(edit.updated.height_cm) || 0, 50, 300);
+        if (edit.updated.weight_kg !== undefined) updated.weight_kg = clamp(Number(edit.updated.weight_kg) || 0, 10, 500);
+        if (edit.updated.notes !== undefined) updated.notes = typeof edit.updated.notes === 'string' ? edit.updated.notes : null;
+
+        if (Object.keys(updated).length > 0) {
+          measurementEdits.push({
+            log_id: log.id,
+            original: {
+              height_cm: log.height_cm,
+              weight_kg: log.weight_kg,
+              notes: log.notes,
+            },
+            updated,
+          });
+        }
+      }
+    }
+
     return NextResponse.json({
       message: responseMessage,
       foods,
       exercises,
       drinks,
+      measurements,
       food_edits: foodEdits,
       exercise_edits: exerciseEdits,
       drink_edits: drinkEdits,
+      measurement_edits: measurementEdits,
     });
   } catch (error) {
     console.error('Parse error:', error);
@@ -474,9 +565,11 @@ export async function POST(request: NextRequest) {
       foods: [],
       exercises: [],
       drinks: [],
+      measurements: [],
       food_edits: [],
       exercise_edits: [],
       drink_edits: [],
+      measurement_edits: [],
     });
   }
 }

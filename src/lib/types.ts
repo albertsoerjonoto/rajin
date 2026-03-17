@@ -41,6 +41,7 @@ export interface HabitLog {
   user_id: string;
   date: string;
   completed: boolean;
+  logged_at: string;
   created_at: string;
 }
 
@@ -54,6 +55,7 @@ export interface FoodLog {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  logged_at: string;
   source: LogSource;
   created_at: string;
 }
@@ -66,6 +68,7 @@ export interface ExerciseLog {
   duration_minutes: number;
   calories_burned: number;
   notes: string | null;
+  logged_at: string;
   source: LogSource;
   created_at: string;
 }
@@ -81,6 +84,19 @@ export interface DrinkLog {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  logged_at: string;
+  source: LogSource;
+  created_at: string;
+}
+
+export interface MeasurementLog {
+  id: string;
+  user_id: string;
+  date: string;
+  logged_at: string;
+  height_cm: number | null;
+  weight_kg: number | null;
+  notes: string | null;
   source: LogSource;
   created_at: string;
 }
@@ -114,6 +130,7 @@ export interface FriendActivity {
 export interface HabitWithLog extends Habit {
   completed: boolean;
   log_id?: string;
+  logged_at?: string;
 }
 
 // Gemini parsing types
@@ -143,10 +160,17 @@ export interface ParsedDrink {
   fat_g: number | null;
 }
 
+export interface ParsedMeasurement {
+  height_cm: number | null;
+  weight_kg: number | null;
+  notes: string | null;
+}
+
 export interface ParseResult {
   foods: ParsedFood[];
   exercises: ParsedExercise[];
   drinks: ParsedDrink[];
+  measurements: ParsedMeasurement[];
 }
 
 // Chat edit types
@@ -168,10 +192,18 @@ export interface DrinkEdit {
   updated: Partial<ParsedDrink>;
 }
 
+export interface MeasurementEdit {
+  log_id: string;
+  original: { height_cm: number | null; weight_kg: number | null; notes: string | null };
+  updated: Partial<ParsedMeasurement>;
+}
+
 export interface ChatContext {
   todayFoodLogs: { index: number; id: string; description: string; meal_type: MealType; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
   todayExerciseLogs: { index: number; id: string; exercise_type: string; duration_minutes: number; calories_burned: number }[];
   todayDrinkLogs: { index: number; id: string; drink_type: DrinkType; description: string; volume_ml: number; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
+  todayHabitLogs: { index: number; id: string; habit_name: string; emoji: string; completed: boolean; logged_at: string | null }[];
+  todayMeasurementLogs: { index: number; id: string; height_cm: number | null; weight_kg: number | null; notes: string | null; logged_at: string }[];
   profile: { display_name: string | null; calorieTarget: number; tdee: number; proteinTarget: string; carbsTarget: string; fatTarget: string } | null;
   totalCalories: number;
   totalCaloriesBurned: number;
@@ -193,9 +225,11 @@ export interface ChatMessage {
   parsed_foods: ParsedFood[] | null;
   parsed_exercises: ParsedExercise[] | null;
   parsed_drinks: ParsedDrink[] | null;
+  parsed_measurements: ParsedMeasurement[] | null;
   food_edits: FoodEdit[] | null;
   exercise_edits: ExerciseEdit[] | null;
   drink_edits: DrinkEdit[] | null;
+  measurement_edits: MeasurementEdit[] | null;
   saved: boolean;
   created_at: string;
 }
