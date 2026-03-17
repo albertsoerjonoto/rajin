@@ -315,7 +315,7 @@ export async function POST(request: NextRequest) {
         if (!supabaseUrl || !image_url.startsWith(supabaseUrl)) {
           throw new Error('Invalid image URL origin');
         }
-        const imgResponse = await fetch(image_url);
+        const imgResponse = await fetch(image_url, { signal: AbortSignal.timeout(5000) });
         const imgBuffer = await imgResponse.arrayBuffer();
         const base64 = Buffer.from(imgBuffer).toString('base64');
         const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg';
