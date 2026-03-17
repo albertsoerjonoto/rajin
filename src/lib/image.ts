@@ -8,15 +8,13 @@ export async function compressAvatar(file: File): Promise<Blob> {
 
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = reject;
     const url = URL.createObjectURL(file);
-    el.src = url;
-    // Clean up object URL after load
     el.onload = () => {
       URL.revokeObjectURL(url);
       resolve(el);
     };
+    el.onerror = reject;
+    el.src = url;
   });
 
   // Center-crop to square, then scale to SIZE×SIZE
