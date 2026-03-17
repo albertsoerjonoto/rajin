@@ -3,6 +3,7 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type DrinkType = 'water' | 'coffee' | 'tea' | 'juice' | 'soda' | 'milk' | 'other';
 export type LogSource = 'manual' | 'chat';
 export type Gender = 'male' | 'female';
+export type FriendshipStatus = 'pending' | 'accepted' | 'declined';
 export type Locale = 'id' | 'en';
 
 export interface Profile {
@@ -98,6 +99,32 @@ export interface MeasurementLog {
   notes: string | null;
   source: LogSource;
   created_at: string;
+}
+
+export interface Friendship {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: FriendshipStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FriendProfile {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+export interface FriendActivity {
+  activity_type: 'food' | 'exercise' | 'drink' | 'habit';
+  friend_id: string;
+  friend_display_name: string | null;
+  friend_avatar_url: string | null;
+  description: string;
+  detail: string;
+  logged_at: string;
 }
 
 export interface HabitWithLog extends Habit {
