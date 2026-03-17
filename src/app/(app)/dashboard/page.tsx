@@ -23,7 +23,7 @@ import {
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile } from '@/lib/types';
+import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile, FriendProfile, SharedHabit } from '@/lib/types';
 import { buildDayDataMap } from '@/components/analytics/types';
 import type { DayData } from '@/components/analytics/types';
 import StreakCard from '@/components/analytics/StreakCard';
@@ -119,6 +119,9 @@ export default function DashboardPage() {
   const [editPrivate, setEditPrivate] = useState(false);
   const [activeHabit, setActiveHabit] = useState<HabitWithLog | null>(null);
   const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState<string | null>(null); // habit id
+  const [acceptedFriends, setAcceptedFriends] = useState<FriendProfile[]>([]);
+  const [sharedHabits, setSharedHabits] = useState<SharedHabit[]>([]);
 
   // Analytics state (for period != day)
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
@@ -335,6 +338,56 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Load accepted friends and shared habits for the share modal
+  useEffect(() => {
+    if (!user) return;
+    const sb = createClient();
+    // Load accepted friends
+    sb.from('friendships')
+      .select('*')
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+      .eq('status', 'accepted')
+      .then(async ({ data }) => {
+        if (!data) return;
+        const otherIds = data.map(f => f.requester_id === user.id ? f.addressee_id : f.requester_id);
+        if (otherIds.length === 0) return;
+        const { data: profiles } = await sb.from('profiles').select('id, username, display_name, avatar_url').in('id', otherIds);
+        setAcceptedFriends((profiles ?? []) as FriendProfile[]);
+      });
+    // Load shared habits
+    sb.from('shared_habits')
+      .select('*')
+      .or(`owner_id.eq.${user.id},friend_id.eq.${user.id}`)
+      .then(({ data }) => {
+        setSharedHabits((data ?? []) as SharedHabit[]);
+      });
+  }, [user]);
+
+  const shareHabit = async (habitId: string, friendId: string) => {
+    if (!user) return;
+    const sb = createClient();
+    const { error } = await sb.from('shared_habits').insert({
+      habit_id: habitId,
+      owner_id: user.id,
+      friend_id: friendId,
+    });
+    if (error) {
+      showToast('error', t('friends.failedShare'));
+      return;
+    }
+    showToast('success', t('friends.habitShared'));
+    setShowShareModal(null);
+    // Refresh shared habits
+    const { data } = await sb.from('shared_habits').select('*').or(`owner_id.eq.${user.id},friend_id.eq.${user.id}`);
+    setSharedHabits((data ?? []) as SharedHabit[]);
+  };
+
+  const getSharedFriendsForHabit = (habitId: string): FriendProfile[] => {
+    const accepted = sharedHabits.filter(sh => sh.habit_id === habitId && sh.status === 'accepted');
+    const friendIds = accepted.map(sh => sh.owner_id === user?.id ? sh.friend_id : sh.owner_id);
+    return acceptedFriends.filter(f => friendIds.includes(f.id));
+  };
 
   const toggleHabit = async (habit: HabitWithLog) => {
     if (!user || togglingId) return;
@@ -758,6 +811,46 @@ export default function DashboardPage() {
                             </button>
                             <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
                           </label>
+                          {!editPrivate && acceptedFriends.length > 0 && (
+                            <div className="mb-3">
+                              {showShareModal === habit.id ? (
+                                <div className="space-y-1">
+                                  <p className="text-xs text-text-secondary mb-1">{t('friends.selectFriend')}</p>
+                                  {acceptedFriends
+                                    .filter(f => !sharedHabits.some(sh => sh.habit_id === habit.id && (sh.friend_id === f.id || sh.owner_id === f.id)))
+                                    .map(friend => (
+                                      <button
+                                        key={friend.id}
+                                        onClick={() => shareHabit(habit.id, friend.id)}
+                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-secondary transition-colors text-left"
+                                      >
+                                        <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+                                          {friend.avatar_url ? (
+                                            <img src={friend.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                                          ) : (
+                                            <span className="text-[10px] font-semibold text-accent">{(friend.display_name ?? '?')[0].toUpperCase()}</span>
+                                          )}
+                                        </div>
+                                        <span className="text-xs text-text-primary">{friend.display_name ?? friend.username}</span>
+                                      </button>
+                                    ))}
+                                  <button
+                                    onClick={() => setShowShareModal(null)}
+                                    className="text-xs text-text-tertiary mt-1"
+                                  >
+                                    {t('common.cancel')}
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setShowShareModal(habit.id)}
+                                  className="text-xs text-accent-text font-medium"
+                                >
+                                  {t('friends.shareHabit')}
+                                </button>
+                              )}
+                            </div>
+                          )}
                           <div className="flex gap-2">
                             <button
                               onClick={() => deleteHabit(habit.id)}
@@ -814,6 +907,23 @@ export default function DashboardPage() {
                       <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
                         {habit.name}
                       </span>
+                      {(() => {
+                        const sharedFriends = getSharedFriendsForHabit(habit.id);
+                        if (sharedFriends.length === 0) return null;
+                        return (
+                          <div className="flex -space-x-1 shrink-0">
+                            {sharedFriends.slice(0, 2).map(f => (
+                              <div key={f.id} className="w-4 h-4 rounded-full bg-accent/10 border border-surface flex items-center justify-center">
+                                {f.avatar_url ? (
+                                  <img src={f.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                                ) : (
+                                  <span className="text-[6px] font-bold text-accent">{(f.display_name ?? '?')[0].toUpperCase()}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {habit.is_private && (
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-text-tertiary">
                           <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />

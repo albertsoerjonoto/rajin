@@ -7,7 +7,7 @@ import { useLocale } from '@/lib/i18n';
 import { useToast } from '@/components/Toast';
 import { cn, getToday } from '@/lib/utils';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import type { Friendship, FriendProfile, FriendActivity } from '@/lib/types';
+import type { Friendship, FriendProfile, FriendActivity, SharedHabit } from '@/lib/types';
 
 type Tab = 'feed' | 'friends' | 'add';
 
@@ -37,6 +37,9 @@ export default function FriendsPage() {
   const [searching, setSearching] = useState(false);
   const [friendshipMap, setFriendshipMap] = useState<Record<string, { status: string; isRequester: boolean; id: string }>>({});
   const [confirmUnfriend, setConfirmUnfriend] = useState<{ id: string; name: string } | null>(null);
+
+  // Shared habit invitations
+  const [sharedInvites, setSharedInvites] = useState<(SharedHabit & { habit_name: string; habit_emoji: string; owner_name: string })[]>([]);
 
   const today = getToday();
 
@@ -104,11 +107,43 @@ export default function FriendsPage() {
     }
   }, [user, today]);
 
+  const loadSharedInvites = useCallback(async () => {
+    if (!user) return;
+    try {
+      const sb = createClient();
+      const { data } = await sb
+        .from('shared_habits')
+        .select('*')
+        .eq('friend_id', user.id)
+        .eq('status', 'pending');
+      if (!data || data.length === 0) { setSharedInvites([]); return; }
+
+      // Fetch habit names and owner names
+      const habitIds = data.map(sh => sh.habit_id);
+      const ownerIds = data.map(sh => sh.owner_id);
+      const [habitsRes, profilesRes] = await Promise.all([
+        sb.from('habits').select('id, name, emoji').in('id', habitIds),
+        sb.from('profiles').select('id, display_name').in('id', ownerIds),
+      ]);
+      const habitMap = new Map((habitsRes.data ?? []).map(h => [h.id, h]));
+      const profileMap = new Map((profilesRes.data ?? []).map(p => [p.id, p]));
+
+      setSharedInvites(data.map(sh => ({
+        ...sh,
+        habit_name: habitMap.get(sh.habit_id)?.name ?? '',
+        habit_emoji: habitMap.get(sh.habit_id)?.emoji ?? '',
+        owner_name: profileMap.get(sh.owner_id)?.display_name ?? 'User',
+      })));
+    } catch {
+      // Non-critical
+    }
+  }, [user]);
+
   const loadAll = useCallback(async () => {
     setLoading(true);
-    await Promise.all([loadFriendships(), loadActivity()]);
+    await Promise.all([loadFriendships(), loadActivity(), loadSharedInvites()]);
     setLoading(false);
-  }, [loadFriendships, loadActivity]);
+  }, [loadFriendships, loadActivity, loadSharedInvites]);
 
   useEffect(() => {
     loadAll();
@@ -198,6 +233,50 @@ export default function FriendsPage() {
       await loadAll();
     } catch {
       showToast('error', t('friends.failedUnfriend'));
+    }
+  };
+
+  const acceptSharedHabit = async (invite: typeof sharedInvites[0]) => {
+    if (!user) return;
+    try {
+      const sb = createClient();
+      // Accept the shared habit
+      const { error } = await sb.from('shared_habits').update({ status: 'accepted' }).eq('id', invite.id);
+      if (error) throw error;
+
+      // Create the habit for the friend if they don't have one with same name
+      const { data: existing } = await sb
+        .from('habits')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', invite.habit_name)
+        .eq('is_active', true)
+        .limit(1);
+
+      if (!existing || existing.length === 0) {
+        await sb.from('habits').insert({
+          user_id: user.id,
+          name: invite.habit_name,
+          emoji: invite.habit_emoji,
+          sort_order: 999,
+        });
+      }
+
+      showToast('success', t('friends.sharedAccepted'));
+      await loadSharedInvites();
+    } catch {
+      showToast('error', t('friends.failedAcceptShared'));
+    }
+  };
+
+  const rejectSharedHabit = async (id: string) => {
+    try {
+      const sb = createClient();
+      const { error } = await sb.from('shared_habits').update({ status: 'rejected' }).eq('id', id);
+      if (error) throw error;
+      await loadSharedInvites();
+    } catch {
+      showToast('error', t('friends.failedRejectShared'));
     }
   };
 
@@ -313,6 +392,41 @@ export default function FriendsPage() {
           {/* ── Friends List Tab ── */}
           {tab === 'friends' && (
             <div className="space-y-4">
+              {/* Shared habit invitations */}
+              {sharedInvites.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-semibold text-text-secondary mb-2">{t('friends.sharedHabits')}</h2>
+                  <div className="space-y-2">
+                    {sharedInvites.map((invite) => (
+                      <div key={invite.id} className="bg-surface rounded-xl p-4 shadow-xs">
+                        <p className="text-sm text-text-primary mb-2">
+                          <span className="font-medium">{invite.owner_name}</span>
+                          {' '}{t('friends.sharedHabitInvite').replace('{name}', '').trim()}
+                        </p>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-base">{invite.habit_emoji}</span>
+                          <span className="text-sm font-medium text-text-primary">{invite.habit_name}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => acceptSharedHabit(invite)}
+                            className="px-3 py-1.5 bg-accent text-accent-fg text-xs font-medium rounded-lg"
+                          >
+                            {t('friends.accept')}
+                          </button>
+                          <button
+                            onClick={() => rejectSharedHabit(invite.id)}
+                            className="px-3 py-1.5 bg-surface-secondary text-text-secondary text-xs font-medium rounded-lg"
+                          >
+                            {t('friends.decline')}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Incoming requests */}
               {incomingRequests.length > 0 && (
                 <div>
