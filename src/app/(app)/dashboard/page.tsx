@@ -33,6 +33,7 @@ import MacroDonutChart from '@/components/analytics/MacroDonutChart';
 import ExerciseChart from '@/components/analytics/ExerciseChart';
 import WaterProgressChart from '@/components/analytics/WaterProgressChart';
 import WeightTrendChart from '@/components/analytics/WeightTrendChart';
+import HabitBreakdown from '@/components/analytics/HabitBreakdown';
 
 function HabitCardContent({ habit, isDragging }: { habit: HabitWithLog; isDragging?: boolean }) {
   return (
@@ -566,18 +567,21 @@ export default function DashboardPage() {
             <div className="bg-surface rounded-xl p-4 shadow-sm animate-fade-in">
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
-                  <p className="text-xs text-text-tertiary">{t('analytics.avg')} {t('common.cal')}</p>
+                  <p className="text-[10px] text-text-tertiary leading-tight">{t('analytics.avgDailyIntake')}</p>
                   <p className="text-lg font-bold text-text-primary">{comparisonStats.curAvgCal}</p>
+                  <p className="text-[10px] text-text-tertiary">{t('common.cal')}{t('analytics.perDay')}</p>
                   <ComparisonBadge current={comparisonStats.curAvgCal} previous={comparisonStats.prevAvgCal} invert />
                 </div>
                 <div>
-                  <p className="text-xs text-text-tertiary">{t('dashboard.habits')}</p>
+                  <p className="text-[10px] text-text-tertiary leading-tight">{t('analytics.habitCompletionRate')}</p>
                   <p className="text-lg font-bold text-text-primary">{comparisonStats.curHabitPct}%</p>
+                  <p className="text-[10px] text-text-tertiary">{t('analytics.of')} {t('analytics.days')}</p>
                   <ComparisonBadge current={comparisonStats.curHabitPct} previous={comparisonStats.prevHabitPct} />
                 </div>
                 <div>
-                  <p className="text-xs text-text-tertiary">{t('dashboard.exercise')}</p>
-                  <p className="text-lg font-bold text-text-primary">{comparisonStats.curActiveDays} {t('analytics.days')}</p>
+                  <p className="text-[10px] text-text-tertiary leading-tight">{t('analytics.activeDays')}</p>
+                  <p className="text-lg font-bold text-text-primary">{comparisonStats.curActiveDays}</p>
+                  <p className="text-[10px] text-text-tertiary">{t('analytics.of')} {dates.length} {t('analytics.days')}</p>
                   <ComparisonBadge current={comparisonStats.curActiveDays} previous={comparisonStats.prevActiveDays} />
                 </div>
               </div>
@@ -616,6 +620,14 @@ export default function DashboardPage() {
             period={period as 'week' | 'month' | 'year'}
             waterGoalMl={waterGoalMl}
           />
+
+          {habits.length > 0 && (
+            <HabitBreakdown
+              habits={habits}
+              habitLogs={habitLogs}
+              totalDays={dates.length}
+            />
+          )}
 
           {measurements.length > 0 && (
             <WeightTrendChart

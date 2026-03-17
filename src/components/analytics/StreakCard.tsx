@@ -15,7 +15,6 @@ export default function StreakCard({ dayDataMap, allHabitLogs }: StreakCardProps
   const [animatedCount, setAnimatedCount] = useState(0);
 
   const { currentStreak, bestStreak, completionRate } = useMemo(() => {
-    // Current streak: consecutive days where ALL habits completed, walking backward from today
     const sortedDays = [...allHabitLogs].sort((a, b) => b.date.localeCompare(a.date));
     let current = 0;
     for (const day of sortedDays) {
@@ -26,7 +25,6 @@ export default function StreakCard({ dayDataMap, allHabitLogs }: StreakCardProps
       }
     }
 
-    // Best streak
     const chronological = [...allHabitLogs].sort((a, b) => a.date.localeCompare(b.date));
     let best = 0;
     let run = 0;
@@ -39,7 +37,6 @@ export default function StreakCard({ dayDataMap, allHabitLogs }: StreakCardProps
       }
     }
 
-    // Completion rate for selected period
     const days = Array.from(dayDataMap.values());
     const daysWithHabits = days.filter((d) => d.habitsTotal > 0);
     const totalCompleted = daysWithHabits.reduce((s, d) => s + d.habitsCompleted, 0);
@@ -72,17 +69,20 @@ export default function StreakCard({ dayDataMap, allHabitLogs }: StreakCardProps
       'rounded-xl p-5 animate-fade-in',
       isActive ? 'bg-accent text-accent-fg' : 'bg-surface'
     )}>
+      <p className={cn('text-xs font-semibold uppercase tracking-wide mb-2', isActive ? 'text-accent-fg/60' : 'text-text-tertiary')}>
+        {t('analytics.habitStreak')}
+      </p>
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-bold">{animatedCount}</span>
             <span className="text-lg">🔥</span>
           </div>
-          <p className={cn('text-sm font-medium mt-1', isActive ? 'text-accent-fg/80' : 'text-text-secondary')}>
-            {t('analytics.dayStreak')}
+          <p className={cn('text-xs mt-1', isActive ? 'text-accent-fg/70' : 'text-text-tertiary')}>
+            {t('analytics.habitStreakDesc')}
           </p>
         </div>
-        <div className={cn('text-right text-sm', isActive ? 'text-accent-fg/70' : 'text-text-tertiary')}>
+        <div className={cn('text-right text-xs space-y-1', isActive ? 'text-accent-fg/70' : 'text-text-tertiary')}>
           <p>{t('analytics.bestStreak')}: {bestStreak} {t('analytics.days')}</p>
           <p>{t('analytics.completionRate')}: {completionRate}%</p>
         </div>
