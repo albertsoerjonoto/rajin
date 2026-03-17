@@ -80,7 +80,7 @@ export default function WaterProgressChart({ dayDataMap, dates, period, waterGoa
               borderRadius: 8,
               fontSize: 12,
             }}
-            formatter={(value: number) => [`${value}ml`, t('drink.water')]}
+            formatter={(value) => [`${value}ml`, t('drink.water')]}
           />
           {waterGoalMl > 0 && (
             <ReferenceLine

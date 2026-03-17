@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 import { useLocale } from '@/lib/i18n';
 import type { DayData, AnalyticsPeriod } from './types';
 
@@ -95,7 +95,7 @@ export default function CalorieBarChart({ dayDataMap, dates, period, calorieTarg
               borderRadius: 8,
               fontSize: 12,
             }}
-            formatter={(value: number, name: string) => [
+            formatter={(value, name) => [
               `${value} ${t('common.cal')}`,
               name === 'food' ? t('dashboard.food') : t('dashboard.drinks'),
             ]}

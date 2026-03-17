@@ -81,7 +81,7 @@ export default function WeightTrendChart({ measurements, period, targetWeight }:
               borderRadius: 8,
               fontSize: 12,
             }}
-            formatter={(value: number, name: string) => [
+            formatter={(value, name) => [
               `${value} kg`,
               name === 'weight' ? t('profile.weight') : t('analytics.avg'),
             ]}

@@ -98,7 +98,7 @@ export default function ExerciseChart({ dayDataMap, dates, period }: ExerciseCha
               borderRadius: 8,
               fontSize: 12,
             }}
-            formatter={(value: number) => [
+            formatter={(value) => [
               showCalories ? `${value} ${t('common.cal')}` : `${value} ${t('common.min')}`,
               t('dashboard.exercise'),
             ]}
