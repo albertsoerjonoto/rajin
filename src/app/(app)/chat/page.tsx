@@ -708,7 +708,7 @@ export default function ChatPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userContent, context: contextRef.current, history: recentMessages, image_url: uploadedImageUrl, locale }),
-        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(65000)]),
       });
 
       const data = await res.json();
