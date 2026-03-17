@@ -59,7 +59,7 @@ export default function WaterProgressChart({ dayDataMap, dates, period, waterGoa
       <p className="text-xs text-text-tertiary mb-3">
         {t('analytics.avg')}: {avgWater}ml/{t('analytics.day')} · {daysGoalMet}/{data.length} {t('analytics.daysGoalMet')}
       </p>
-      <ResponsiveContainer width="100%" height={180}>
+      <ResponsiveContainer width="100%" height={180} minWidth={0}>
         <BarChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -15 }}>
           <XAxis
             dataKey="label"

@@ -48,7 +48,7 @@ export default function MacroDonutChart({ dayDataMap }: MacroDonutChartProps) {
     <div className="bg-surface rounded-xl p-4 shadow-sm animate-fade-in">
       <h3 className="text-sm font-semibold text-text-secondary mb-3">{t('analytics.macroSplit')}</h3>
       <div className="relative" style={{ height: 180 }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <PieChart>
             <Pie
               data={pieData}

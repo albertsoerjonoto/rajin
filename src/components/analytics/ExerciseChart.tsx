@@ -77,7 +77,7 @@ export default function ExerciseChart({ dayDataMap, dates, period }: ExerciseCha
       <p className="text-xs text-text-tertiary mb-3">
         {totalMinutes} {t('common.min')} · {totalCalBurned.toLocaleString()} {t('common.cal')} · {daysActive}/{data.length} {t('analytics.daysActive')}
       </p>
-      <ResponsiveContainer width="100%" height={180}>
+      <ResponsiveContainer width="100%" height={180} minWidth={0}>
         <BarChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -15 }}>
           <XAxis
             dataKey="label"

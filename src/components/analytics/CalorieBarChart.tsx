@@ -74,7 +74,7 @@ export default function CalorieBarChart({ dayDataMap, dates, period, calorieTarg
       <p className="text-xs text-text-tertiary mb-3">
         {t('analytics.avg')}: {avgCalories.toLocaleString()} {t('common.cal')}/{t('analytics.day')} · {daysOnTarget} {t('analytics.daysOnTarget')}
       </p>
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" height={200} minWidth={0}>
         <BarChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -15 }}>
           <XAxis
             dataKey="label"

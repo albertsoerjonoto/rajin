@@ -59,7 +59,7 @@ export default function WeightTrendChart({ measurements, period, targetWeight }:
   return (
     <div className="bg-surface rounded-xl p-4 shadow-sm animate-fade-in">
       <h3 className="text-sm font-semibold text-text-secondary mb-3">{t('analytics.weightTrend')}</h3>
-      <ResponsiveContainer width="100%" height={180}>
+      <ResponsiveContainer width="100%" height={180} minWidth={0}>
         <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -15 }}>
           <XAxis
             dataKey="label"
