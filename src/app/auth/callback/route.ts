@@ -11,14 +11,25 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Check if user has completed onboarding
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Check if profile exists, create one if not (for OAuth users)
         const { data: profile } = await supabase
           .from('profiles')
-          .select('onboarding_completed')
+          .select('id, onboarding_completed')
           .eq('id', user.id)
           .single();
+
+        if (!profile) {
+          await supabase.from('profiles').insert({
+            id: user.id,
+            email: user.email ?? '',
+            display_name: user.user_metadata?.full_name
+              || user.user_metadata?.name
+              || user.email?.split('@')[0]
+              || '',
+          });
+        }
 
         if (profile?.onboarding_completed) {
           return NextResponse.redirect(`${origin}/dashboard`);
