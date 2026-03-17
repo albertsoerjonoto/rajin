@@ -59,6 +59,7 @@ export const translations: Translations = {
   'dashboard.failedUpdateHabit': { id: 'Gagal memperbarui kebiasaan', en: 'Failed to update habit' },
   'dashboard.failedAddHabit': { id: 'Gagal menambah kebiasaan', en: 'Failed to add habit' },
   'dashboard.failedDeleteHabit': { id: 'Gagal menghapus kebiasaan', en: 'Failed to delete habit' },
+  'dashboard.privateHabit': { id: 'Privat (sembunyikan dari teman)', en: 'Private (hide from friends)' },
 
   // ── Nutrition labels ──
   'nutrition.protein': { id: 'Protein', en: 'Protein' },

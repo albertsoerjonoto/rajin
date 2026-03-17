@@ -50,6 +50,12 @@ function HabitCardContent({ habit, isDragging }: { habit: HabitWithLog; isDraggi
       <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', isDragging ? 'text-text-primary' : 'text-text-secondary')}>
         {habit.name}
       </span>
+      {habit.is_private && (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-text-tertiary">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      )}
     </div>
   );
 }
@@ -104,11 +110,13 @@ export default function DashboardPage() {
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitEmoji, setNewHabitEmoji] = useState('⭐');
+  const [newHabitPrivate, setNewHabitPrivate] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmoji, setEditEmoji] = useState('');
+  const [editPrivate, setEditPrivate] = useState(false);
   const [activeHabit, setActiveHabit] = useState<HabitWithLog | null>(null);
   const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
 
@@ -381,6 +389,7 @@ export default function DashboardPage() {
       name: newHabitName.trim(),
       emoji: newHabitEmoji || '⭐',
       sort_order: habits.length,
+      is_private: newHabitPrivate,
     });
 
     if (error) {
@@ -390,6 +399,7 @@ export default function DashboardPage() {
 
     setNewHabitName('');
     setNewHabitEmoji('⭐');
+    setNewHabitPrivate(false);
     setShowAddHabit(false);
     fetchData();
   };
@@ -398,6 +408,7 @@ export default function DashboardPage() {
     setEditingId(habit.id);
     setEditName(habit.name);
     setEditEmoji(habit.emoji);
+    setEditPrivate(habit.is_private);
   };
 
   const saveEdit = async () => {
@@ -405,7 +416,7 @@ export default function DashboardPage() {
     const supabase = createClient();
     const { error } = await supabase
       .from('habits')
-      .update({ name: editName.trim(), emoji: editEmoji || '⭐' })
+      .update({ name: editName.trim(), emoji: editEmoji || '⭐', is_private: editPrivate })
       .eq('id', editingId);
     if (error) {
       showToast('error', t('dashboard.failedUpdateHabit'));
@@ -671,6 +682,24 @@ export default function DashboardPage() {
                     autoFocus
                   />
                 </div>
+                <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={newHabitPrivate}
+                    onClick={() => setNewHabitPrivate(!newHabitPrivate)}
+                    className={cn(
+                      'relative w-9 h-5 rounded-full transition-colors duration-200',
+                      newHabitPrivate ? 'bg-accent' : 'bg-surface-secondary'
+                    )}
+                  >
+                    <span className={cn(
+                      'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200',
+                      newHabitPrivate && 'translate-x-4'
+                    )} />
+                  </button>
+                  <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
+                </label>
                 <div className="flex gap-2">
                   <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-text-secondary rounded-xl hover:bg-surface-hover transition-all duration-200">
                     {t('common.cancel')}
@@ -711,6 +740,24 @@ export default function DashboardPage() {
                               autoFocus
                             />
                           </div>
+                          <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={editPrivate}
+                              onClick={() => setEditPrivate(!editPrivate)}
+                              className={cn(
+                                'relative w-9 h-5 rounded-full transition-colors duration-200',
+                                editPrivate ? 'bg-accent' : 'bg-surface-secondary'
+                              )}
+                            >
+                              <span className={cn(
+                                'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200',
+                                editPrivate && 'translate-x-4'
+                              )} />
+                            </button>
+                            <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
+                          </label>
                           <div className="flex gap-2">
                             <button
                               onClick={() => deleteHabit(habit.id)}
@@ -767,6 +814,12 @@ export default function DashboardPage() {
                       <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
                         {habit.name}
                       </span>
+                      {habit.is_private && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-text-tertiary">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                      )}
                       <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
                         <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
                         {habit.completed && (
