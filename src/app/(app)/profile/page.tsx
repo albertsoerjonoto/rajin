@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/Toast';
-import { getToday } from '@/lib/utils';
+import { getToday, cn } from '@/lib/utils';
 import {
   validateCalorieRangeAmount,
   validateDOB,
@@ -15,7 +15,8 @@ import { PageSkeleton } from '@/components/LoadingSkeleton';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { compressAvatar } from '@/lib/image';
 import { useLocale } from '@/lib/i18n';
-import type { Profile, Gender, Locale } from '@/lib/types';
+import { useDesktopLayout } from '@/hooks/useDesktopLayout';
+import type { Profile, Gender, Locale, DesktopLayout } from '@/lib/types';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -71,6 +72,7 @@ export default function ProfilePage() {
     setGender(p.gender || '');
     setHeightCm(p.height_cm ? String(p.height_cm) : '');
     setWeightKg(p.weight_kg ? String(p.weight_kg) : '');
+    if (p.desktop_layout) setDesktopLayout(p.desktop_layout);
   };
 
   useEffect(() => {
@@ -182,6 +184,7 @@ export default function ProfilePage() {
         gender: gender || null,
         height_cm: heightCm ? parseFloat(heightCm) : null,
         weight_kg: weightKg ? parseFloat(weightKg) : null,
+        desktop_layout: desktopLayout,
       })
       .eq('id', user.id);
 
@@ -294,8 +297,10 @@ export default function ProfilePage() {
   const dividerClass = 'border-b border-border';
   const inputClass = 'text-sm text-right bg-transparent focus:outline-none text-text-secondary placeholder:text-text-tertiary';
 
+  const { isExpanded, layout: desktopLayout, setLayout: setDesktopLayout } = useDesktopLayout();
+
   return (
-    <div className="max-w-lg mx-auto px-4">
+    <div className={cn('max-w-lg mx-auto px-4', isExpanded && 'lg:max-w-4xl lg:px-8')}>
       {ToastContainer}
       <div className="sticky top-0 z-20 bg-bg pb-4 -mx-4 px-4 pt-6">
         <h1 className="text-xl font-bold text-text-primary">{t('profile.title')}</h1>
@@ -371,8 +376,11 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Account + Body Stats — 2 columns on desktop */}
+          <div className={cn(isExpanded && 'lg:grid lg:grid-cols-2 lg:gap-6 lg:mt-8')}>
           {/* Account section */}
-          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">{t('profile.account')}</p>
+          <div>
+          <p className={cn('text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2', isExpanded && 'lg:mt-0')}>{t('profile.account')}</p>
           <div className="bg-surface rounded-2xl overflow-hidden">
             {/* Display Name */}
             <div className={`${rowClass} ${dividerClass}`}>
@@ -522,7 +530,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Water Goal section */}
-          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">{t('profile.waterGoal')}</p>
+          <p className={cn('text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2', isExpanded && 'lg:mt-4')}>{t('profile.waterGoal')}</p>
           <div className="bg-surface rounded-2xl overflow-hidden">
             <div className={rowClass}>
               <span className="text-sm text-text-primary shrink-0 mr-3">{t('profile.waterGoal')}</span>
@@ -560,8 +568,10 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          </div>{/* end Account column */}
           {/* Body Stats section */}
-          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">{t('profile.bodyStats')}</p>
+          <div>
+          <p className={cn('text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2', isExpanded && 'lg:mt-0')}>{t('profile.bodyStats')}</p>
           <div className="bg-surface rounded-2xl overflow-hidden">
             {/* Date of Birth */}
             <div className={dividerClass}>
@@ -661,6 +671,34 @@ export default function ProfilePage() {
               {errors.weightKg && (
                 <p className="text-xs text-danger-text px-4 pb-2 -mt-1">{errors.weightKg}</p>
               )}
+            </div>
+          </div>
+          </div>{/* end Body Stats column */}
+          </div>{/* end 2-column grid wrapper */}
+
+          {/* Display section — only visible on desktop */}
+          <div className="hidden lg:block">
+            <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">{t('profile.display')}</p>
+            <div className="bg-surface rounded-2xl overflow-hidden">
+              <div className={rowClass}>
+                <span className="text-sm text-text-primary shrink-0 mr-3">{t('profile.desktopLayout')}</span>
+                <div className="flex gap-1">
+                  {(['compact', 'expanded'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setDesktopLayout(mode)}
+                      className={`px-2.5 py-1 rounded-lg text-xs transition-all capitalize ${
+                        desktopLayout === mode
+                          ? 'bg-surface-hover text-text-primary font-semibold'
+                          : 'text-text-muted hover:text-text-secondary'
+                      }`}
+                    >
+                      {mode === 'compact' ? t('profile.compact') : t('profile.expanded')}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 

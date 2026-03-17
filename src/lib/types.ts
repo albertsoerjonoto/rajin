@@ -7,6 +7,7 @@ export type FriendshipStatus = 'pending' | 'accepted' | 'declined' | 'rejected' 
 export type SharedHabitStatus = 'pending' | 'accepted' | 'rejected';
 export type FeedEventType = 'habit_completed' | 'streak_milestone' | 'friend_added' | 'shared_habit_started' | 'shared_streak';
 export type Locale = 'id' | 'en';
+export type DesktopLayout = 'compact' | 'expanded';
 
 export interface Profile {
   id: string;
@@ -24,6 +25,7 @@ export interface Profile {
   onboarding_step: number;
   daily_water_goal_ml: number;
   locale: Locale;
+  desktop_layout: DesktopLayout;
   created_at: string;
 }
 
