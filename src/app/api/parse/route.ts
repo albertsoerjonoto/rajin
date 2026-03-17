@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { clamp } from '@/lib/validation';
 import type { ChatContext, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit } from '@/lib/types';
 
+// Allow up to 60s for Gemini API calls (default Vercel limit is 10s on hobby, 60s on pro)
+export const maxDuration = 60;
+
 const BASE_PROMPT = `You are a nutrition and exercise assistant. You will receive a language directive below — always respond in that language.
 
 You can:
@@ -66,6 +69,7 @@ Exercise calorie estimates:
 - Gym/weights: ~60 cal per 10 min
 - Yoga: ~30 cal per 10 min
 - For running distances: assume ~6 min/km pace
+- Steps: 1K steps ≈ 10 min walking ≈ 40 cal. "1K" means 1000. Convert steps to walking exercise.
 
 Determine meal_type based on context or time mentioned. Default to "lunch" if unclear.
 
@@ -78,14 +82,11 @@ When the user mentions body measurements like weight or height (e.g., "berat bad
 HABITS:
 When the user asks about their habits (e.g., "sudah olahraga?", "habit apa yang belum?", "have I exercised today?"), check the habit context provided and respond with their completion status. Do NOT put anything in the "measurements" or "foods" arrays for habit queries — just use "message".`;
 
-function buildSystemPrompt(context?: ChatContext, locale: string = 'id'): string {
+function buildSystemPrompt(context?: ChatContext): string {
   let prompt = BASE_PROMPT;
 
-  if (locale === 'en') {
-    prompt += '\n\nIMPORTANT: The user has set their language to English. Always respond in English regardless of their input language.';
-  } else {
-    prompt += '\n\nIMPORTANT: The user has set their language to Bahasa Indonesia. Always respond in Bahasa Indonesia regardless of their input language.';
-  }
+  // Language instruction: match the user's input language, not the locale setting
+  prompt += '\n\nIMPORTANT LANGUAGE RULE: Always respond in the SAME language the user writes in. If the user types in English, respond in English. If the user types in Bahasa Indonesia, respond in Bahasa Indonesia. Match the user\'s language exactly.';
 
   if (context) {
     prompt += '\n\n--- USER CONTEXT (TODAY) ---\n';
@@ -254,7 +255,7 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Input validation ---
-    const { message, context, history, image_url, locale } = await request.json();
+    const { message, context, history, image_url } = await request.json();
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -273,10 +274,10 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Build context-aware prompt ---
-    const userLocale = locale === 'en' ? 'en' : 'id';
-    const systemPrompt = buildSystemPrompt(context as ChatContext | undefined, userLocale);
+    const systemPrompt = buildSystemPrompt(context as ChatContext | undefined);
 
     // --- Build multi-turn conversation for Gemini ---
+    const typedContext = context as ChatContext | undefined;
     const ai = new GoogleGenAI({ apiKey });
 
     // Build conversation history as alternating user/model turns
@@ -291,20 +292,31 @@ export async function POST(request: NextRequest) {
           // Wrap assistant response as JSON with actual parsed data from history
           // This teaches the model the correct response format (structured data in arrays)
           // Strip edit objects to just show updated fields (log_id/original are internal)
-          const stripEdits = (edits: unknown) =>
-            Array.isArray(edits) ? edits.map((e: Record<string, unknown>) => ({
-              updated: e.updated ?? {},
-            })) : [];
+          const stripEdits = (edits: unknown, logs?: { index: number; id: string }[]) =>
+            Array.isArray(edits) ? edits.map((e: Record<string, unknown>) => {
+              // Recover the original index from the log_id so the model sees the correct format with index
+              const logId = e.log_id as string | undefined;
+              const matchedLog = logId && logs ? logs.find(l => l.id === logId) : undefined;
+              return {
+                index: matchedLog?.index ?? e.index ?? 0,
+                updated: e.updated ?? {},
+              };
+            }) : [];
+          // Strip client-side action text (e.g., "Ditemukan 1 edit...") from history messages
+          // so the model doesn't learn to replicate UI instructions in its response
+          let historyMessage = msg.content;
+          const actionTextPattern = /\n\n(?:Found|Ditemukan)\s+\d+.+(?:to confirm|untuk konfirmasi)\.?$/i;
+          historyMessage = historyMessage.replace(actionTextPattern, '');
           const wrappedJson = JSON.stringify({
-            message: msg.content,
+            message: historyMessage,
             foods: Array.isArray(msg.parsedFoods) ? msg.parsedFoods : [],
             exercises: Array.isArray(msg.parsedExercises) ? msg.parsedExercises : [],
             drinks: Array.isArray(msg.parsedDrinks) ? msg.parsedDrinks : [],
             measurements: Array.isArray(msg.parsedMeasurements) ? msg.parsedMeasurements : [],
-            food_edits: stripEdits(msg.foodEdits),
-            exercise_edits: stripEdits(msg.exerciseEdits),
-            drink_edits: stripEdits(msg.drinkEdits),
-            measurement_edits: stripEdits(msg.measurementEdits),
+            food_edits: stripEdits(msg.foodEdits, typedContext?.todayFoodLogs),
+            exercise_edits: stripEdits(msg.exerciseEdits, typedContext?.todayExerciseLogs),
+            drink_edits: stripEdits(msg.drinkEdits, typedContext?.todayDrinkLogs),
+            measurement_edits: stripEdits(msg.measurementEdits, typedContext?.todayMeasurementLogs),
           });
           contents.push({ role: 'model', parts: [{ text: wrappedJson }] });
         }
@@ -341,7 +353,7 @@ export async function POST(request: NextRequest) {
         },
         contents,
       }),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gemini timeout')), 30000)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gemini timeout')), 60000)),
     ]);
 
     const text = response.text ?? '';
@@ -427,7 +439,6 @@ export async function POST(request: NextRequest) {
       : [];
 
     // --- Process edits: map indices to real log IDs ---
-    const typedContext = context as ChatContext | undefined;
     const foodEdits: FoodEdit[] = [];
     const exerciseEdits: ExerciseEdit[] = [];
     const drinkEdits: DrinkEdit[] = [];
@@ -572,7 +583,7 @@ export async function POST(request: NextRequest) {
 
     let userMessage = 'Sorry, something went wrong. Please try again.';
     let statusCode = 500;
-    if (isTimeout) { userMessage = 'The request took too long. Please try a shorter message.'; statusCode = 504; }
+    if (isTimeout) { userMessage = 'Request timed out. Please try again.'; statusCode = 504; }
     if (isRateLimit) { userMessage = "I've hit my usage limit. Please wait a minute and try again, or try a shorter message."; statusCode = 429; }
     if (isOverloaded) { userMessage = "The AI service is busy right now. Please try again in a few seconds."; statusCode = 503; }
 
