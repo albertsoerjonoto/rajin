@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTour } from './useTour';
 import { useLocale } from '@/lib/i18n';
 
@@ -34,6 +34,41 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
   const isLastStep = currentStep?.id === 'complete';
   const isCenter = currentStep?.position === 'center' || !currentStep?.targetSelector;
 
+  // Track the visible area (visual viewport) in layout viewport coordinates.
+  // When the mobile keyboard opens, the visual viewport shrinks and may scroll
+  // within the layout viewport. The bubble (inside a fixed overlay) uses layout
+  // viewport coordinates, so we need to know the visible bounds to clamp correctly.
+  const [visibleBounds, setVisibleBounds] = useState(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    return {
+      top: vv?.offsetTop ?? 0,
+      left: vv?.offsetLeft ?? 0,
+      w: vv?.width ?? (typeof window !== 'undefined' ? window.innerWidth : 375),
+      h: vv?.height ?? (typeof window !== 'undefined' ? window.innerHeight : 812),
+    };
+  });
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      setVisibleBounds({
+        top: vv.offsetTop,
+        left: vv.offsetLeft,
+        w: vv.width,
+        h: vv.height,
+      });
+    };
+
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
+
   const handleAction = () => {
     if (isLastStep) {
       completeTour();
@@ -57,9 +92,13 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
       };
     }
 
-    const viewportW = typeof window !== 'undefined' ? window.innerWidth : 375;
-    const viewportH = typeof window !== 'undefined' ? window.innerHeight : 812;
-    const bubbleWidth = Math.min(320, viewportW - 32);
+    // Visible area in layout viewport coordinates
+    const visTop = visibleBounds.top;
+    const visLeft = visibleBounds.left;
+    const visW = visibleBounds.w;
+    const visH = visibleBounds.h;
+
+    const bubbleWidth = Math.min(320, visW - 32);
     const bubbleEstHeight = 160; // approximate height of the bubble
     const position = currentStep?.position ?? 'bottom';
     const gap = 12;
@@ -73,7 +112,7 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
     if (position === 'top') {
       // Try above the spotlight
       const aboveTop = spotlight.y - gap - bubbleEstHeight;
-      if (aboveTop >= 8) {
+      if (aboveTop >= visTop + 8) {
         // Fits above
         top = spotlight.y - gap;
         arrowDir = 'down';
@@ -87,7 +126,7 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
     } else if (position === 'bottom') {
       // Try below the spotlight
       const belowBottom = spotlight.y + spotlight.height + gap + bubbleEstHeight;
-      if (belowBottom <= viewportH - 8) {
+      if (belowBottom <= visTop + visH - 8) {
         // Fits below
         top = spotlight.y + spotlight.height + gap;
         arrowDir = 'up';
@@ -108,12 +147,12 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
       arrowDir = 'left';
     }
 
-    // Clamp to viewport
-    const clampedLeft = Math.max(16, Math.min(left, viewportW - bubbleWidth - 16));
+    // Clamp to visible area (visual viewport in layout viewport coords)
+    const clampedLeft = Math.max(visLeft + 16, Math.min(left, visLeft + visW - bubbleWidth - 16));
 
-    // Clamp top so bubble doesn't go below viewport
+    // Clamp top so bubble stays within visible area
     if (!useTranslateY) {
-      top = Math.max(8, Math.min(top, viewportH - bubbleEstHeight - 8));
+      top = Math.max(visTop + 8, Math.min(top, visTop + visH - bubbleEstHeight - 8));
     }
 
     // Arrow points to the center of the spotlight element
@@ -130,7 +169,7 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
       arrow: arrowDir,
       arrowLeft: arrowLeftPx,
     };
-  }, [spotlight, isCenter, currentStep?.position]);
+  }, [spotlight, isCenter, currentStep?.position, visibleBounds]);
 
   if (!currentStep) return null;
 

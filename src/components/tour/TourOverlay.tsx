@@ -25,9 +25,17 @@ function findElement(selector: string, padding: number): SpotlightRect | null {
   const el = document.querySelector(selector);
   if (!el) return null;
   const rect = el.getBoundingClientRect();
+
+  // getBoundingClientRect() returns coordinates relative to the visual viewport,
+  // but the fixed overlay is positioned relative to the layout viewport.
+  // When the mobile keyboard is open, these diverge — the visual viewport scrolls
+  // within the layout viewport. We must offset to convert to layout viewport coords.
+  const offsetX = window.visualViewport?.offsetLeft ?? 0;
+  const offsetY = window.visualViewport?.offsetTop ?? 0;
+
   return {
-    x: rect.left - padding,
-    y: rect.top - padding,
+    x: rect.left + offsetX - padding,
+    y: rect.top + offsetY - padding,
     width: rect.width + padding * 2,
     height: rect.height + padding * 2,
   };
@@ -100,7 +108,7 @@ export function TourOverlay() {
     };
   }, [isActive, currentStep]);
 
-  // Recalculate spotlight position on scroll/resize (deduplicated)
+  // Recalculate spotlight position on scroll/resize/visualViewport changes (deduplicated)
   useEffect(() => {
     if (!isActive || !currentStep?.targetSelector) return;
     const padding = currentStep.highlightPadding ?? 8;
@@ -112,9 +120,21 @@ export function TourOverlay() {
 
     window.addEventListener('scroll', handler, true);
     window.addEventListener('resize', handler);
+
+    // Listen to visualViewport changes (keyboard open/close on mobile)
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', handler);
+      vv.addEventListener('scroll', handler);
+    }
+
     return () => {
       window.removeEventListener('scroll', handler, true);
       window.removeEventListener('resize', handler);
+      if (vv) {
+        vv.removeEventListener('resize', handler);
+        vv.removeEventListener('scroll', handler);
+      }
     };
   }, [isActive, currentStep]);
 
