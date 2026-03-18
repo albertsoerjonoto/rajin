@@ -6,7 +6,6 @@ export interface TourStep {
   position: 'top' | 'bottom' | 'left' | 'right' | 'center';
   action?: 'wait_for_input' | 'wait_for_response' | 'wait_for_save' | 'navigate' | 'none';
   navigateTo?: string;
-  skipLabelKey?: string;
   highlightPadding?: number;
 }
 
@@ -18,7 +17,6 @@ export const tourSteps: TourStep[] = [
     descriptionKey: 'tour.welcomeDesc',
     position: 'bottom',
     action: 'none',
-    skipLabelKey: 'tour.skipTour',
     highlightPadding: 8,
   },
   {
@@ -28,7 +26,6 @@ export const tourSteps: TourStep[] = [
     descriptionKey: 'tour.inputDesc',
     position: 'top',
     action: 'wait_for_input',
-    skipLabelKey: 'tour.skip',
     highlightPadding: 8,
   },
   {
@@ -38,7 +35,6 @@ export const tourSteps: TourStep[] = [
     descriptionKey: 'tour.waitingDesc',
     position: 'bottom',
     action: 'wait_for_response',
-    skipLabelKey: 'tour.skip',
     highlightPadding: 8,
   },
   {
@@ -48,7 +44,6 @@ export const tourSteps: TourStep[] = [
     descriptionKey: 'tour.resultDesc',
     position: 'top',
     action: 'wait_for_save',
-    skipLabelKey: 'tour.skip',
     highlightPadding: 8,
   },
   {
@@ -59,7 +54,6 @@ export const tourSteps: TourStep[] = [
     position: 'top',
     action: 'navigate',
     navigateTo: '/log',
-    skipLabelKey: 'tour.next',
     highlightPadding: 12,
   },
   {
@@ -70,7 +64,6 @@ export const tourSteps: TourStep[] = [
     position: 'top',
     action: 'navigate',
     navigateTo: '/dashboard',
-    skipLabelKey: 'tour.next',
     highlightPadding: 12,
   },
   {
@@ -80,7 +73,6 @@ export const tourSteps: TourStep[] = [
     descriptionKey: 'tour.completeDesc',
     position: 'center',
     action: 'none',
-    skipLabelKey: 'tour.letsGo',
     highlightPadding: 0,
   },
 ];

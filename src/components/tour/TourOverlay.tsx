@@ -119,32 +119,21 @@ export function TourOverlay() {
   return (
     <div
       className="fixed inset-0 z-[100]"
-      style={{ pointerEvents: 'auto' }}
+      style={{ pointerEvents: 'none' }}
     >
-      {/* Dimmed overlay with spotlight cutout */}
+      {/* Dimmed overlay with spotlight cutout.
+          The clip-path punches a hole where the spotlight is,
+          so pointer events pass through the hole to the page below,
+          while clicks on the dimmed area are blocked. */}
       <div
         className="absolute inset-0 motion-safe:transition-all motion-safe:duration-300"
         style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
           opacity: visible ? 1 : 0,
           clipPath: spotlight && !isCenter ? clipPath : undefined,
+          pointerEvents: 'auto',
         }}
       />
-
-      {/* Transparent clickable area over the spotlight to allow interaction */}
-      {spotlight && !isCenter && (
-        <div
-          className="absolute"
-          style={{
-            left: spotlight.x,
-            top: spotlight.y,
-            width: spotlight.width,
-            height: spotlight.height,
-            pointerEvents: 'none',
-            zIndex: 101,
-          }}
-        />
-      )}
 
       {/* Tour bubble */}
       {bubbleReady && (
