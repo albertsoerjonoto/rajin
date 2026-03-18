@@ -415,6 +415,17 @@ export default function DashboardPage() {
         setHabits((prev) =>
           prev.map((h) => (h.id === habit.id ? { ...h, log_id: undefined } : h))
         );
+        // Delete feed events for this habit today (completion + streak milestone)
+        Promise.resolve(
+          supabase
+            .from('feed_events')
+            .delete()
+            .eq('user_id', user.id)
+            .in('event_type', ['habit_completed', 'streak_milestone'])
+            .gte('created_at', new Date(date + 'T00:00:00').toISOString())
+            .lte('created_at', new Date(date + 'T23:59:59').toISOString())
+            .contains('data', { habit_id: habit.id })
+        ).catch(console.warn);
       } else {
         const { data, error } = await supabase
           .from('habit_logs')

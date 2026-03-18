@@ -352,40 +352,97 @@ export default function FriendsPage() {
     return `${diffDay} ${t('friends.daysAgo')}`;
   };
 
-  const renderFeedEvent = (event: FeedEventWithProfile) => {
+  const firstName = (name: string | null) => {
+    if (!name) return 'User';
+    const parts = name.trim().split(/\s+/);
+    return parts[0];
+  };
+
+  // Group consecutive habit_completed events by same user
+  type GroupedFeedItem =
+    | { type: 'single'; event: FeedEventWithProfile }
+    | { type: 'group'; events: FeedEventWithProfile[]; profile: FriendProfile; userId: string };
+
+  const groupFeedEvents = (events: FeedEventWithProfile[]): GroupedFeedItem[] => {
+    const items: GroupedFeedItem[] = [];
+    let i = 0;
+    while (i < events.length) {
+      const event = events[i];
+      if (event.event_type === 'habit_completed') {
+        // Collect consecutive habit_completed from same user
+        const group: FeedEventWithProfile[] = [event];
+        let j = i + 1;
+        while (j < events.length && events[j].event_type === 'habit_completed' && events[j].user_id === event.user_id) {
+          group.push(events[j]);
+          j++;
+        }
+        if (group.length > 1) {
+          items.push({ type: 'group', events: group, profile: event.profile, userId: event.user_id });
+        } else {
+          items.push({ type: 'single', event });
+        }
+        i = j;
+      } else {
+        items.push({ type: 'single', event });
+        i++;
+      }
+    }
+    return items;
+  };
+
+  const renderSingleEvent = (event: FeedEventWithProfile) => {
     const data = event.data as Record<string, string | number>;
-    const name = event.profile.display_name ?? 'User';
+    const name = firstName(event.profile.display_name);
     const isMe = event.user_id === user?.id;
 
     let description = '';
-    let emoji = '';
 
     switch (event.event_type) {
       case 'habit_completed':
-        emoji = (data.habit_emoji as string) ?? '✅';
-        description = `${name} ${t('friends.completed')} ${emoji} ${data.habit_name}`;
+        description = `${name} ${t('friends.completed')} ${(data.habit_emoji as string) ?? '✅'} ${data.habit_name}`;
         break;
       case 'streak_milestone':
         description = `${name} ${t('friends.hitStreak')} 🔥 ${data.streak} ${t('friends.dayStreak')} ${data.habit_name}!`;
         break;
       case 'friend_added':
-        description = `${data.user1_name} ${t('friends.nowFriends')} ${data.user2_name}`;
-        emoji = '🤝';
+        description = `${firstName(data.user1_name as string)} ${t('friends.nowFriends')} ${firstName(data.user2_name as string)}`;
         break;
       case 'shared_habit_started':
         description = `${name} shared ${(data.habit_emoji as string) ?? ''} ${data.habit_name}`;
         break;
       case 'shared_streak':
-        description = `${data.user1_name} & ${data.user2_name} ${t('friends.sharedStreak')} ${(data.habit_emoji as string) ?? ''} ${data.habit_name}! 🔥 ${data.streak}`;
+        description = `${firstName(data.user1_name as string)} & ${firstName(data.user2_name as string)} ${t('friends.sharedStreak')} ${(data.habit_emoji as string) ?? ''} ${data.habit_name}! 🔥 ${data.streak}`;
         break;
     }
 
     return (
-      <div key={event.id} className={cn('bg-surface rounded-xl p-4 shadow-xs flex items-start gap-3', isMe && 'border-l-2 border-accent')}>
-        <Avatar url={event.profile.avatar_url} name={event.profile.display_name} />
+      <div key={event.id} className={cn('bg-surface rounded-xl px-3 py-2.5 flex items-center gap-3', isMe && 'border-l-2 border-accent')}>
+        <Avatar url={event.profile.avatar_url} name={event.profile.display_name} size="sm" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-text-primary">{description}</p>
-          <p className="text-xs text-text-tertiary mt-1">{relativeTime(event.created_at)}</p>
+          <p className="text-[13px] text-text-primary leading-snug">{description}</p>
+          <p className="text-[11px] text-text-tertiary mt-0.5">{relativeTime(event.created_at)}</p>
+        </div>
+      </div>
+    );
+  };
+
+  const renderGroupedEvent = (item: GroupedFeedItem & { type: 'group' }) => {
+    const name = firstName(item.profile.display_name);
+    const isMe = item.userId === user?.id;
+    const habits = item.events.map(e => {
+      const d = e.data as Record<string, string>;
+      return `${d.habit_emoji ?? '✅'} ${d.habit_name}`;
+    });
+    const earliest = item.events[item.events.length - 1];
+
+    return (
+      <div key={item.events.map(e => e.id).join('-')} className={cn('bg-surface rounded-xl px-3 py-2.5 flex items-center gap-3', isMe && 'border-l-2 border-accent')}>
+        <Avatar url={item.profile.avatar_url} name={item.profile.display_name} size="sm" />
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] text-text-primary leading-snug">
+            {name} {t('friends.completed')} {habits.join(', ')}
+          </p>
+          <p className="text-[11px] text-text-tertiary mt-0.5">{relativeTime(earliest.created_at)}</p>
         </div>
       </div>
     );
@@ -396,6 +453,8 @@ export default function FriendsPage() {
     if (feedFilter === 'friends') return e.user_id !== user?.id;
     return true;
   });
+
+  const groupedFeed = groupFeedEvents(filteredFeedEvents);
 
   const activityIcon = (type: string) => {
     switch (type) {
@@ -477,7 +536,7 @@ export default function FriendsPage() {
           {tab === 'feed' && (
             <div className="space-y-3">
               {/* Filter tabs */}
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-0.5 bg-surface-secondary rounded-lg p-0.5 mb-3">
                 {([
                   { key: 'all' as FeedFilter, labelKey: 'friends.feedAll' },
                   { key: 'mine' as FeedFilter, labelKey: 'friends.feedMine' },
@@ -487,10 +546,10 @@ export default function FriendsPage() {
                     key={f.key}
                     onClick={() => setFeedFilter(f.key)}
                     className={cn(
-                      'px-3 py-1 text-xs font-medium rounded-full transition-all duration-200',
+                      'flex-1 py-1.5 text-xs font-medium rounded-md transition-all duration-200',
                       feedFilter === f.key
-                        ? 'bg-accent text-accent-fg'
-                        : 'bg-surface-secondary text-text-secondary'
+                        ? 'bg-surface text-text-primary shadow-sm'
+                        : 'text-text-secondary'
                     )}
                   >
                     {t(f.labelKey)}
@@ -504,11 +563,15 @@ export default function FriendsPage() {
                   action={() => setTab('add')}
                   actionLabel={t('friends.addFriend')}
                 />
-              ) : filteredFeedEvents.length === 0 ? (
+              ) : groupedFeed.length === 0 ? (
                 <p className="text-center text-text-secondary py-8">{t('friends.noActivity')}</p>
               ) : (
                 <>
-                  {filteredFeedEvents.map(event => renderFeedEvent(event))}
+                  {groupedFeed.map(item =>
+                    item.type === 'group'
+                      ? renderGroupedEvent(item)
+                      : renderSingleEvent(item.event)
+                  )}
                   {hasMoreFeed && (
                     <button
                       onClick={loadMoreFeed}
@@ -725,22 +788,24 @@ export default function FriendsPage() {
   );
 }
 
-function Avatar({ url, name }: { url: string | null; name: string | null }) {
+function Avatar({ url, name, size = 'md' }: { url: string | null; name: string | null; size?: 'sm' | 'md' }) {
   const initials = (name ?? '?').charAt(0).toUpperCase();
+  const sizeClass = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
+  const textClass = size === 'sm' ? 'text-xs' : 'text-sm';
 
   if (url) {
     return (
       <img
         src={url}
         alt={name ?? 'Avatar'}
-        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+        className={cn(sizeClass, 'rounded-full object-cover flex-shrink-0')}
       />
     );
   }
 
   return (
-    <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-      <span className="text-sm font-semibold text-accent">{initials}</span>
+    <div className={cn(sizeClass, 'rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0')}>
+      <span className={cn(textClass, 'font-semibold text-accent')}>{initials}</span>
     </div>
   );
 }
