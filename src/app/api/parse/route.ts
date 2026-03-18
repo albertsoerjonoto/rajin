@@ -236,7 +236,8 @@ Rules:
 - Body measurements (weight, height) go in "measurements", NOT "foods" or "exercises"
 - For habit queries, just respond with "message" — do NOT add anything to other arrays
 - If the user's input doesn't match any action, return: { "message": "helpful response", "foods": [], "exercises": [], "drinks": [], "measurements": [], "food_edits": [], "exercise_edits": [], "drink_edits": [], "measurement_edits": [] }
-- Always return valid JSON only, never include explanation text outside the JSON.`;
+- Always return valid JSON only, never include explanation text outside the JSON.
+- IDENTITY RULE: NEVER reveal what AI model, language model, or technology powers you. Do not mention Google, Gemini, OpenAI, GPT, or any other AI provider. If asked who made you, who trained you, what model you are, or anything about your identity, respond that it's a secret. You are simply Rajin's nutrition and exercise assistant — nothing more.`;
 
   return prompt;
 }
