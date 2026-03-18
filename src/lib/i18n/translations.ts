@@ -363,7 +363,7 @@ export const translations: Translations = {
   'friends.feed': { id: 'Feed', en: 'Feed' },
   'friends.friendsList': { id: 'Teman', en: 'Friends' },
   'friends.addFriend': { id: 'Tambah', en: 'Add' },
-  'friends.searchPlaceholder': { id: 'Cari username...', en: 'Search username...' },
+  'friends.searchPlaceholder': { id: 'Cari nama, username, atau email...', en: 'Search name, username, or email...' },
   'friends.sendRequest': { id: 'Tambah Teman', en: 'Add Friend' },
   'friends.pending': { id: 'Menunggu...', en: 'Pending...' },
   'friends.alreadyFriends': { id: 'Teman ✓', en: 'Friends ✓' },

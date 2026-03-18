@@ -221,12 +221,10 @@ export default function FriendsPage() {
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const sb = createClient();
-        const { data, error } = await sb.rpc('search_users_by_username', {
-          search_term: searchQuery.trim(),
-        });
-        if (error) throw error;
-        setSearchResults((data ?? []) as FriendProfile[]);
+        const res = await fetch(`/api/friends/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error);
+        setSearchResults((json.results ?? []) as FriendProfile[]);
       } catch {
         showToast('error', t('friends.failedSearch'));
       } finally {
