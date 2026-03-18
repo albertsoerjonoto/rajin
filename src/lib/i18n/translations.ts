@@ -497,7 +497,6 @@ export const translations: Translations = {
     en: "You're ready to go! Remember, you can always chat with the AI to log food, drinks, or exercise. Enjoy your health journey!",
   },
   'tour.next': { id: 'Lanjut', en: 'Next' },
-  'tour.skip': { id: 'Lewati', en: 'Skip' },
   'tour.skipTour': { id: 'Lewati Tur', en: 'Skip Tour' },
   'tour.done': { id: 'Selesai!', en: 'Done!' },
   'tour.letsGo': { id: 'Ayo Mulai!', en: "Let's Go!" },

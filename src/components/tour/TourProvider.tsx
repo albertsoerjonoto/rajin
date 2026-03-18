@@ -6,6 +6,35 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { tourSteps, type TourStep } from '@/lib/tour-steps';
 
+const TOUR_STORAGE_KEY = 'rajin_tour_progress';
+
+interface TourProgress {
+  active: boolean;
+  stepIndex: number;
+}
+
+function saveTourProgress(progress: TourProgress | null) {
+  try {
+    if (progress) {
+      localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(progress));
+    } else {
+      localStorage.removeItem(TOUR_STORAGE_KEY);
+    }
+  } catch {}
+}
+
+function loadTourProgress(): TourProgress | null {
+  try {
+    const raw = localStorage.getItem(TOUR_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.active === 'boolean' && typeof parsed.stepIndex === 'number') {
+      return parsed;
+    }
+  } catch {}
+  return null;
+}
+
 export interface TourState {
   isActive: boolean;
   currentStepIndex: number;
@@ -27,6 +56,31 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const completingRef = useRef(false);
   const indexRef = useRef(0);
+  const restoredRef = useRef(false);
+
+  // Restore tour progress from localStorage on mount
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    const progress = loadTourProgress();
+    if (progress?.active && progress.stepIndex < tourSteps.length) {
+      indexRef.current = progress.stepIndex;
+      setCurrentStepIndex(progress.stepIndex);
+      setIsActive(true);
+      // Navigate to the step's page if it has one
+      const step = tourSteps[progress.stepIndex];
+      if (step.navigateTo) {
+        router.replace(step.navigateTo);
+      }
+    }
+  }, [router]);
+
+  // Persist tour progress whenever it changes
+  useEffect(() => {
+    if (isActive) {
+      saveTourProgress({ active: true, stepIndex: currentStepIndex });
+    }
+  }, [isActive, currentStepIndex]);
 
   const markCompleted = useCallback(async () => {
     if (completingRef.current || !user) return;
@@ -42,6 +96,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     setIsActive(false);
     setCurrentStepIndex(0);
     indexRef.current = 0;
+    saveTourProgress(null);
     markCompleted();
   }, [markCompleted]);
 
@@ -68,6 +123,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     indexRef.current = 0;
     setCurrentStepIndex(0);
     setIsActive(true);
+    saveTourProgress({ active: true, stepIndex: 0 });
   }, []);
 
   const advanceToStep = useCallback((id: string) => {
@@ -78,7 +134,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Sync indexRef when currentStepIndex changes from advanceToStep
+  // Sync indexRef when currentStepIndex changes
   useEffect(() => {
     indexRef.current = currentStepIndex;
   }, [currentStepIndex]);
