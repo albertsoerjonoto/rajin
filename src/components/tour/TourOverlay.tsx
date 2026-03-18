@@ -138,12 +138,12 @@ export function TourOverlay() {
           so pointer events pass through the hole to the page below,
           while clicks on the dimmed area are blocked. */}
       <div
-        className="absolute inset-0 motion-safe:transition-all motion-safe:duration-300"
+        className="absolute inset-0 motion-safe:transition-[opacity,clip-path] motion-safe:duration-300"
         style={{
           backgroundColor: 'rgba(0, 0, 0, 0.6)',
           opacity: visible ? 1 : 0,
           clipPath: spotlight && !isCenter ? clipPath : undefined,
-          pointerEvents: 'auto',
+          pointerEvents: visible ? 'auto' : 'none',
         }}
       />
 
