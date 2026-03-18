@@ -703,35 +703,42 @@ export default function LogPage() {
                   </div>
                 </div>
 
-                {drinkLogs.length === 0 ? (
-                  <div className="bg-surface rounded-2xl p-4 text-center">
-                    <p className="text-text-tertiary text-sm">{t('drink.noDrinksLogged')}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {drinkLogs.map((log, i) => (
-                      <div key={log.id} onClick={() => startEditDrink(log)} className="bg-surface rounded-2xl p-4 animate-stagger-in cursor-pointer hover:bg-surface-hover transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="flex items-center">
-                              <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">{drinkTypeLabel(log.drink_type)}</span>
-                              <TimeStamp time={log.logged_at} />
-                            </div>
-                            <p className="text-sm font-medium text-text-primary mt-0.5">{log.description}</p>
-                            <p className="text-xs text-text-tertiary mt-1">
-                              {log.volume_ml}ml
-                              {log.drink_type !== 'water' && log.calories > 0 && ` · ${log.calories} ${t('common.cal')}`}
-                              {log.drink_type !== 'water' && log.protein_g != null && log.protein_g > 0 && ` · ${log.protein_g}g ${t('log.protein')}`}
-                              {log.drink_type !== 'water' && log.carbs_g != null && log.carbs_g > 0 && ` · ${log.carbs_g}g ${t('log.carbs')}`}
-                              {log.drink_type !== 'water' && log.fat_g != null && log.fat_g > 0 && ` · ${log.fat_g}g ${t('log.fat')}`}
-                            </p>
-                          </div>
-                          <DeleteButton type="drink" id={log.id} />
-                        </div>
+                {(() => {
+                  const nonWaterLogs = drinkLogs.filter((d) => d.drink_type !== 'water');
+                  if (nonWaterLogs.length === 0 && drinkLogs.length === 0) {
+                    return (
+                      <div className="bg-surface rounded-2xl p-4 text-center">
+                        <p className="text-text-tertiary text-sm">{t('drink.noDrinksLogged')}</p>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    );
+                  }
+                  if (nonWaterLogs.length === 0) return null;
+                  return (
+                    <div className="space-y-2">
+                      {nonWaterLogs.map((log, i) => (
+                        <div key={log.id} onClick={() => startEditDrink(log)} className="bg-surface rounded-2xl p-4 animate-stagger-in cursor-pointer hover:bg-surface-hover transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="flex items-center">
+                                <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">{drinkTypeLabel(log.drink_type)}</span>
+                                <TimeStamp time={log.logged_at} />
+                              </div>
+                              <p className="text-sm font-medium text-text-primary mt-0.5">{log.description}</p>
+                              <p className="text-xs text-text-tertiary mt-1">
+                                {log.volume_ml}ml
+                                {log.calories > 0 && ` · ${log.calories} ${t('common.cal')}`}
+                                {log.protein_g != null && log.protein_g > 0 && ` · ${log.protein_g}g ${t('log.protein')}`}
+                                {log.carbs_g != null && log.carbs_g > 0 && ` · ${log.carbs_g}g ${t('log.carbs')}`}
+                                {log.fat_g != null && log.fat_g > 0 && ` · ${log.fat_g}g ${t('log.fat')}`}
+                              </p>
+                            </div>
+                            <DeleteButton type="drink" id={log.id} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </section>
             </div>
           )}
