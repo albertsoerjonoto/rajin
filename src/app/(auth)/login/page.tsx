@@ -185,7 +185,7 @@ export default function LoginPage() {
           </Link>
         </p>
 
-        <p className="text-center text-sm text-text-tertiary mt-6">{t('auth.loginSubtagline')}</p>
+        <p className="text-center text-xs text-text-tertiary/60 mt-6">{t('auth.loginSubtagline')}</p>
       </div>
     </div>
   );
