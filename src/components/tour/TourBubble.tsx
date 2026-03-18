@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTour } from './useTour';
 import { useLocale } from '@/lib/i18n';
 
@@ -13,6 +13,23 @@ type ArrowDirection = 'up' | 'down' | 'left' | 'right' | 'none';
 export function TourBubble({ spotlight }: TourBubbleProps) {
   const { currentStep, nextStep, skipTour, completeTour, currentStepIndex, steps } = useTour();
   const { t } = useLocale();
+
+  // Re-trigger fade-in animation when step changes without unmounting the component.
+  // Double-rAF ensures the browser has flushed the "no animation" frame before re-applying.
+  const [animating, setAnimating] = useState(true);
+  const prevStepRef = useRef(currentStepIndex);
+
+  useEffect(() => {
+    if (prevStepRef.current !== currentStepIndex) {
+      prevStepRef.current = currentStepIndex;
+      setAnimating(false);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setAnimating(true);
+        });
+      });
+    }
+  }, [currentStepIndex]);
 
   const isLastStep = currentStep?.id === 'complete';
   const isCenter = currentStep?.position === 'center' || !currentStep?.targetSelector;
@@ -163,8 +180,7 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
 
   return (
     <div
-      key={currentStepIndex}
-      className="absolute z-[102] motion-safe:animate-fade-in"
+      className={`absolute z-[102] ${animating ? 'motion-safe:animate-fade-in' : 'opacity-0'}`}
       style={{
         ...style,
         pointerEvents: 'auto',
@@ -219,7 +235,7 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
               <button
                 type="button"
                 onClick={handleAction}
-                className="bg-accent hover:bg-accent-hover text-accent-fg text-sm font-semibold px-4 py-2 rounded-xl transition-all active:scale-95 min-h-[44px]"
+                className="bg-accent hover:bg-accent-hover text-accent-fg text-sm font-semibold px-4 py-2 rounded-xl transition-colors active:scale-95 min-h-[44px]"
               >
                 {isLastStep ? t('tour.letsGo') : t('tour.next')}
               </button>

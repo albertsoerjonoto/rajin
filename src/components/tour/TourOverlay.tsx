@@ -11,6 +11,16 @@ interface SpotlightRect {
   height: number;
 }
 
+function rectsEqual(a: SpotlightRect | null, b: SpotlightRect | null): boolean {
+  if (!a || !b) return a === b;
+  return (
+    Math.abs(a.x - b.x) < 1 &&
+    Math.abs(a.y - b.y) < 1 &&
+    Math.abs(a.width - b.width) < 1 &&
+    Math.abs(a.height - b.height) < 1
+  );
+}
+
 function findElement(selector: string, padding: number): SpotlightRect | null {
   const el = document.querySelector(selector);
   if (!el) return null;
@@ -36,13 +46,23 @@ export function TourOverlay() {
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
   const [visible, setVisible] = useState(false);
   const [bubbleReady, setBubbleReady] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const rafRef = useRef<number>(0);
+  const spotlightRef = useRef<SpotlightRect | null>(null);
 
-  // Poll for the target element when step changes
+  // Update spotlight only when position actually changed (avoids re-renders mid-tap)
+  const updateSpotlight = (rect: SpotlightRect | null) => {
+    if (!rectsEqual(rect, spotlightRef.current)) {
+      spotlightRef.current = rect;
+      setSpotlight(rect);
+    }
+  };
+
+  // Poll for the target element when step changes using rAF instead of setInterval
   useEffect(() => {
     if (!isActive || !currentStep) return;
     setBubbleReady(false);
     setSpotlight(null);
+    spotlightRef.current = null;
 
     if (!currentStep.targetSelector) {
       // Center mode — no target
@@ -52,41 +72,50 @@ export function TourOverlay() {
 
     const padding = currentStep.highlightPadding ?? 8;
     let attempts = 0;
+    let lastCheck = 0;
 
-    const check = () => {
+    const check = (timestamp: number) => {
+      // Throttle to ~150ms between checks
+      if (timestamp - lastCheck < 150) {
+        rafRef.current = requestAnimationFrame(check);
+        return;
+      }
+      lastCheck = timestamp;
+
       const result = findElement(currentStep.targetSelector, padding);
       if (result) {
-        setSpotlight(result);
+        updateSpotlight(result);
         setBubbleReady(true);
-        clearInterval(intervalRef.current);
-      } else if (attempts++ > 20) {
-        // Give up — show centered
-        setSpotlight(null);
-        setBubbleReady(true);
-        clearInterval(intervalRef.current);
+        return; // stop polling — element found
       }
+      if (attempts++ > 20) {
+        // Give up — show centered
+        updateSpotlight(null);
+        setBubbleReady(true);
+        return;
+      }
+      rafRef.current = requestAnimationFrame(check);
     };
 
-    // Initial check after short delay for navigation
+    // Initial delay for navigation to settle
     const timer = setTimeout(() => {
-      check();
-      intervalRef.current = setInterval(check, 150);
+      rafRef.current = requestAnimationFrame(check);
     }, 150);
 
     return () => {
       clearTimeout(timer);
-      clearInterval(intervalRef.current);
+      cancelAnimationFrame(rafRef.current);
     };
   }, [isActive, currentStep]);
 
-  // Recalculate spotlight position on scroll/resize/visualViewport changes
+  // Recalculate spotlight position on scroll/resize/visualViewport changes (deduplicated)
   useEffect(() => {
     if (!isActive || !currentStep?.targetSelector) return;
     const padding = currentStep.highlightPadding ?? 8;
 
     const handler = () => {
       const result = findElement(currentStep.targetSelector, padding);
-      if (result) setSpotlight(result);
+      if (result) updateSpotlight(result);
     };
 
     window.addEventListener('scroll', handler, true);
@@ -137,16 +166,13 @@ export function TourOverlay() {
     : undefined;
 
   return (
-    <div
-      className="fixed inset-0 z-[100]"
-      style={{ pointerEvents: 'none' }}
-    >
+    <div className="fixed inset-0 z-[100]">
       {/* Dimmed overlay with spotlight cutout.
           The clip-path punches a hole where the spotlight is,
           so pointer events pass through the hole to the page below,
           while clicks on the dimmed area are blocked. */}
       <div
-        className="absolute inset-0 motion-safe:transition-[opacity,clip-path] motion-safe:duration-300"
+        className="absolute inset-0 motion-safe:transition-[opacity] motion-safe:duration-300"
         style={{
           backgroundColor: 'rgba(0, 0, 0, 0.6)',
           opacity: visible ? 1 : 0,
