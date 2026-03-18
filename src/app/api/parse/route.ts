@@ -93,8 +93,14 @@ function buildSystemPrompt(context?: ChatContext): string {
 
     if (context.profile) {
       prompt += `\nUser: ${context.profile.display_name || 'Unknown'}`;
-      prompt += `\nCalorie target: ${context.profile.calorieTarget} cal/day (TDEE: ${context.profile.tdee})`;
+      if (context.profile.gender) prompt += `\nGender: ${context.profile.gender}`;
+      if (context.profile.age) prompt += `\nAge: ${context.profile.age} years old`;
+      if (context.profile.height_cm) prompt += `\nHeight: ${context.profile.height_cm} cm`;
+      if (context.profile.weight_kg) prompt += `\nWeight: ${context.profile.weight_kg} kg`;
+      prompt += `\nCalorie goal: ${context.profile.calorieGoalType} (${context.profile.calorieRangeMin}-${context.profile.calorieRangeMax} cal/day, target ${context.profile.calorieTarget})`;
+      prompt += `\nTDEE: ${context.profile.tdee} cal/day`;
       prompt += `\nMacro targets — Protein: ${context.profile.proteinTarget}, Carbs: ${context.profile.carbsTarget}, Fat: ${context.profile.fatTarget}`;
+      prompt += `\nDaily water goal: ${context.profile.waterGoalMl} ml`;
     } else {
       prompt += '\nUser has not set up body stats yet. Give general advice if asked for recommendations.';
     }

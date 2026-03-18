@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, cn, formatDisplayDate } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
-import { computeNutritionTargets } from '@/lib/nutrition';
+import { computeNutritionTargets, calculateAge } from '@/lib/nutrition';
 import DateNav from '@/components/DateNav';
 import { compressChatImage } from '@/lib/image';
 import { useLocale } from '@/lib/i18n';
@@ -501,23 +501,40 @@ export default function ChatPage() {
     let profileContext: ChatContext['profile'] = null;
     if (profile) {
       const targets = computeNutritionTargets(profile);
+      const age = profile.date_of_birth ? calculateAge(profile.date_of_birth) : null;
       if (targets.hasData) {
         profileContext = {
           display_name: profile.display_name,
+          gender: profile.gender,
+          age,
+          height_cm: profile.height_cm,
+          weight_kg: profile.weight_kg,
           calorieTarget: targets.calorieTarget,
           tdee: targets.tdee,
+          calorieGoalType: targets.deltaLabel,
+          calorieRangeMin: targets.calorieRange.min,
+          calorieRangeMax: targets.calorieRange.max,
           proteinTarget: `${targets.protein.min}-${targets.protein.max}g`,
           carbsTarget: `${targets.carbs.min}-${targets.carbs.max}g`,
           fatTarget: `${targets.fat.min}-${targets.fat.max}g`,
+          waterGoalMl: profile.daily_water_goal_ml ?? 2000,
         };
       } else {
         profileContext = {
           display_name: profile.display_name,
+          gender: profile.gender,
+          age,
+          height_cm: profile.height_cm,
+          weight_kg: profile.weight_kg,
           calorieTarget: 2000 + Math.round(((profile.calorie_offset_min ?? -200) + (profile.calorie_offset_max ?? 200)) / 2),
           tdee: 2000,
+          calorieGoalType: 'not set',
+          calorieRangeMin: 0,
+          calorieRangeMax: 0,
           proteinTarget: 'not set',
           carbsTarget: 'not set',
           fatTarget: 'not set',
+          waterGoalMl: profile.daily_water_goal_ml ?? 2000,
         };
       }
     }

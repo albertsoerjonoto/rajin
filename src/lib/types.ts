@@ -248,7 +248,22 @@ export interface ChatContext {
   todayDrinkLogs: { index: number; id: string; drink_type: DrinkType; description: string; volume_ml: number; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
   todayHabitLogs: { index: number; id: string; habit_name: string; emoji: string; completed: boolean; logged_at: string | null }[];
   todayMeasurementLogs: { index: number; id: string; height_cm: number | null; weight_kg: number | null; notes: string | null; logged_at: string }[];
-  profile: { display_name: string | null; calorieTarget: number; tdee: number; proteinTarget: string; carbsTarget: string; fatTarget: string } | null;
+  profile: {
+    display_name: string | null;
+    gender: string | null;
+    age: number | null;
+    height_cm: number | null;
+    weight_kg: number | null;
+    calorieTarget: number;
+    tdee: number;
+    calorieGoalType: string;
+    calorieRangeMin: number;
+    calorieRangeMax: number;
+    proteinTarget: string;
+    carbsTarget: string;
+    fatTarget: string;
+    waterGoalMl: number;
+  } | null;
   totalCalories: number;
   totalCaloriesBurned: number;
   totalDrinkCalories: number;
