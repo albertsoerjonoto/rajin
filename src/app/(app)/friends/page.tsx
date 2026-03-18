@@ -431,7 +431,7 @@ export default function FriendsPage() {
     }
 
     return (
-      <div key={event.id} className={cn('px-3 py-2.5 flex items-center gap-3', isMe && 'border-l-2 border-accent')}>
+      <div key={event.id} className="px-3 py-2.5 flex items-center gap-3">
         <Avatar url={event.profile.avatar_url} name={event.profile.display_name} size="sm" />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] text-text-primary leading-snug">{description}</p>
@@ -447,7 +447,7 @@ export default function FriendsPage() {
     const earliest = item.events[item.events.length - 1];
 
     return (
-      <div key={item.events.map(e => e.id).join('-')} className={cn('px-3 py-2.5 flex items-start gap-3', isMe && 'border-l-2 border-accent')}>
+      <div key={item.events.map(e => e.id).join('-')} className="px-3 py-2.5 flex items-start gap-3">
         <Avatar url={item.profile.avatar_url} name={item.profile.display_name} size="sm" />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] text-text-primary font-medium leading-snug">
@@ -557,7 +557,7 @@ export default function FriendsPage() {
           {tab === 'feed' && (
             <div className="space-y-1">
               {/* Filter tabs */}
-              <div className="flex gap-4 border-b border-border mb-2">
+              <div className="flex gap-3 mb-2">
                 {([
                   { key: 'all' as FeedFilter, labelKey: 'friends.feedAll' },
                   { key: 'mine' as FeedFilter, labelKey: 'friends.feedMine' },
@@ -567,10 +567,10 @@ export default function FriendsPage() {
                     key={f.key}
                     onClick={() => setFeedFilter(f.key)}
                     className={cn(
-                      'pb-2 text-xs font-medium transition-all duration-200 border-b-2 -mb-px',
+                      'text-xs font-medium transition-colors',
                       feedFilter === f.key
-                        ? 'border-accent text-text-primary'
-                        : 'border-transparent text-text-tertiary'
+                        ? 'text-text-primary'
+                        : 'text-text-tertiary'
                     )}
                   >
                     {t(f.labelKey)}
