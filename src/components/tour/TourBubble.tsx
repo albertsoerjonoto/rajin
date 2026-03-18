@@ -43,63 +43,72 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
     const viewportW = typeof window !== 'undefined' ? window.innerWidth : 375;
     const viewportH = typeof window !== 'undefined' ? window.innerHeight : 812;
     const bubbleWidth = Math.min(320, viewportW - 32);
+    const bubbleEstHeight = 160; // approximate height of the bubble
     const position = currentStep?.position ?? 'bottom';
+    const gap = 12;
 
     let top = 0;
     let left = 0;
     let arrowDir: ArrowDirection = 'none';
+    let useTranslateY = false;
 
+    // Determine the best position, flipping if it would go off-screen
     if (position === 'top') {
-      top = spotlight.y - 12;
+      // Try above the spotlight
+      const aboveTop = spotlight.y - gap - bubbleEstHeight;
+      if (aboveTop >= 8) {
+        // Fits above
+        top = spotlight.y - gap;
+        arrowDir = 'down';
+        useTranslateY = true;
+      } else {
+        // Flip to below
+        top = spotlight.y + spotlight.height + gap;
+        arrowDir = 'up';
+      }
       left = spotlight.x + spotlight.width / 2 - bubbleWidth / 2;
-      arrowDir = 'down';
     } else if (position === 'bottom') {
-      top = spotlight.y + spotlight.height + 12;
+      // Try below the spotlight
+      const belowBottom = spotlight.y + spotlight.height + gap + bubbleEstHeight;
+      if (belowBottom <= viewportH - 8) {
+        // Fits below
+        top = spotlight.y + spotlight.height + gap;
+        arrowDir = 'up';
+      } else {
+        // Flip to above
+        top = spotlight.y - gap;
+        arrowDir = 'down';
+        useTranslateY = true;
+      }
       left = spotlight.x + spotlight.width / 2 - bubbleWidth / 2;
-      arrowDir = 'up';
     } else if (position === 'left') {
       top = spotlight.y + spotlight.height / 2;
-      left = spotlight.x - bubbleWidth - 12;
+      left = spotlight.x - bubbleWidth - gap;
       arrowDir = 'right';
     } else {
       top = spotlight.y + spotlight.height / 2;
-      left = spotlight.x + spotlight.width + 12;
+      left = spotlight.x + spotlight.width + gap;
       arrowDir = 'left';
     }
 
     // Clamp to viewport
     const clampedLeft = Math.max(16, Math.min(left, viewportW - bubbleWidth - 16));
 
+    // Clamp top so bubble doesn't go below viewport
+    if (!useTranslateY) {
+      top = Math.max(8, Math.min(top, viewportH - bubbleEstHeight - 8));
+    }
+
     // Arrow points to the center of the spotlight element
     const spotlightCenterX = spotlight.x + spotlight.width / 2;
     const arrowLeftPx = Math.max(24, Math.min(spotlightCenterX - clampedLeft, bubbleWidth - 24));
-
-    // If bubble would go below viewport, put it above
-    if (position === 'bottom' && top + 150 > viewportH) {
-      top = spotlight.y - 12;
-      return {
-        style: {
-          left: `${clampedLeft}px`,
-          bottom: `${viewportH - top}px`,
-          maxWidth: `${bubbleWidth}px`,
-        },
-        arrow: 'down' as ArrowDirection,
-        arrowLeft: arrowLeftPx,
-      };
-    }
-
-    // If bubble would go above viewport, put it below
-    if (position === 'top' && top < 60) {
-      top = spotlight.y + spotlight.height + 12;
-      arrowDir = 'up';
-    }
 
     return {
       style: {
         left: `${clampedLeft}px`,
         top: `${top}px`,
         maxWidth: `${bubbleWidth}px`,
-        transform: position === 'top' ? 'translateY(-100%)' : undefined,
+        transform: useTranslateY ? 'translateY(-100%)' : undefined,
       },
       arrow: arrowDir,
       arrowLeft: arrowLeftPx,

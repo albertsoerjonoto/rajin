@@ -1008,9 +1008,9 @@ export default function DashboardPage() {
           {/* Diet + Exercise wrapper — side by side on desktop */}
           <div className={cn(isExpanded && 'lg:grid lg:grid-cols-3 lg:gap-6')}>
           {/* Diet Section */}
-          <section className={cn('mb-6 animate-stagger-in', isExpanded && 'lg:col-span-2 lg:mb-0')} style={{ animationDelay: '50ms' }} data-tour="diet-card">
+          <section className={cn('mb-6 animate-stagger-in', isExpanded && 'lg:col-span-2 lg:mb-0')} style={{ animationDelay: '50ms' }}>
             <h2 className="text-lg font-semibold text-text-primary mb-3">{t('dashboard.diet')}</h2>
-            <div className="bg-surface rounded-2xl p-5">
+            <div className="bg-surface rounded-2xl p-5" data-tour="diet-card">
               {/* Calorie Summary */}
               {hasBodyStats ? (
                 <div className="mb-4">

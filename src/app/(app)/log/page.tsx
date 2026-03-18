@@ -544,9 +544,9 @@ export default function LogPage() {
   const { isExpanded } = useDesktopLayout();
 
   return (
-    <div className={cn('max-w-lg mx-auto px-4', isExpanded && 'lg:max-w-3xl lg:px-8')} data-tour="log-entries">
+    <div className={cn('max-w-lg mx-auto px-4', isExpanded && 'lg:max-w-3xl lg:px-8')}>
       {ToastContainer}
-      <div className="sticky top-0 z-20 bg-bg -mx-4 px-4 pt-6 pb-3">
+      <div className="sticky top-0 z-20 bg-bg -mx-4 px-4 pt-6 pb-3" data-tour="log-header">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-text-primary">{t('log.title')}</h1>
           <DateNav date={date} onDateChange={handleDateChange} />
