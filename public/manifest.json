@@ -1,6 +1,6 @@
 {
-  "name": "Rajin — Habit, Food & Exercise Tracker",
-  "short_name": "Rajin",
+  "name": "Rajin.AI",
+  "short_name": "Rajin.AI",
   "description": "Track your daily habits, food intake, and exercise",
   "start_url": "/dashboard",
   "display": "standalone",

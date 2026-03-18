@@ -193,7 +193,7 @@ export const translations: Translations = {
   'profile.weightError': { id: 'Harus antara 10 dan 500 kg', en: 'Must be between 10 and 500 kg' },
 
   // ── Auth pages ──
-  'auth.appName': { id: 'Rajin', en: 'Rajin' },
+  'auth.appName': { id: 'Rajin.AI', en: 'Rajin.AI' },
   'auth.loginSubtitle': { id: 'Lacak kebiasaan, makanan & olahraga kamu', en: 'Track your habits, food & exercise' },
   'auth.signupSubtitle': { id: 'Mulai lacak kemajuan harian kamu', en: 'Start tracking your daily progress' },
   'auth.usernameOrEmail': { id: 'Username atau email', en: 'Username or email' },

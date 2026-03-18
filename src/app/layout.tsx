@@ -4,13 +4,13 @@ import Providers from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Rajin — Habit, Food & Exercise Tracker',
+  title: 'Rajin.AI',
   description: 'Track your daily habits, food intake, and exercise with AI-powered Indonesian food knowledge.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Rajin',
+    title: 'Rajin.AI',
   },
   formatDetection: {
     telephone: false,

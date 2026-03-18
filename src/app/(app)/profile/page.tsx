@@ -736,7 +736,7 @@ export default function ProfilePage() {
         onCancel={() => !deleting && setShowDeleteConfirm(false)}
       />
 
-      <p className="text-center text-xs text-text-tertiary mt-12 mb-6">Rajin v1.0</p>
+      <p className="text-center text-xs text-text-tertiary mt-12 mb-6">Rajin.AI v1.0</p>
     </div>
   );
 }

@@ -73,7 +73,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           {/* Logo */}
           <div className="flex items-center justify-center xl:justify-start xl:px-6 h-16 border-b border-border">
             <span className="text-lg font-bold text-text-primary xl:hidden">R</span>
-            <span className="text-lg font-bold text-text-primary hidden xl:inline">Rajin</span>
+            <span className="text-lg font-bold text-text-primary hidden xl:inline">Rajin.AI</span>
           </div>
 
           {/* Nav items */}
