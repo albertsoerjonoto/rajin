@@ -57,15 +57,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
 
   // Scroll to top on page navigation
   useEffect(() => {
-    const scrollTop = () => {
-      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    };
-    scrollTop();
-    requestAnimationFrame(scrollTop);
-    const timer = setTimeout(scrollTop, 100);
-    return () => clearTimeout(timer);
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }, [pathname]);
 
   return (
@@ -90,7 +82,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                   href={tab.href}
                   title={t(tab.labelKey)}
                   className={cn(
-                    'flex items-center justify-center xl:justify-start gap-3 px-0 xl:px-3 py-2.5 rounded-xl transition-all duration-200 relative',
+                    'flex items-center justify-center xl:justify-start gap-3 px-0 xl:px-3 py-2.5 rounded-xl transition-colors duration-200 relative',
                     isActive
                       ? 'bg-accent-surface text-nav-active font-semibold'
                       : 'text-nav-inactive hover:bg-surface-hover hover:text-nav-inactive-hover'
@@ -118,7 +110,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* Bottom tab nav — visible on mobile, hidden on md+ when expanded */}
       <nav className={cn(
-        'fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-xl safe-area-bottom z-50',
+        'fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-md safe-area-bottom z-50',
         isExpanded ? 'sm:hidden' : ''
       )}>
         <div className="max-w-lg mx-auto flex justify-around items-center h-16">
@@ -132,7 +124,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 href={tab.href}
                 data-tour={tab.href === '/log' ? 'nav-log' : tab.href === '/dashboard' ? 'nav-overview' : undefined}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-all duration-200 relative',
+                  'flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-colors duration-200 relative',
                   isTabActive ? 'text-nav-active' : 'text-nav-inactive hover:text-nav-inactive-hover',
                   dimmed && 'opacity-40'
                 )}
