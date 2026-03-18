@@ -90,7 +90,6 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-text-primary">{t('auth.appName')}</h1>
           <p className="text-text-secondary mt-2">{t('auth.loginSubtitle')}</p>
-          <p className="text-text-tertiary text-sm mt-1">{t('auth.loginSubtagline')}</p>
         </div>
 
         {error && (
@@ -185,6 +184,8 @@ export default function LoginPage() {
             {t('auth.signUp')}
           </Link>
         </p>
+
+        <p className="text-center text-sm text-text-tertiary mt-6">{t('auth.loginSubtagline')}</p>
       </div>
     </div>
   );
