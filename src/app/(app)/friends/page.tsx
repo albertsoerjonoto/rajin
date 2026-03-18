@@ -358,10 +358,12 @@ export default function FriendsPage() {
     return parts[0];
   };
 
-  // Group consecutive habit_completed events by same user
+  // Group consecutive habit_completed events by same user, same day only
   type GroupedFeedItem =
     | { type: 'single'; event: FeedEventWithProfile }
     | { type: 'group'; events: FeedEventWithProfile[]; profile: FriendProfile; userId: string };
+
+  const sameDay = (a: string, b: string) => a.slice(0, 10) === b.slice(0, 10);
 
   const groupFeedEvents = (events: FeedEventWithProfile[]): GroupedFeedItem[] => {
     const items: GroupedFeedItem[] = [];
@@ -369,17 +371,30 @@ export default function FriendsPage() {
     while (i < events.length) {
       const event = events[i];
       if (event.event_type === 'habit_completed') {
-        // Collect consecutive habit_completed from same user
+        // Collect consecutive habit_completed from same user AND same day
         const group: FeedEventWithProfile[] = [event];
         let j = i + 1;
-        while (j < events.length && events[j].event_type === 'habit_completed' && events[j].user_id === event.user_id) {
+        while (
+          j < events.length &&
+          events[j].event_type === 'habit_completed' &&
+          events[j].user_id === event.user_id &&
+          sameDay(events[j].created_at, event.created_at)
+        ) {
           group.push(events[j]);
           j++;
         }
-        if (group.length > 1) {
-          items.push({ type: 'group', events: group, profile: event.profile, userId: event.user_id });
+        // Deduplicate by habit name (keep first occurrence)
+        const seen = new Set<string>();
+        const deduped = group.filter(e => {
+          const name = (e.data as Record<string, string>).habit_name;
+          if (seen.has(name)) return false;
+          seen.add(name);
+          return true;
+        });
+        if (deduped.length > 1) {
+          items.push({ type: 'group', events: deduped, profile: event.profile, userId: event.user_id });
         } else {
-          items.push({ type: 'single', event });
+          items.push({ type: 'single', event: deduped[0] });
         }
         i = j;
       } else {
@@ -429,20 +444,26 @@ export default function FriendsPage() {
   const renderGroupedEvent = (item: GroupedFeedItem & { type: 'group' }) => {
     const name = firstName(item.profile.display_name);
     const isMe = item.userId === user?.id;
-    const habits = item.events.map(e => {
-      const d = e.data as Record<string, string>;
-      return `${d.habit_emoji ?? '✅'} ${d.habit_name}`;
-    });
     const earliest = item.events[item.events.length - 1];
 
     return (
-      <div key={item.events.map(e => e.id).join('-')} className={cn('bg-surface rounded-xl px-3 py-2.5 flex items-center gap-3', isMe && 'border-l-2 border-accent')}>
+      <div key={item.events.map(e => e.id).join('-')} className={cn('bg-surface rounded-xl px-3 py-2.5 flex items-start gap-3', isMe && 'border-l-2 border-accent')}>
         <Avatar url={item.profile.avatar_url} name={item.profile.display_name} size="sm" />
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] text-text-primary leading-snug">
-            {name} {t('friends.completed')} {habits.join(', ')}
+          <p className="text-[13px] text-text-primary font-medium leading-snug">
+            {name} {t('friends.completed')} {item.events.length} habits
           </p>
-          <p className="text-[11px] text-text-tertiary mt-0.5">{relativeTime(earliest.created_at)}</p>
+          <ul className="mt-1 space-y-0.5">
+            {item.events.map(e => {
+              const d = e.data as Record<string, string>;
+              return (
+                <li key={e.id} className="text-[12px] text-text-secondary leading-snug">
+                  {d.habit_emoji ?? '✅'} {d.habit_name}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-[11px] text-text-tertiary mt-1">{relativeTime(earliest.created_at)}</p>
         </div>
       </div>
     );
