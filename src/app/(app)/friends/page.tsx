@@ -343,9 +343,19 @@ export default function FriendsPage() {
   const deleteFeedEvent = async (eventId: string) => {
     try {
       const sb = createClient();
-      const { error } = await sb.from('feed_events').delete().eq('id', eventId);
+      // For grouped events, find all IDs in the same group
+      const idsToDelete = [eventId];
+      const groupItem = groupedFeed.find(
+        item => item.type === 'group' && item.events.some(e => e.id === eventId)
+      );
+      if (groupItem && groupItem.type === 'group') {
+        idsToDelete.length = 0;
+        groupItem.events.forEach(e => idsToDelete.push(e.id));
+      }
+      const { error } = await sb.from('feed_events').delete().in('id', idsToDelete);
       if (error) throw error;
-      setFeedEvents(prev => prev.filter(e => e.id !== eventId));
+      const idSet = new Set(idsToDelete);
+      setFeedEvents(prev => prev.filter(e => !idSet.has(e.id)));
       setConfirmDeleteEvent(null);
       showToast('success', t('friends.feedDeleted'));
     } catch {
@@ -515,7 +525,7 @@ export default function FriendsPage() {
         {isMe && (
           <button
             onClick={() => setConfirmDeleteEvent(item.events[0].id)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-text-tertiary hover:text-red-500 rounded-lg shrink-0 mt-1"
+            className="opacity-40 sm:opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-text-tertiary hover:text-red-500 rounded-lg shrink-0 mt-1"
             aria-label={t('friends.deleteFeedEvent')}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
