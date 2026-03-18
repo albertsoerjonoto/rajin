@@ -5,7 +5,7 @@ export type LogSource = 'manual' | 'chat';
 export type Gender = 'male' | 'female';
 export type FriendshipStatus = 'pending' | 'accepted' | 'declined' | 'rejected' | 'blocked';
 export type SharedHabitStatus = 'pending' | 'accepted' | 'rejected';
-export type FeedEventType = 'habit_completed' | 'streak_milestone' | 'friend_added' | 'shared_habit_started' | 'shared_streak';
+export type FeedEventType = 'habit_completed' | 'streak_milestone' | 'friend_added' | 'shared_habit_started' | 'shared_streak' | 'exercise_completed' | 'calorie_goal_met' | 'protein_goal_met' | 'fat_goal_met' | 'carbs_goal_met' | 'water_goal_met';
 export type Locale = 'id' | 'en';
 export type DesktopLayout = 'compact' | 'expanded';
 
