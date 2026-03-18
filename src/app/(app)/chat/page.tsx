@@ -747,6 +747,10 @@ export default function ChatPage() {
           ...prev,
           { id: `error-${Date.now()}`, role: 'assistant', content: errorContent },
         ]);
+        // Tour: revert back to chat-input so user can retry
+        if (tourActive && getStepId() === 'ai-response') {
+          advanceToStep('chat-input');
+        }
         setLoading(false);
         return;
       }
@@ -857,6 +861,10 @@ export default function ChatPage() {
         ...prev,
         { id: `error-${Date.now()}`, role: 'assistant', content: isTimeout ? t('chat.requestTimeout') : t('chat.somethingWrong') },
       ]);
+      // Tour: revert back to chat-input so user can retry
+      if (tourActive && getStepId() === 'ai-response') {
+        advanceToStep('chat-input');
+      }
     }
 
     setLoading(false);
