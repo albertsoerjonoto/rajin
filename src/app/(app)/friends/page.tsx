@@ -431,7 +431,7 @@ export default function FriendsPage() {
     }
 
     return (
-      <div key={event.id} className={cn('bg-surface rounded-xl px-3 py-2.5 flex items-center gap-3', isMe && 'border-l-2 border-accent')}>
+      <div key={event.id} className={cn('px-3 py-2.5 flex items-center gap-3', isMe && 'border-l-2 border-accent')}>
         <Avatar url={event.profile.avatar_url} name={event.profile.display_name} size="sm" />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] text-text-primary leading-snug">{description}</p>
@@ -447,7 +447,7 @@ export default function FriendsPage() {
     const earliest = item.events[item.events.length - 1];
 
     return (
-      <div key={item.events.map(e => e.id).join('-')} className={cn('bg-surface rounded-xl px-3 py-2.5 flex items-start gap-3', isMe && 'border-l-2 border-accent')}>
+      <div key={item.events.map(e => e.id).join('-')} className={cn('px-3 py-2.5 flex items-start gap-3', isMe && 'border-l-2 border-accent')}>
         <Avatar url={item.profile.avatar_url} name={item.profile.display_name} size="sm" />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] text-text-primary font-medium leading-snug">
