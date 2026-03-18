@@ -166,7 +166,7 @@ export function TourOverlay() {
     : undefined;
 
   return (
-    <div className="fixed inset-0 z-[100]">
+    <div className="fixed inset-0 z-[100]" style={{ pointerEvents: 'none' }}>
       {/* Dimmed overlay with spotlight cutout.
           The clip-path punches a hole where the spotlight is,
           so pointer events pass through the hole to the page below,
