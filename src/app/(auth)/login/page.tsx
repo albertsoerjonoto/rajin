@@ -65,7 +65,7 @@ export default function LoginPage() {
     'w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg px-4 relative">
+    <div className="h-dvh flex items-center justify-center bg-bg px-4 relative overflow-hidden">
       {/* Language toggle */}
       <div className="absolute top-4 right-4">
         <div className="flex items-center bg-surface rounded-full border border-border-strong overflow-hidden">
