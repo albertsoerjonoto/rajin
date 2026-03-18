@@ -25,7 +25,7 @@ import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@d
 import { CSS } from '@dnd-kit/utilities';
 import { useDesktopLayout } from '@/hooks/useDesktopLayout';
 import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile, FriendProfile, SharedHabit, HabitStreak } from '@/lib/types';
-import { updateHabitStreak, isStreakMilestone } from '@/lib/streaks';
+import { updateHabitStreak, isStreakMilestone, calculateStreak } from '@/lib/streaks';
 import { buildDayDataMap } from '@/components/analytics/types';
 import type { DayData } from '@/components/analytics/types';
 import StreakCard from '@/components/analytics/StreakCard';
@@ -364,12 +364,34 @@ export default function DashboardPage() {
       .then(({ data }) => {
         setSharedHabits((data ?? []) as SharedHabit[]);
       });
-    sb.from('habit_streaks')
-      .select('*')
+    // Calculate streaks from actual habit_logs instead of cached habit_streaks
+    // so that missed days correctly reset the streak to 0
+    sb.from('habit_logs')
+      .select('habit_id, date, completed')
       .eq('user_id', user.id)
-      .then(({ data }) => {
+      .eq('completed', true)
+      .order('date', { ascending: false })
+      .limit(5000)
+      .then(({ data: logs }) => {
+        if (!logs) return;
+        const today = getToday();
+        const logsByHabit = new Map<string, { date: string; completed: boolean }[]>();
+        for (const log of logs) {
+          const arr = logsByHabit.get(log.habit_id) ?? [];
+          arr.push({ date: log.date, completed: log.completed });
+          logsByHabit.set(log.habit_id, arr);
+        }
         const map: Record<string, HabitStreak> = {};
-        (data ?? []).forEach((s: HabitStreak) => { map[s.habit_id] = s; });
+        for (const [habitId, habitLogs] of logsByHabit) {
+          const { current, longest, lastCompleted } = calculateStreak(habitLogs, today);
+          map[habitId] = {
+            habit_id: habitId,
+            user_id: user.id,
+            current_streak: current,
+            longest_streak: longest,
+            last_completed_date: lastCompleted,
+          } as HabitStreak;
+        }
         setStreakMap(map);
       });
   }, [user]);
@@ -964,7 +986,7 @@ export default function DashboardPage() {
                       <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
                         {habit.name}
                       </span>
-                      {streakMap[habit.id]?.current_streak > 0 && (
+                      {streakMap[habit.id]?.current_streak > 1 && (
                         <span className="text-[10px] font-semibold text-orange-500 shrink-0">
                           🔥{streakMap[habit.id].current_streak}
                         </span>
