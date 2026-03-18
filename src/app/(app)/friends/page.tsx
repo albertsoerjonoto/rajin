@@ -447,7 +447,11 @@ export default function FriendsPage() {
       case 'habit_completed': {
         const emoji = (data.habit_emoji as string) ?? '✅';
         const hcStreak = typeof data.streak === 'number' ? data.streak : 0;
-        description = `${name} ${t('friends.completed')} ${emoji} ${data.habit_name}${hcStreak > 1 ? ` 🔥${hcStreak}` : ''}`;
+        if (hcStreak > 1) {
+          description = `${name} ${t('friends.hitStreak')} 🔥 ${hcStreak} ${t('friends.dayStreak')} ${emoji} ${data.habit_name}!`;
+        } else {
+          description = `${name} ${t('friends.completed')} ${emoji} ${data.habit_name}`;
+        }
         break;
       }
       case 'streak_milestone':
@@ -548,7 +552,7 @@ export default function FriendsPage() {
               return (
                 <li key={e.id} className="text-[12px] text-text-secondary leading-snug">
                   {d.habit_emoji ?? '✅'} {d.habit_name}
-                  {streak > 1 && <span className="text-orange-500 font-semibold ml-1">🔥{streak}</span>}
+                  {streak > 1 && <span className="text-orange-500 font-semibold ml-1">🔥 {streak} days</span>}
                 </li>
               );
             })}
