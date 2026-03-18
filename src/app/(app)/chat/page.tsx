@@ -1181,7 +1181,7 @@ export default function ChatPage() {
 
       {/* Input — only visible for today */}
       {isToday && (
-      <div className="px-4 pt-2 pb-4" data-tour="chat-input">
+      <div className="px-4 pt-2 pb-4">
         {/* Image preview */}
         {imagePreview && (
           <div className="mb-2 relative inline-block">
@@ -1195,7 +1195,7 @@ export default function ChatPage() {
             </button>
           </div>
         )}
-        <div className="flex items-center bg-surface-secondary rounded-2xl px-4 py-1">
+        <div className="flex items-center bg-surface-secondary rounded-2xl px-4 py-1" data-tour="chat-input">
           <input
             ref={fileInputRef}
             type="file"

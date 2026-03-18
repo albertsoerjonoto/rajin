@@ -26,7 +26,7 @@ export const tourSteps: TourStep[] = [
     descriptionKey: 'tour.inputDesc',
     position: 'top',
     action: 'wait_for_input',
-    highlightPadding: 8,
+    highlightPadding: 4,
   },
   {
     id: 'ai-response',
