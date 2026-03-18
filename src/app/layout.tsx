@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   title: 'Rajin.AI',
   description: 'Track your daily habits, food intake, and exercise with AI-powered Indonesian food knowledge.',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icons/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
