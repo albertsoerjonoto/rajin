@@ -294,28 +294,15 @@ export default function FriendsPage() {
   const acceptSharedHabit = async (invite: typeof sharedInvites[0]) => {
     if (!user) return;
     try {
-      const sb = createClient();
-      const { error } = await sb.from('shared_habits').update({ status: 'accepted' }).eq('id', invite.id);
-      if (error) throw error;
-
-      // Create the habit for the friend if they don't have one with same name
-      const { data: existing } = await sb
-        .from('habits')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('name', invite.habit_name)
-        .eq('is_active', true)
-        .limit(1);
-
-      if (!existing || existing.length === 0) {
-        await sb.from('habits').insert({
-          user_id: user.id,
-          name: invite.habit_name,
-          emoji: invite.habit_emoji,
-          sort_order: 999,
-        });
+      const res = await fetch(`/api/shared-habits/${invite.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'accept' }),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'Failed');
       }
-
       showToast('success', t('friends.sharedAccepted'));
       await loadSharedInvites();
     } catch {
@@ -325,9 +312,12 @@ export default function FriendsPage() {
 
   const rejectSharedHabit = async (id: string) => {
     try {
-      const sb = createClient();
-      const { error } = await sb.from('shared_habits').update({ status: 'rejected' }).eq('id', id);
-      if (error) throw error;
+      const res = await fetch(`/api/shared-habits/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject' }),
+      });
+      if (!res.ok) throw new Error('Failed');
       await loadSharedInvites();
     } catch {
       showToast('error', t('friends.failedRejectShared'));
