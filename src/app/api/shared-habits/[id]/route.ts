@@ -79,9 +79,12 @@ export async function PATCH(
     .eq('id', id);
 
   // Create shared_streaks row
-  await supabase.from('shared_streaks').insert({
+  const { error: streakErr } = await supabase.from('shared_streaks').insert({
     shared_habit_id: id,
   });
+  if (streakErr) {
+    return NextResponse.json({ error: 'Failed to initialize shared streak' }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true, friend_habit_id: friendHabitId });
 }
