@@ -770,9 +770,12 @@ export default function ChatPage() {
       const hasEdits = foodEdits.length > 0 || exerciseEdits.length > 0 || drinkEdits.length > 0 || measurementEdits.length > 0;
 
       // Build response text
+      // Strip any "Found N items..." / "Ditemukan N item..." the model echoed,
+      // since the client generates its own action text below.
       let responseText = '';
       if (textMessage) {
-        responseText = textMessage;
+        const actionTextPattern = /\n?\n?(?:Found|Ditemukan)\s+\d+.+(?:to confirm|untuk konfirmasi)\.?$/i;
+        responseText = textMessage.replace(actionTextPattern, '').trim();
       }
       if (hasAdds || hasEdits) {
         const parts: string[] = [];
