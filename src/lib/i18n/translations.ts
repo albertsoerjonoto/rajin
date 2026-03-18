@@ -194,8 +194,9 @@ export const translations: Translations = {
 
   // ── Auth pages ──
   'auth.appName': { id: 'Rajin.AI', en: 'Rajin.AI' },
-  'auth.loginSubtitle': { id: 'Raih tujuanmu dengan AI', en: 'Achieve your goals with AI' },
-  'auth.signupSubtitle': { id: 'Raih tujuanmu dengan AI', en: 'Achieve your goals with AI' },
+  'auth.loginSubtitle': { id: 'Raih tujuanmu dengan AI!', en: 'Achieve your goals with AI!' },
+  'auth.signupSubtitle': { id: 'Raih tujuanmu dengan AI!', en: 'Achieve your goals with AI!' },
+  'auth.loginSubtagline': { id: 'Daripada doomscroll mulu', en: 'Better than doomscrolling all day' },
   'auth.usernameOrEmail': { id: 'Username atau email', en: 'Username or email' },
   'login.usernamePlaceholder': { id: 'username atau email', en: 'username or email' },
   'auth.password': { id: 'Password', en: 'Password' },
@@ -205,7 +206,7 @@ export const translations: Translations = {
   'auth.createAccount': { id: 'Buat Akun', en: 'Create Account' },
   'auth.creatingAccount': { id: 'Membuat akun...', en: 'Creating account...' },
   'auth.dontHaveAccount': { id: 'Belum punya akun?', en: "Don't have an account?" },
-  'auth.signUp': { id: 'Daftar', en: 'Sign up' },
+  'auth.signUp': { id: 'Daftar dong', en: 'Sign up' },
   'auth.alreadyHaveAccount': { id: 'Sudah punya akun?', en: 'Already have an account?' },
   'auth.signInLink': { id: 'Masuk', en: 'Sign in' },
   'auth.username': { id: 'Username', en: 'Username' },

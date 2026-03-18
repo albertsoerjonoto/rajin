@@ -126,3 +126,144 @@ export const STREAK_MILESTONES = [3, 7, 14, 21, 30, 50, 100, 365];
 export function isStreakMilestone(streak: number): boolean {
   return STREAK_MILESTONES.includes(streak);
 }
+
+/**
+ * After a user toggles a habit, check if it's shared and update shared_streaks.
+ * Also emit shared_streak_milestone feed events when milestones are hit.
+ */
+export async function updateSharedStreaks(
+  userId: string,
+  habitId: string,
+  today: string,
+  isCompleting: boolean
+): Promise<void> {
+  const sb = createClient();
+
+  // Find all accepted shared_habits where this habit is involved
+  const { data: sharedHabits } = await sb
+    .from('shared_habits')
+    .select('id, habit_id, owner_id, friend_id, friend_habit_id')
+    .eq('status', 'accepted')
+    .or(`and(owner_id.eq.${userId},habit_id.eq.${habitId}),and(friend_id.eq.${userId},friend_habit_id.eq.${habitId})`);
+
+  if (!sharedHabits || sharedHabits.length === 0) return;
+
+  for (const sh of sharedHabits) {
+    const isOwner = sh.owner_id === userId;
+    const otherUserId = isOwner ? sh.friend_id : sh.owner_id;
+    const otherHabitId = isOwner ? sh.friend_habit_id : sh.habit_id;
+
+    if (!otherHabitId) continue;
+
+    // Check if the other user completed their habit today
+    const { data: otherLog } = await sb
+      .from('habit_logs')
+      .select('id')
+      .eq('habit_id', otherHabitId)
+      .eq('user_id', otherUserId)
+      .eq('date', today)
+      .eq('completed', true)
+      .limit(1);
+
+    const bothCompletedToday = isCompleting && otherLog && otherLog.length > 0;
+
+    // Get current shared streak
+    const { data: sharedStreak } = await sb
+      .from('shared_streaks')
+      .select('*')
+      .eq('shared_habit_id', sh.id)
+      .single();
+
+    if (!sharedStreak) continue;
+
+    let newStreak = sharedStreak.current_streak;
+
+    if (bothCompletedToday) {
+      const lastDate = sharedStreak.last_both_completed_date;
+      const yesterday = addDaysStr(today, -1);
+
+      if (lastDate === today) {
+        // Already counted today
+        continue;
+      } else if (lastDate === yesterday) {
+        newStreak = sharedStreak.current_streak + 1;
+      } else {
+        newStreak = 1;
+      }
+
+      const newLongest = Math.max(sharedStreak.longest_streak, newStreak);
+
+      await sb
+        .from('shared_streaks')
+        .update({
+          current_streak: newStreak,
+          longest_streak: newLongest,
+          last_both_completed_date: today,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sharedStreak.id);
+
+      // Emit shared_streak_milestone if applicable
+      if (isStreakMilestone(newStreak)) {
+        // Get habit info and profiles for the event
+        const [habitRes, ownerRes, friendRes] = await Promise.all([
+          sb.from('habits').select('name, emoji').eq('id', sh.habit_id).single(),
+          sb.from('profiles').select('display_name, avatar_url').eq('id', sh.owner_id).single(),
+          sb.from('profiles').select('display_name, avatar_url').eq('id', sh.friend_id).single(),
+        ]);
+
+        const eventData = {
+          shared_habit_id: sh.id,
+          habit_name: habitRes.data?.name ?? '',
+          habit_emoji: habitRes.data?.emoji ?? '',
+          streak: newStreak,
+          user1_name: ownerRes.data?.display_name ?? 'User',
+          user1_avatar: ownerRes.data?.avatar_url ?? null,
+          user2_name: friendRes.data?.display_name ?? 'User',
+          user2_avatar: friendRes.data?.avatar_url ?? null,
+          friend_name: isOwner ? friendRes.data?.display_name : ownerRes.data?.display_name,
+          friend_avatar_url: isOwner ? friendRes.data?.avatar_url : ownerRes.data?.avatar_url,
+        };
+
+        // Emit for both users
+        await Promise.all([
+          sb.from('feed_events').insert({
+            user_id: sh.owner_id,
+            event_type: 'shared_streak_milestone',
+            data: eventData,
+            is_private: false,
+          }),
+          sb.from('feed_events').insert({
+            user_id: sh.friend_id,
+            event_type: 'shared_streak_milestone',
+            data: eventData,
+            is_private: false,
+          }),
+        ]);
+      }
+    } else if (!isCompleting) {
+      // User uncompleted — recalculate shared streak
+      const myHabitId = isOwner ? sh.habit_id : sh.friend_habit_id;
+      if (!myHabitId) continue;
+
+      const [myLogsRes, otherLogsRes] = await Promise.all([
+        sb.from('habit_logs').select('date, completed').eq('habit_id', myHabitId).eq('user_id', userId).eq('completed', true).order('date', { ascending: false }).limit(100),
+        sb.from('habit_logs').select('date, completed').eq('habit_id', otherHabitId).eq('user_id', otherUserId).eq('completed', true).order('date', { ascending: false }).limit(100),
+      ]);
+
+      const recalculated = calculateSharedStreak(
+        myLogsRes.data ?? [],
+        otherLogsRes.data ?? [],
+        today
+      );
+
+      await sb
+        .from('shared_streaks')
+        .update({
+          current_streak: recalculated,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sharedStreak.id);
+    }
+  }
+}
