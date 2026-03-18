@@ -439,7 +439,8 @@ export default function FriendsPage() {
     switch (event.event_type) {
       case 'habit_completed': {
         const emoji = (data.habit_emoji as string) ?? '✅';
-        description = `${name} ${t('friends.completed')} ${emoji} ${data.habit_name}`;
+        const hcStreak = typeof data.streak === 'number' ? data.streak : 0;
+        description = `${name} ${t('friends.completed')} ${emoji} ${data.habit_name}${hcStreak > 1 ? ` 🔥${hcStreak}` : ''}`;
         break;
       }
       case 'streak_milestone':
@@ -455,6 +456,9 @@ export default function FriendsPage() {
       }
       case 'shared_streak':
         description = `${firstName(data.user1_name as string)} & ${firstName(data.user2_name as string)} ${t('friends.sharedStreak')} ${(data.habit_emoji as string) ?? ''} ${data.habit_name}! 🔥 ${data.streak}`;
+        break;
+      case 'shared_streak_milestone':
+        description = `${firstName(data.user1_name as string)} & ${firstName(data.user2_name as string)} ${t('friends.sharedStreak')} ${(data.habit_emoji as string) ?? ''} ${data.habit_name}! 🔥 ${data.streak} ${t('friends.dayStreak').split(' ')[0]}!`;
         break;
       case 'exercise_completed':
         description = `${name} ${t('friends.exerciseCompleted')} 🏋️ ${data.exercise_type} ${t('friends.exerciseFor')} ${data.duration_minutes} ${t('friends.exerciseMin')}`;
@@ -476,11 +480,31 @@ export default function FriendsPage() {
         break;
     }
 
+    const isStreakMilestone = event.event_type === 'streak_milestone';
+    const isSharedStreak = event.event_type === 'shared_streak' || event.event_type === 'shared_streak_milestone';
+
     return (
-      <div key={event.id} className="px-3 py-2.5 flex items-center gap-3 group">
-        <Avatar url={event.profile.avatar_url} name={event.profile.display_name} size="sm" />
+      <div
+        key={event.id}
+        className={cn(
+          'px-3 py-2.5 flex items-center gap-3 group rounded-xl',
+          isStreakMilestone && 'bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20',
+          isSharedStreak && 'bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20'
+        )}
+      >
+        {isSharedStreak ? (
+          <div className="flex -space-x-2 shrink-0">
+            <Avatar url={event.profile.avatar_url} name={event.profile.display_name} size="sm" />
+            <Avatar url={(data.friend_avatar_url as string) ?? null} name={(data.friend_name as string) ?? null} size="sm" />
+          </div>
+        ) : (
+          <Avatar url={event.profile.avatar_url} name={event.profile.display_name} size="sm" />
+        )}
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] text-text-primary leading-snug">{description}</p>
+          <p className={cn(
+            'text-[13px] leading-snug',
+            (isStreakMilestone || isSharedStreak) ? 'text-text-primary font-medium' : 'text-text-primary'
+          )}>{description}</p>
           <p className="text-[11px] text-text-tertiary mt-0.5">{relativeTime(event.created_at)}</p>
         </div>
         {isMe && (
@@ -512,10 +536,12 @@ export default function FriendsPage() {
           </p>
           <ul className="mt-1 space-y-0.5">
             {item.events.map(e => {
-              const d = e.data as Record<string, string>;
+              const d = e.data as Record<string, string | number>;
+              const streak = typeof d.streak === 'number' ? d.streak : 0;
               return (
                 <li key={e.id} className="text-[12px] text-text-secondary leading-snug">
                   {d.habit_emoji ?? '✅'} {d.habit_name}
+                  {streak > 1 && <span className="text-orange-500 font-semibold ml-1">🔥{streak}</span>}
                 </li>
               );
             })}

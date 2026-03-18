@@ -24,8 +24,8 @@ import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDesktopLayout } from '@/hooks/useDesktopLayout';
-import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile, FriendProfile, SharedHabit, HabitStreak } from '@/lib/types';
-import { updateHabitStreak, isStreakMilestone, calculateStreak } from '@/lib/streaks';
+import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile, FriendProfile, SharedHabit, SharedStreak, HabitStreak } from '@/lib/types';
+import { updateHabitStreak, isStreakMilestone, calculateStreak, updateSharedStreaks } from '@/lib/streaks';
 import { buildDayDataMap } from '@/components/analytics/types';
 import type { DayData } from '@/components/analytics/types';
 import StreakCard from '@/components/analytics/StreakCard';
@@ -125,6 +125,7 @@ export default function DashboardPage() {
   const [acceptedFriends, setAcceptedFriends] = useState<FriendProfile[]>([]);
   const [sharedHabits, setSharedHabits] = useState<SharedHabit[]>([]);
   const [streakMap, setStreakMap] = useState<Record<string, HabitStreak>>({});
+  const [sharedStreakMap, setSharedStreakMap] = useState<Record<string, SharedStreak>>({});
 
   // Analytics state (for period != day)
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
@@ -361,8 +362,24 @@ export default function DashboardPage() {
     sb.from('shared_habits')
       .select('*')
       .or(`owner_id.eq.${user.id},friend_id.eq.${user.id}`)
-      .then(({ data }) => {
-        setSharedHabits((data ?? []) as SharedHabit[]);
+      .then(async ({ data }) => {
+        const shList = (data ?? []) as SharedHabit[];
+        setSharedHabits(shList);
+        // Load shared streaks for accepted shared habits
+        const acceptedIds = shList.filter(sh => sh.status === 'accepted').map(sh => sh.id);
+        if (acceptedIds.length > 0) {
+          const { data: streaks } = await sb
+            .from('shared_streaks')
+            .select('*')
+            .in('shared_habit_id', acceptedIds);
+          if (streaks) {
+            const map: Record<string, SharedStreak> = {};
+            for (const s of streaks) {
+              map[s.shared_habit_id] = s as SharedStreak;
+            }
+            setSharedStreakMap(map);
+          }
+        }
       });
     // Calculate streaks from actual habit_logs instead of cached habit_streaks
     // so that missed days correctly reset the streak to 0
@@ -477,7 +494,7 @@ export default function DashboardPage() {
           await sb.from('feed_events').insert({
             user_id: user.id,
             event_type: 'habit_completed',
-            data: { habit_id: habit.id, habit_name: habit.name, habit_emoji: habit.emoji },
+            data: { habit_id: habit.id, habit_name: habit.name, habit_emoji: habit.emoji, streak: streakData?.current_streak ?? 0 },
             is_private: false,
           });
           if (streakData && isStreakMilestone(streakData.current_streak)) {
@@ -489,6 +506,8 @@ export default function DashboardPage() {
             });
           }
         }
+        // Update shared streaks if this habit is shared
+        await updateSharedStreaks(user.id, habit.id, date, !wasCompleted);
       }).catch(console.warn);
     } catch {
       setHabits((prev) =>
@@ -994,6 +1013,38 @@ export default function DashboardPage() {
                       {(() => {
                         const sharedFriends = getSharedFriendsForHabit(habit.id);
                         if (sharedFriends.length === 0) return null;
+                        // Find shared streak for this habit
+                        const sharedHabit = sharedHabits.find(
+                          sh => sh.habit_id === habit.id && sh.status === 'accepted'
+                        );
+                        const sharedStreak = sharedHabit ? sharedStreakMap[sharedHabit.id] : null;
+                        const sharedStreakCount = sharedStreak?.current_streak ?? 0;
+
+                        if (sharedStreakCount > 0) {
+                          // Duolingo-style: [Avatar] 🔥N [Friend Avatar]
+                          const friend = sharedFriends[0];
+                          return (
+                            <div className="flex items-center gap-0.5 shrink-0 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-full px-1 py-0.5">
+                              <div className="w-3.5 h-3.5 rounded-full bg-accent/10 border border-white flex items-center justify-center">
+                                {profile?.avatar_url ? (
+                                  <img src={profile.avatar_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+                                ) : (
+                                  <span className="text-[5px] font-bold text-accent">{(profile?.display_name ?? '?')[0].toUpperCase()}</span>
+                                )}
+                              </div>
+                              <span className="text-[9px] font-bold text-orange-600 dark:text-orange-400">🔥{sharedStreakCount}</span>
+                              <div className="w-3.5 h-3.5 rounded-full bg-accent/10 border border-white flex items-center justify-center">
+                                {friend.avatar_url ? (
+                                  <img src={friend.avatar_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+                                ) : (
+                                  <span className="text-[5px] font-bold text-accent">{(friend.display_name ?? '?')[0].toUpperCase()}</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // No shared streak yet, just show friend avatars
                         return (
                           <div className="flex -space-x-1 shrink-0">
                             {sharedFriends.slice(0, 2).map(f => (
