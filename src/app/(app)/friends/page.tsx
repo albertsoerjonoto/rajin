@@ -525,7 +525,7 @@ export default function FriendsPage() {
       <h1 className="text-xl font-bold text-text-primary mb-4">{t('friends.title')}</h1>
 
       {/* Pill tabs */}
-      <div className="flex gap-1 bg-surface-secondary rounded-xl p-1 mb-5">
+      <div className="flex gap-1 bg-surface-secondary rounded-xl p-1 mb-3">
         {tabs.map((tb) => (
           <button
             key={tb.key}
@@ -555,9 +555,9 @@ export default function FriendsPage() {
         <>
           {/* ── Feed Tab ── */}
           {tab === 'feed' && (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {/* Filter tabs */}
-              <div className="flex gap-0.5 bg-surface-secondary rounded-lg p-0.5 mb-3">
+              <div className="flex gap-4 border-b border-border mb-2">
                 {([
                   { key: 'all' as FeedFilter, labelKey: 'friends.feedAll' },
                   { key: 'mine' as FeedFilter, labelKey: 'friends.feedMine' },
@@ -567,10 +567,10 @@ export default function FriendsPage() {
                     key={f.key}
                     onClick={() => setFeedFilter(f.key)}
                     className={cn(
-                      'flex-1 py-1.5 text-xs font-medium rounded-md transition-all duration-200',
+                      'pb-2 text-xs font-medium transition-all duration-200 border-b-2 -mb-px',
                       feedFilter === f.key
-                        ? 'bg-surface text-text-primary shadow-sm'
-                        : 'text-text-secondary'
+                        ? 'border-accent text-text-primary'
+                        : 'border-transparent text-text-tertiary'
                     )}
                   >
                     {t(f.labelKey)}
