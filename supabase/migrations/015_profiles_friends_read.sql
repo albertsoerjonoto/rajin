@@ -3,8 +3,7 @@
 -- show as "User" because RLS blocks reading other users' profiles.
 CREATE POLICY "Users can view friend profiles" ON profiles FOR SELECT
   USING (
-    auth.uid() = id
-    OR EXISTS (
+    EXISTS (
       SELECT 1 FROM friendships f
       WHERE (f.requester_id = auth.uid() AND f.addressee_id = profiles.id)
          OR (f.addressee_id = auth.uid() AND f.requester_id = profiles.id)
