@@ -130,6 +130,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
               <Link
                 key={tab.href}
                 href={tab.href}
+                data-tour={tab.href === '/log' ? 'nav-log' : tab.href === '/dashboard' ? 'nav-overview' : undefined}
                 className={cn(
                   'flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-all duration-200 relative',
                   isTabActive ? 'text-nav-active' : 'text-nav-inactive hover:text-nav-inactive-hover',
