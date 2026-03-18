@@ -48,6 +48,7 @@ export default function FriendsPage() {
   const [searching, setSearching] = useState(false);
   const [friendshipMap, setFriendshipMap] = useState<Record<string, { status: string; isRequester: boolean; id: string }>>({});
   const [confirmUnfriend, setConfirmUnfriend] = useState<{ id: string; name: string } | null>(null);
+  const [confirmDeleteEvent, setConfirmDeleteEvent] = useState<string | null>(null);
 
   // Shared habit invitations
   const [sharedInvites, setSharedInvites] = useState<(SharedHabit & { habit_name: string; habit_emoji: string; owner_name: string })[]>([]);
@@ -339,6 +340,29 @@ export default function FriendsPage() {
     setLoadingMore(false);
   };
 
+  const deleteFeedEvent = async (eventId: string) => {
+    try {
+      const sb = createClient();
+      // For grouped events, find all IDs in the same group
+      const idsToDelete = [eventId];
+      const groupItem = groupedFeed.find(
+        item => item.type === 'group' && item.events.some(e => e.id === eventId)
+      );
+      if (groupItem && groupItem.type === 'group') {
+        idsToDelete.length = 0;
+        groupItem.events.forEach(e => idsToDelete.push(e.id));
+      }
+      const { error } = await sb.from('feed_events').delete().in('id', idsToDelete);
+      if (error) throw error;
+      const idSet = new Set(idsToDelete);
+      setFeedEvents(prev => prev.filter(e => !idSet.has(e.id)));
+      setConfirmDeleteEvent(null);
+      showToast('success', t('friends.feedDeleted'));
+    } catch {
+      showToast('error', t('friends.feedDeleteFailed'));
+    }
+  };
+
   const relativeTime = (dateStr: string) => {
     const now = Date.now();
     const then = new Date(dateStr).getTime();
@@ -413,30 +437,63 @@ export default function FriendsPage() {
     let description = '';
 
     switch (event.event_type) {
-      case 'habit_completed':
-        description = `${name} ${t('friends.completed')} ${(data.habit_emoji as string) ?? '✅'} ${data.habit_name}`;
+      case 'habit_completed': {
+        const emoji = (data.habit_emoji as string) ?? '✅';
+        description = `${name} ${t('friends.completed')} ${emoji} ${data.habit_name}`;
         break;
+      }
       case 'streak_milestone':
         description = `${name} ${t('friends.hitStreak')} 🔥 ${data.streak} ${t('friends.dayStreak')} ${data.habit_name}!`;
         break;
       case 'friend_added':
         description = `${firstName(data.user1_name as string)} ${t('friends.nowFriends')} ${firstName(data.user2_name as string)}`;
         break;
-      case 'shared_habit_started':
-        description = `${name} shared ${(data.habit_emoji as string) ?? ''} ${data.habit_name}`;
+      case 'shared_habit_started': {
+        const emoji = (data.habit_emoji as string) ?? '🤝';
+        description = `${name} shared ${emoji} ${data.habit_name}`;
         break;
+      }
       case 'shared_streak':
         description = `${firstName(data.user1_name as string)} & ${firstName(data.user2_name as string)} ${t('friends.sharedStreak')} ${(data.habit_emoji as string) ?? ''} ${data.habit_name}! 🔥 ${data.streak}`;
+        break;
+      case 'exercise_completed':
+        description = `${name} ${t('friends.exerciseCompleted')} 🏋️ ${data.exercise_type} ${t('friends.exerciseFor')} ${data.duration_minutes} ${t('friends.exerciseMin')}`;
+        break;
+      case 'calorie_goal_met':
+        description = `${name} ${t('friends.calorieGoalMet')} 🎯 (${data.calories} kcal)`;
+        break;
+      case 'protein_goal_met':
+        description = `${name} ${t('friends.proteinGoalMet')} 💪 (${data.protein_g}g)`;
+        break;
+      case 'fat_goal_met':
+        description = `${name} ${t('friends.fatGoalMet')} 🥑 (${data.fat_g}g)`;
+        break;
+      case 'carbs_goal_met':
+        description = `${name} ${t('friends.carbsGoalMet')} 🍚 (${data.carbs_g}g)`;
+        break;
+      case 'water_goal_met':
+        description = `${name} ${t('friends.waterGoalMet')} 💧 (${Math.round((data.water_ml as number) / 1000 * 10) / 10}L)`;
         break;
     }
 
     return (
-      <div key={event.id} className="px-3 py-2.5 flex items-center gap-3">
+      <div key={event.id} className="px-3 py-2.5 flex items-center gap-3 group">
         <Avatar url={event.profile.avatar_url} name={event.profile.display_name} size="sm" />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] text-text-primary leading-snug">{description}</p>
           <p className="text-[11px] text-text-tertiary mt-0.5">{relativeTime(event.created_at)}</p>
         </div>
+        {isMe && (
+          <button
+            onClick={() => setConfirmDeleteEvent(event.id)}
+            className="opacity-40 sm:opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-text-tertiary hover:text-red-500 rounded-lg shrink-0"
+            aria-label={t('friends.deleteFeedEvent')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18" /><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+            </svg>
+          </button>
+        )}
       </div>
     );
   };
@@ -447,7 +504,7 @@ export default function FriendsPage() {
     const earliest = item.events[item.events.length - 1];
 
     return (
-      <div key={item.events.map(e => e.id).join('-')} className="px-3 py-2.5 flex items-start gap-3">
+      <div key={item.events.map(e => e.id).join('-')} className="px-3 py-2.5 flex items-start gap-3 group">
         <Avatar url={item.profile.avatar_url} name={item.profile.display_name} size="sm" />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] text-text-primary font-medium leading-snug">
@@ -465,6 +522,17 @@ export default function FriendsPage() {
           </ul>
           <p className="text-[11px] text-text-tertiary mt-1">{relativeTime(earliest.created_at)}</p>
         </div>
+        {isMe && (
+          <button
+            onClick={() => setConfirmDeleteEvent(item.events[0].id)}
+            className="opacity-40 sm:opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-text-tertiary hover:text-red-500 rounded-lg shrink-0 mt-1"
+            aria-label={t('friends.deleteFeedEvent')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18" /><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+            </svg>
+          </button>
+        )}
       </div>
     );
   };
@@ -804,6 +872,14 @@ export default function FriendsPage() {
         message={confirmUnfriend ? `${t('friends.unfriend')} ${confirmUnfriend.name}?` : ''}
         onConfirm={() => confirmUnfriend && unfriend(confirmUnfriend.id)}
         onCancel={() => setConfirmUnfriend(null)}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDeleteEvent}
+        title={t('friends.deleteConfirmTitle')}
+        message={t('friends.deleteConfirmMessage')}
+        onConfirm={() => confirmDeleteEvent && deleteFeedEvent(confirmDeleteEvent)}
+        onCancel={() => setConfirmDeleteEvent(null)}
       />
     </div>
   );

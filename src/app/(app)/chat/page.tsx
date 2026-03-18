@@ -14,6 +14,7 @@ import VoiceButton from '@/components/VoiceButton';
 import { useDesktopLayout } from '@/hooks/useDesktopLayout';
 import { useTour } from '@/components/tour/useTour';
 import type { ParsedFood, ParsedExercise, ParsedDrink, ParsedMeasurement, MealType, DrinkType, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
+import { emitExerciseEvent, checkAndEmitGoalEvents } from '@/lib/feedEvents';
 
 interface Message {
   id: string;
@@ -941,6 +942,15 @@ export default function ChatPage() {
     savingLockRef.current = false;
     fetchContext();
 
+    // Emit feed events for exercises and goal checks
+    const feedDate = today;
+    Promise.resolve().then(async () => {
+      for (const e of exercises) {
+        await emitExerciseEvent(user.id, e.exercise_type, e.duration_minutes, e.calories_burned).catch(console.warn);
+      }
+      await checkAndEmitGoalEvents(user.id, feedDate).catch(console.warn);
+    }).catch(console.warn);
+
     // Tour: advance after save
     if (tourActive && getStepId() === 'parsed-result') {
       nextStep();
@@ -985,6 +995,9 @@ export default function ChatPage() {
     setSavingId(null);
     savingLockRef.current = false;
     fetchContext();
+
+    // Check goal events after edits
+    checkAndEmitGoalEvents(user.id, getToday()).catch(console.warn);
 
     // Tour: advance after save
     if (tourActive && getStepId() === 'parsed-result') {
@@ -1074,6 +1087,17 @@ export default function ChatPage() {
     setSavingId(null);
     savingLockRef.current = false;
     fetchContext();
+
+    // Emit feed events for exercises and goal checks
+    const feedDate2 = today;
+    Promise.resolve().then(async () => {
+      if (msg.parsedExercises) {
+        for (const e of msg.parsedExercises) {
+          await emitExerciseEvent(user.id, e.exercise_type, e.duration_minutes, e.calories_burned).catch(console.warn);
+        }
+      }
+      await checkAndEmitGoalEvents(user.id, feedDate2).catch(console.warn);
+    }).catch(console.warn);
 
     // Tour: advance after save
     if (tourActive && getStepId() === 'parsed-result') {

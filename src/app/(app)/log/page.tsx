@@ -12,6 +12,7 @@ import { validateCalories, validateDuration, validateMacro, validateVolume } fro
 import { useLocale } from '@/lib/i18n';
 import { useDesktopLayout } from '@/hooks/useDesktopLayout';
 import type { FoodLog, ExerciseLog, DrinkLog, MealType, DrinkType, Profile, HabitWithLog, MeasurementLog } from '@/lib/types';
+import { emitExerciseEvent, checkAndEmitGoalEvents } from '@/lib/feedEvents';
 
 type Tab = 'food' | 'exercise' | 'habits' | 'measurements';
 type Modal = 'none' | 'food' | 'exercise' | 'drink' | 'measurement';
@@ -213,6 +214,7 @@ export default function LogPage() {
     closeModal();
     setSaving(false);
     fetchData();
+    checkAndEmitGoalEvents(user.id, date).catch(console.warn);
   };
 
   const saveExerciseLog = async () => {
@@ -247,6 +249,10 @@ export default function LogPage() {
       showToast('error', editingExercise ? t('log.failedUpdateExercise') : t('log.failedSaveExercise'));
       setSaving(false);
       return;
+    }
+
+    if (!editingExercise) {
+      emitExerciseEvent(user.id, exerciseType.trim(), dur, burned).catch(console.warn);
     }
 
     closeModal();
@@ -297,6 +303,7 @@ export default function LogPage() {
     closeModal();
     setSaving(false);
     fetchData();
+    checkAndEmitGoalEvents(user.id, date).catch(console.warn);
   };
 
   const saveMeasurementLog = async () => {
@@ -358,6 +365,7 @@ export default function LogPage() {
       return;
     }
     fetchData();
+    checkAndEmitGoalEvents(user.id, date).catch(console.warn);
   };
 
   const toggleHabit = async (habit: HabitWithLog) => {
