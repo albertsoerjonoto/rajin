@@ -15,9 +15,17 @@ function findElement(selector: string, padding: number): SpotlightRect | null {
   const el = document.querySelector(selector);
   if (!el) return null;
   const rect = el.getBoundingClientRect();
+
+  // getBoundingClientRect() returns coordinates relative to the visual viewport,
+  // but the fixed overlay is positioned relative to the layout viewport.
+  // When the mobile keyboard is open, these diverge — the visual viewport scrolls
+  // within the layout viewport. We must offset to convert to layout viewport coords.
+  const offsetX = window.visualViewport?.offsetLeft ?? 0;
+  const offsetY = window.visualViewport?.offsetTop ?? 0;
+
   return {
-    x: rect.left - padding,
-    y: rect.top - padding,
+    x: rect.left + offsetX - padding,
+    y: rect.top + offsetY - padding,
     width: rect.width + padding * 2,
     height: rect.height + padding * 2,
   };
