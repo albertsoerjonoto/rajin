@@ -1152,7 +1152,7 @@ export default function ChatPage() {
             return (
               <div
                 key={msg.id}
-                data-tour={isWelcome ? 'welcome-message' : isLastAssistant && hasActionable ? 'parsed-result' : isLastAssistant ? 'ai-response' : undefined}
+                data-tour={isLastAssistant && hasActionable ? 'parsed-result' : isLastAssistant ? 'ai-response' : undefined}
               >
                 <MessageBubble
                   msg={msg}
