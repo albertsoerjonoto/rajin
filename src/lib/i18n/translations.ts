@@ -425,6 +425,8 @@ export const translations: Translations = {
   'friends.fatGoalMet': { id: 'mencapai target lemak', en: 'hit fat goal' },
   'friends.carbsGoalMet': { id: 'mencapai target karbohidrat', en: 'hit carbs goal' },
   'friends.waterGoalMet': { id: 'mencapai target air', en: 'hit water goal' },
+  'friends.hitGoals': { id: 'mencapai', en: 'hit' },
+  'friends.goals': { id: 'target', en: 'goals' },
   'friends.deleteFeedEvent': { id: 'Hapus', en: 'Delete' },
   'friends.deleteConfirmTitle': { id: 'Hapus notifikasi?', en: 'Delete notification?' },
   'friends.deleteConfirmMessage': { id: 'Notifikasi ini akan dihapus dari feed.', en: 'This notification will be removed from the feed.' },

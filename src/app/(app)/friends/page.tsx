@@ -323,9 +323,9 @@ export default function FriendsPage() {
       // For grouped events, find all IDs in the same group
       const idsToDelete = [eventId];
       const groupItem = groupedFeed.find(
-        item => item.type === 'group' && item.events.some(e => e.id === eventId)
+        item => (item.type === 'group' || item.type === 'goal_group') && item.events.some(e => e.id === eventId)
       );
-      if (groupItem && groupItem.type === 'group') {
+      if (groupItem && (groupItem.type === 'group' || groupItem.type === 'goal_group')) {
         idsToDelete.length = 0;
         groupItem.events.forEach(e => idsToDelete.push(e.id));
       }
@@ -360,9 +360,13 @@ export default function FriendsPage() {
   };
 
   // Group consecutive habit_completed events by same user, same day only
+  // Also group nutrition goal events (calorie, protein, fat, carbs, water) by same user, same day
+  const NUTRITION_GOAL_TYPES = new Set(['calorie_goal_met', 'protein_goal_met', 'fat_goal_met', 'carbs_goal_met', 'water_goal_met']);
+
   type GroupedFeedItem =
     | { type: 'single'; event: FeedEventWithProfile }
-    | { type: 'group'; events: FeedEventWithProfile[]; profile: FriendProfile; userId: string };
+    | { type: 'group'; events: FeedEventWithProfile[]; profile: FriendProfile; userId: string }
+    | { type: 'goal_group'; events: FeedEventWithProfile[]; profile: FriendProfile; userId: string };
 
   const sameDay = (a: string, b: string) => a.slice(0, 10) === b.slice(0, 10);
 
@@ -394,6 +398,32 @@ export default function FriendsPage() {
         });
         if (deduped.length > 1) {
           items.push({ type: 'group', events: deduped, profile: event.profile, userId: event.user_id });
+        } else {
+          items.push({ type: 'single', event: deduped[0] });
+        }
+        i = j;
+      } else if (NUTRITION_GOAL_TYPES.has(event.event_type)) {
+        // Collect consecutive nutrition goal events from same user AND same day
+        const group: FeedEventWithProfile[] = [event];
+        let j = i + 1;
+        while (
+          j < events.length &&
+          NUTRITION_GOAL_TYPES.has(events[j].event_type) &&
+          events[j].user_id === event.user_id &&
+          sameDay(events[j].created_at, event.created_at)
+        ) {
+          group.push(events[j]);
+          j++;
+        }
+        // Deduplicate by event type (keep first occurrence)
+        const seen = new Set<string>();
+        const deduped = group.filter(e => {
+          if (seen.has(e.event_type)) return false;
+          seen.add(e.event_type);
+          return true;
+        });
+        if (deduped.length > 1) {
+          items.push({ type: 'goal_group', events: deduped, profile: event.profile, userId: event.user_id });
         } else {
           items.push({ type: 'single', event: deduped[0] });
         }
@@ -540,6 +570,63 @@ export default function FriendsPage() {
     );
   };
 
+  const goalEventDetail = (event: FeedEventWithProfile) => {
+    const data = event.data as Record<string, string | number>;
+    switch (event.event_type) {
+      case 'calorie_goal_met':
+        return { emoji: '🎯', label: `${t('friends.calorieGoalMet')} (${data.calories} kcal)` };
+      case 'protein_goal_met':
+        return { emoji: '💪', label: `${t('friends.proteinGoalMet')} (${data.protein_g}g)` };
+      case 'fat_goal_met':
+        return { emoji: '🥑', label: `${t('friends.fatGoalMet')} (${data.fat_g}g)` };
+      case 'carbs_goal_met':
+        return { emoji: '🍚', label: `${t('friends.carbsGoalMet')} (${data.carbs_g}g)` };
+      case 'water_goal_met':
+        return { emoji: '💧', label: `${t('friends.waterGoalMet')} (${Math.round((data.water_ml as number) / 1000 * 10) / 10}L)` };
+      default:
+        return { emoji: '✅', label: '' };
+    }
+  };
+
+  const renderGoalGroup = (item: GroupedFeedItem & { type: 'goal_group' }) => {
+    const name = firstName(item.profile.display_name);
+    const isMe = item.userId === user?.id;
+    const earliest = item.events[item.events.length - 1];
+
+    return (
+      <div key={item.events.map(e => e.id).join('-')} className="px-3 py-2.5 flex items-start gap-3 group">
+        <Avatar url={item.profile.avatar_url} name={item.profile.display_name} size="sm" />
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] text-text-primary font-medium leading-snug">
+            {name} {t('friends.hitGoals')} {item.events.length} {t('friends.goals')}
+          </p>
+          <ul className="mt-1 space-y-0.5">
+            {item.events.map(e => {
+              const detail = goalEventDetail(e);
+              return (
+                <li key={e.id} className="text-[12px] text-text-secondary leading-snug">
+                  {detail.emoji} {detail.label}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-[11px] text-text-tertiary mt-1">{relativeTime(earliest.created_at)}</p>
+        </div>
+        {isMe && (
+          <button
+            onClick={() => setConfirmDeleteEvent(item.events[0].id)}
+            className="opacity-40 sm:opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-text-tertiary hover:text-red-500 rounded-lg shrink-0 mt-1"
+            aria-label={t('friends.deleteFeedEvent')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18" /><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+            </svg>
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const filteredFeedEvents = feedEvents.filter(e => {
     if (feedFilter === 'mine') return e.user_id === user?.id;
     if (feedFilter === 'friends') return e.user_id !== user?.id;
@@ -662,6 +749,8 @@ export default function FriendsPage() {
                   {groupedFeed.map(item =>
                     item.type === 'group'
                       ? renderGroupedEvent(item)
+                      : item.type === 'goal_group'
+                      ? renderGoalGroup(item)
                       : renderSingleEvent(item.event)
                   )}
                   {hasMoreFeed && (
