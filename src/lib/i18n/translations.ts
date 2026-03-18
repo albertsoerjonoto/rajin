@@ -194,8 +194,8 @@ export const translations: Translations = {
 
   // ── Auth pages ──
   'auth.appName': { id: 'Rajin.AI', en: 'Rajin.AI' },
-  'auth.loginSubtitle': { id: 'Lacak kebiasaan, makanan & olahraga kamu', en: 'Track your habits, food & exercise' },
-  'auth.signupSubtitle': { id: 'Mulai lacak kemajuan harian kamu', en: 'Start tracking your daily progress' },
+  'auth.loginSubtitle': { id: 'Raih tujuanmu dengan AI', en: 'Achieve your goals with AI' },
+  'auth.signupSubtitle': { id: 'Raih tujuanmu dengan AI', en: 'Achieve your goals with AI' },
   'auth.usernameOrEmail': { id: 'Username atau email', en: 'Username or email' },
   'login.usernamePlaceholder': { id: 'username atau email', en: 'username or email' },
   'auth.password': { id: 'Password', en: 'Password' },
