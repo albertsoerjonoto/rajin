@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTour } from './useTour';
 import { useLocale } from '@/lib/i18n';
 
@@ -16,6 +16,24 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
 
   const isLastStep = currentStep?.id === 'complete';
   const isCenter = currentStep?.position === 'center' || !currentStep?.targetSelector;
+
+  // Track visual viewport size for keyboard-aware positioning
+  const [viewportSize, setViewportSize] = useState(() => ({
+    w: typeof window !== 'undefined' ? (window.visualViewport?.width ?? window.innerWidth) : 375,
+    h: typeof window !== 'undefined' ? (window.visualViewport?.height ?? window.innerHeight) : 812,
+  }));
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onResize = () => {
+      setViewportSize({ w: vv.width, h: vv.height });
+    };
+
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, []);
 
   const handleAction = () => {
     if (isLastStep) {
@@ -40,8 +58,8 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
       };
     }
 
-    const viewportW = typeof window !== 'undefined' ? window.innerWidth : 375;
-    const viewportH = typeof window !== 'undefined' ? window.innerHeight : 812;
+    const viewportW = viewportSize.w;
+    const viewportH = viewportSize.h;
     const bubbleWidth = Math.min(320, viewportW - 32);
     const bubbleEstHeight = 160; // approximate height of the bubble
     const position = currentStep?.position ?? 'bottom';
@@ -113,7 +131,7 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
       arrow: arrowDir,
       arrowLeft: arrowLeftPx,
     };
-  }, [spotlight, isCenter, currentStep?.position]);
+  }, [spotlight, isCenter, currentStep?.position, viewportSize]);
 
   if (!currentStep) return null;
 

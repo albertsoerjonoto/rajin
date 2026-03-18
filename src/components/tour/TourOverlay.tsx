@@ -71,7 +71,7 @@ export function TourOverlay() {
     };
   }, [isActive, currentStep]);
 
-  // Recalculate spotlight position on scroll/resize
+  // Recalculate spotlight position on scroll/resize/visualViewport changes
   useEffect(() => {
     if (!isActive || !currentStep?.targetSelector) return;
     const padding = currentStep.highlightPadding ?? 8;
@@ -83,9 +83,21 @@ export function TourOverlay() {
 
     window.addEventListener('scroll', handler, true);
     window.addEventListener('resize', handler);
+
+    // Listen to visualViewport changes (keyboard open/close on mobile)
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', handler);
+      vv.addEventListener('scroll', handler);
+    }
+
     return () => {
       window.removeEventListener('scroll', handler, true);
       window.removeEventListener('resize', handler);
+      if (vv) {
+        vv.removeEventListener('resize', handler);
+        vv.removeEventListener('scroll', handler);
+      }
     };
   }, [isActive, currentStep]);
 
