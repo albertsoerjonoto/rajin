@@ -376,7 +376,7 @@ export default function ChatPage() {
   const { user } = useAuth();
   const { t, locale } = useLocale();
   const { showToast, ToastContainer } = useToast();
-  const { isActive: tourActive, currentStep, nextStep, advanceToStep } = useTour();
+  const { isActive: tourActive, getStepId, nextStep, advanceToStep } = useTour();
   const [date, setDate] = useState(getToday());
   const [displayName, setDisplayName] = useState('');
 
@@ -655,7 +655,7 @@ export default function ChatPage() {
     shouldAutoScroll.current = true;
 
     // Tour: advance from chat-input step to ai-response step
-    if (tourActive && currentStep?.id === 'chat-input') {
+    if (tourActive && getStepId() === 'chat-input') {
       advanceToStep('ai-response');
     }
 
@@ -838,7 +838,7 @@ export default function ChatPage() {
       setMessages((prev) => [...prev, assistantMsg]);
 
       // Tour: advance from ai-response to parsed-result (or skip to log-page if no actionable items)
-      if (tourActive && currentStep?.id === 'ai-response') {
+      if (tourActive && getStepId() === 'ai-response') {
         if (hasAdds || hasEdits) {
           advanceToStep('parsed-result');
         } else {
@@ -934,10 +934,10 @@ export default function ChatPage() {
     fetchContext();
 
     // Tour: advance after save
-    if (tourActive && currentStep?.id === 'parsed-result') {
+    if (tourActive && getStepId() === 'parsed-result') {
       nextStep();
     }
-  }, [user, showToast, fetchContext, t, tourActive, currentStep, nextStep]);
+  }, [user, showToast, fetchContext, t, tourActive, getStepId, nextStep]);
 
   const confirmEdits = useCallback(async (msgId: string, foodEdits: FoodEdit[], exerciseEdits: ExerciseEdit[], drinkEdits: DrinkEdit[] = [], measurementEdits: MeasurementEdit[] = []) => {
     if (!user || savingLockRef.current) return;
@@ -979,10 +979,10 @@ export default function ChatPage() {
     fetchContext();
 
     // Tour: advance after save
-    if (tourActive && currentStep?.id === 'parsed-result') {
+    if (tourActive && getStepId() === 'parsed-result') {
       nextStep();
     }
-  }, [user, showToast, fetchContext, t, tourActive, currentStep, nextStep]);
+  }, [user, showToast, fetchContext, t, tourActive, getStepId, nextStep]);
 
   const handleSaveAndApply = useCallback(async (msg: Message) => {
     if (!user || savingLockRef.current) return;
@@ -1068,10 +1068,10 @@ export default function ChatPage() {
     fetchContext();
 
     // Tour: advance after save
-    if (tourActive && currentStep?.id === 'parsed-result') {
+    if (tourActive && getStepId() === 'parsed-result') {
       nextStep();
     }
-  }, [user, showToast, fetchContext, t, tourActive, currentStep, nextStep]);
+  }, [user, showToast, fetchContext, t, tourActive, getStepId, nextStep]);
 
   const updateFood = useCallback((msgId: string, index: number, field: keyof ParsedFood, value: string | number) => {
     setMessages((prev) =>

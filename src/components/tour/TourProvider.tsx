@@ -40,6 +40,8 @@ export interface TourState {
   currentStepIndex: number;
   steps: TourStep[];
   currentStep: TourStep | null;
+  /** Returns the current step ID using a ref — safe to call in async callbacks */
+  getStepId: () => string | null;
   startTour: () => void;
   nextStep: () => void;
   skipTour: () => void;
@@ -134,6 +136,10 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const getStepId = useCallback(() => {
+    return tourSteps[indexRef.current]?.id ?? null;
+  }, []);
+
   // Sync indexRef when currentStepIndex changes
   useEffect(() => {
     indexRef.current = currentStepIndex;
@@ -148,6 +154,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
         currentStepIndex,
         steps: tourSteps,
         currentStep,
+        getStepId,
         startTour,
         nextStep,
         skipTour,
