@@ -455,4 +455,59 @@ export const translations: Translations = {
   'voice.noSpeechDetected': { id: 'Tidak ada suara terdeteksi', en: 'No speech detected' },
   'voice.transcriptionFailed': { id: 'Gagal menyalin suara', en: 'Transcription failed' },
   'voice.networkError': { id: 'Kesalahan jaringan saat input suara', en: 'Network error during voice input' },
+
+  // ── Tour ──
+  'tour.welcomeTitle': { id: 'Asisten AI kamu', en: 'Your AI Assistant' },
+  'tour.welcomeDesc': {
+    id: 'Ini asisten AI kamu. Dia bisa mencatat makanan, minuman, dan olahraga cukup dengan ngobrol. Yuk coba!',
+    en: "This is your AI assistant. It can log food, drinks, and exercise just by chatting naturally. Let's try it!",
+  },
+  'tour.inputTitle': { id: 'Coba ketik di sini', en: 'Try typing here' },
+  'tour.inputDesc': {
+    id: 'Ketik apa yang kamu makan atau minum hari ini — misalnya "nasi goreng untuk makan siang" atau "minum segelas air". Kamu juga bisa pakai mikrofon atau kamera!',
+    en: 'Type what you ate or drank today — like "nasi goreng for lunch" or "drank a glass of water". You can also tap the mic to speak or the camera to take a photo!',
+  },
+  'tour.waitingTitle': { id: 'AI sedang menganalisis...', en: 'AI is analyzing...' },
+  'tour.waitingDesc': {
+    id: 'Bagus! AI sedang menganalisis inputmu...',
+    en: 'Great! The AI is analyzing your input...',
+  },
+  'tour.resultTitle': { id: 'Hasil AI', en: 'AI Results' },
+  'tour.resultDesc': {
+    id: 'Ini yang ditemukan AI! Kamu bisa ketuk untuk edit detail sebelum menyimpan. Kalau sudah siap, ketuk Simpan.',
+    en: "Here's what the AI found! You can tap to edit the details before saving. When you're ready, tap Save to log it.",
+  },
+  'tour.resultFallback': {
+    id: 'Hmm, itu tidak menghasilkan log. Coba sesuatu seperti "makan nasi ayam untuk makan siang". Atau lewati untuk lanjut tur.',
+    en: 'Hmm, that didn\'t create a log entry. Try something like "I had rice and chicken for lunch". Or skip to continue the tour.',
+  },
+  'tour.logTitle': { id: 'Log kamu', en: 'Your Log' },
+  'tour.logDesc': {
+    id: 'Ini Log kamu. Semua makanan, camilan, minuman, dan olahraga hari ini ada di sini. Kamu juga bisa tambah entri manual dengan tombol Tambah.',
+    en: 'This is your Log. All your meals, snacks, drinks, and exercises for today are here. You can also add entries manually with the Add button.',
+  },
+  'tour.dashboardTitle': { id: 'Ringkasan harian', en: 'Daily Overview' },
+  'tour.dashboardDesc': {
+    id: 'Dan ini Ringkasan kamu! Lihat bagaimana makananmu memengaruhi target kalori dan makro harian. AI menghitung semuanya untukmu. Kamu siap! 🎉',
+    en: "And this is your Overview! See how your meal affects your daily calorie and macro targets. The AI calculates everything for you. You're all set! 🎉",
+  },
+  'tour.completeTitle': { id: 'Kamu siap! 💪', en: "You're ready! 💪" },
+  'tour.completeDesc': {
+    id: 'Kamu siap! Ingat, kamu bisa selalu ngobrol dengan AI untuk mencatat makanan, minuman, atau olahraga. Selamat menjalani hidup sehat!',
+    en: "You're ready to go! Remember, you can always chat with the AI to log food, drinks, or exercise. Enjoy your health journey!",
+  },
+  'tour.next': { id: 'Lanjut', en: 'Next' },
+  'tour.skip': { id: 'Lewati', en: 'Skip' },
+  'tour.skipTour': { id: 'Lewati Tur', en: 'Skip Tour' },
+  'tour.done': { id: 'Selesai!', en: 'Done!' },
+  'tour.letsGo': { id: 'Ayo Mulai!', en: "Let's Go!" },
+  'tour.apiError': {
+    id: 'Ups, AI sedang bermasalah. Tidak apa — kamu bisa coba lagi kapan saja dari halaman Chat. Yuk lanjut tur!',
+    en: "Oops, the AI is having trouble. No worries — you can try again anytime from the Chat page. Let's continue the tour!",
+  },
+  'tour.replayTour': { id: 'Ulangi Tur', en: 'Replay Tour' },
+  'chat.welcomeTour': {
+    id: 'Selamat datang, {name}! 👋 Yuk catat makanan atau minuman pertamamu. Hari ini kamu makan atau minum apa? Bisa ketik, pakai suara, atau foto!',
+    en: "Welcome, {name}! 👋 Let's log your first meal together. What did you eat or drink today? You can type, use voice, or take a photo!",
+  },
 };

@@ -544,7 +544,7 @@ export default function LogPage() {
   const { isExpanded } = useDesktopLayout();
 
   return (
-    <div className={cn('max-w-lg mx-auto px-4', isExpanded && 'lg:max-w-3xl lg:px-8')}>
+    <div className={cn('max-w-lg mx-auto px-4', isExpanded && 'lg:max-w-3xl lg:px-8')} data-tour="log-entries">
       {ToastContainer}
       <div className="sticky top-0 z-20 bg-bg -mx-4 px-4 pt-6 pb-3">
         <div className="flex items-center justify-between mb-3">

@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useLocale } from '@/lib/i18n';
 import { DesktopLayoutProvider, useDesktopLayout } from '@/hooks/useDesktopLayout';
 import { ServiceWorkerRegister } from './sw-register';
+import { TourOverlay } from '@/components/tour/TourOverlay';
+import { useTour } from '@/components/tour/useTour';
 import type { Locale, DesktopLayout } from '@/lib/types';
 
 const TAB_DEFS = [
@@ -23,6 +25,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useLocale();
   const { isExpanded } = useDesktopLayout();
+  const { isActive: tourActive } = useTour();
   const [pendingCount, setPendingCount] = useState(0);
   const { user } = useAuth();
 
@@ -120,19 +123,21 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       )}>
         <div className="max-w-lg mx-auto flex justify-around items-center h-16">
           {TAB_DEFS.map((tab) => {
-            const isActive = pathname === tab.href;
+            const isTabActive = pathname === tab.href;
             const showBadge = tab.href === '/friends' && pendingCount > 0;
+            const dimmed = tourActive && !isTabActive;
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
                 className={cn(
                   'flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-all duration-200 relative',
-                  isActive ? 'text-nav-active' : 'text-nav-inactive hover:text-nav-inactive-hover'
+                  isTabActive ? 'text-nav-active' : 'text-nav-inactive hover:text-nav-inactive-hover',
+                  dimmed && 'opacity-40'
                 )}
               >
                 <div className="relative">
-                  <tab.icon className="w-6 h-6" filled={isActive} />
+                  <tab.icon className="w-6 h-6" filled={isTabActive} />
                   {showBadge && (
                     <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
                   )}
@@ -143,6 +148,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           })}
         </div>
       </nav>
+      <TourOverlay />
     </div>
   );
 }
@@ -152,9 +158,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { setLocale } = useLocale();
+  const { startTour } = useTour();
   const [ready, setReady] = useState(false);
   const [desktopLayout, setDesktopLayout] = useState<DesktopLayout>('expanded');
   const checkedRef = useRef(false);
+  const tourStartedRef = useRef(false);
 
   // Check if the user has completed onboarding + sync locale + desktop layout
   useEffect(() => {
@@ -187,6 +195,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     checkOnboarding();
   }, [user, authLoading, router, setLocale]);
+
+  // Detect ?tour=start and trigger tour
+  useEffect(() => {
+    if (!ready || tourStartedRef.current) return;
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tour') === 'start') {
+      tourStartedRef.current = true;
+      startTour();
+      router.replace(pathname);
+    }
+  }, [ready, startTour, router, pathname]);
 
   if (!ready) {
     return <div className="min-h-screen bg-bg" />;
