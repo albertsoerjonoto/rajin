@@ -8,7 +8,7 @@ import { useToast } from '@/components/Toast';
 import { cn, getToday } from '@/lib/utils';
 import { useDesktopLayout } from '@/hooks/useDesktopLayout';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import type { Friendship, FriendProfile, FriendActivity, SharedHabit, FeedEvent } from '@/lib/types';
+import type { Friendship, FriendProfile, SharedHabit, FeedEvent } from '@/lib/types';
 
 type Tab = 'feed' | 'friends' | 'add';
 type FeedFilter = 'all' | 'mine' | 'friends';
@@ -30,7 +30,6 @@ export default function FriendsPage() {
   const [loading, setLoading] = useState(true);
 
   // Feed state
-  const [activities, setActivities] = useState<FriendActivity[]>([]);
   const [feedEvents, setFeedEvents] = useState<FeedEventWithProfile[]>([]);
   const [feedFilter, setFeedFilter] = useState<FeedFilter>('all');
   const [feedPage, setFeedPage] = useState(0);
@@ -106,18 +105,6 @@ export default function FriendsPage() {
       showToast('error', t('friends.failedLoad'));
     }
   }, [user, showToast, t]);
-
-  const loadActivity = useCallback(async () => {
-    if (!user) return;
-    try {
-      const sb = createClient();
-      const { data, error } = await sb.rpc('get_friend_activity', { for_date: today });
-      if (error) throw error;
-      setActivities((data ?? []) as FriendActivity[]);
-    } catch {
-      // Activity feed is non-critical, silently fail
-    }
-  }, [user, today]);
 
   const loadFeedEvents = useCallback(async (page = 0, append = false) => {
     if (!user) return;
@@ -197,9 +184,9 @@ export default function FriendsPage() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    await Promise.all([loadFriendships(), loadActivity(), loadSharedInvites(), loadFeedEvents(0)]);
+    await Promise.all([loadFriendships(), loadSharedInvites(), loadFeedEvents(0)]);
     setLoading(false);
-  }, [loadFriendships, loadActivity, loadSharedInvites, loadFeedEvents]);
+  }, [loadFriendships, loadSharedInvites, loadFeedEvents]);
 
   useEffect(() => {
     loadAll();
