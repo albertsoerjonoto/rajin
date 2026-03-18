@@ -165,58 +165,86 @@ export default function ProfilePage() {
 
     setSaving(true);
 
-    const supabase = createClient();
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
+    try {
+      const supabase = createClient();
+
+      // Refresh auth session to avoid stale token errors
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        showToast('error', t('profile.failedSave'));
+        setSaving(false);
+        return;
+      }
+
+      // Build update payload based on columns that exist in the fetched profile
+      const payload: Record<string, unknown> = {
         display_name: displayName.trim() || null,
         username: username.trim().toLowerCase() || null,
-        calorie_offset_min: calorieMode === 'maintenance'
+      };
+
+      // Only include columns that exist in the database (based on fetched profile)
+      if (profile && 'calorie_offset_min' in profile) {
+        payload.calorie_offset_min = calorieMode === 'maintenance'
           ? -(parseInt(maintenanceRange) || 200)
           : calorieMode === 'deficit'
             ? -(parseInt(calorieAmountHigh) || 1000)
-            : (parseInt(calorieAmountLow) || 300),
-        calorie_offset_max: calorieMode === 'maintenance'
+            : (parseInt(calorieAmountLow) || 300);
+        payload.calorie_offset_max = calorieMode === 'maintenance'
           ? (parseInt(maintenanceRange) || 200)
           : calorieMode === 'deficit'
             ? -(parseInt(calorieAmountLow) || 500)
-            : (parseInt(calorieAmountHigh) || 500),
-        daily_water_goal_ml: parseInt(waterGoalMl) || 2000,
-        date_of_birth: dateOfBirth || null,
-        gender: gender || null,
-        height_cm: heightCm ? parseFloat(heightCm) : null,
-        weight_kg: weightKg ? parseFloat(weightKg) : null,
-        desktop_layout: desktopLayout,
-      })
-      .eq('id', user.id);
-
-    if (updateError) {
-      console.error('Profile save error:', JSON.stringify(updateError));
-
-      if (updateError.code === '23505') {
-        setErrors((prev) => ({ ...prev, username: t('profile.usernameTaken') }));
-        showToast('error', t('profile.usernameTaken'));
-      } else {
-        const detail = process.env.NODE_ENV === 'development'
-          ? ` [${updateError.code}: ${updateError.message}]`
-          : '';
-        showToast('error', t('profile.failedSave') + detail);
+            : (parseInt(calorieAmountHigh) || 500);
       }
+
+      if (profile && 'daily_water_goal_ml' in profile) {
+        payload.daily_water_goal_ml = parseInt(waterGoalMl) || 2000;
+      }
+
+      if (profile && 'desktop_layout' in profile) {
+        payload.desktop_layout = desktopLayout;
+      }
+
+      // Body stats and other nullable fields — always safe to include
+      payload.date_of_birth = dateOfBirth || null;
+      payload.gender = gender || null;
+      payload.height_cm = heightCm ? parseFloat(heightCm) : null;
+      payload.weight_kg = weightKg ? parseFloat(weightKg) : null;
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(payload)
+        .eq('id', currentUser.id);
+
+      if (updateError) {
+        console.error('Profile save error:', JSON.stringify(updateError));
+
+        if (updateError.code === '23505') {
+          setErrors((prev) => ({ ...prev, username: t('profile.usernameTaken') }));
+          showToast('error', t('profile.usernameTaken'));
+        } else {
+          const detail = ` [${updateError.code}: ${updateError.message}]`;
+          showToast('error', t('profile.failedSave') + detail);
+        }
+        setSaving(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+      if (data) applyProfile(data);
+
       setSaving(false);
-      return;
+      setSaved(true);
+      showToast('success', t('profile.savedSuccess'));
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Profile save exception:', err);
+      showToast('error', t('profile.failedSave'));
+      setSaving(false);
     }
-
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-    if (data) applyProfile(data);
-
-    setSaving(false);
-    setSaved(true);
-    showToast('success', t('profile.savedSuccess'));
-    setTimeout(() => setSaved(false), 2000);
   };
 
   const handleSignOut = async () => {
