@@ -85,17 +85,18 @@ export async function PATCH(request: NextRequest) {
   }
 
   const status = action === 'accept' ? 'accepted' : 'declined';
-  const { error, count } = await supabase
+  const { data: updated, error } = await supabase
     .from('friendships')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', friendship_id)
-    .eq('addressee_id', user.id);
+    .eq('addressee_id', user.id)
+    .select('id');
 
   if (error) {
     return NextResponse.json({ error: 'Failed to update request' }, { status: 500 });
   }
 
-  if (count === 0) {
+  if (!updated || updated.length === 0) {
     return NextResponse.json({ error: 'Not authorized to update this request' }, { status: 403 });
   }
 
