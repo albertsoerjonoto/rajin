@@ -668,8 +668,8 @@ export default function FriendsPage() {
             className={cn(
               'flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200 relative',
               tab === tb.key
-                ? 'bg-surface text-text-text-primary shadow-sm'
-                : 'text-text-text-secondary'
+                ? 'bg-surface text-text-primary shadow-sm'
+                : 'text-text-secondary'
             )}
           >
             {t(tb.labelKey)}
