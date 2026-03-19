@@ -18,6 +18,7 @@ interface DateNavProps {
   period?: Period;
   onPeriodChange?: (period: Period) => void;
   showPeriodPicker?: boolean;
+  allowFuture?: boolean;
 }
 
 export default function DateNav({
@@ -26,6 +27,7 @@ export default function DateNav({
   period = 'day',
   onPeriodChange,
   showPeriodPicker = false,
+  allowFuture = false,
 }: DateNavProps) {
   const { t, locale } = useLocale();
   const [open, setOpen] = useState(false);
@@ -57,6 +59,9 @@ export default function DateNav({
   }
 
   const label = getLabel(date, period);
+  const today = getToday();
+  const nextDate = navigateByPeriod(date, period, 1);
+  const isNextDisabled = !allowFuture && nextDate > today;
 
   return (
     <div className="flex items-center gap-0.5" ref={ref}>
@@ -104,8 +109,9 @@ export default function DateNav({
       </div>
 
       <button
-        onClick={() => onDateChange(navigateByPeriod(date, period, 1))}
-        className="p-1.5 rounded-lg hover:bg-surface-hover transition-all active:scale-[0.95]"
+        onClick={() => !isNextDisabled && onDateChange(nextDate)}
+        disabled={isNextDisabled}
+        className={`p-1.5 rounded-lg transition-all active:scale-[0.95] ${isNextDisabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-surface-hover'}`}
         aria-label={`Next ${period}`}
       >
         <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">

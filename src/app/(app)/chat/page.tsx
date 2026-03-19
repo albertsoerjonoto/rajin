@@ -63,6 +63,7 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
     if (type === 'breakfast') return t('meal.breakfast');
     if (type === 'lunch') return t('meal.lunch');
     if (type === 'dinner') return t('meal.dinner');
+    if (type === 'snack') return t('meal.snack');
     return t('meal.other');
   };
 
@@ -101,7 +102,7 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
                       <option value="breakfast">{t('meal.breakfast')}</option>
                       <option value="lunch">{t('meal.lunch')}</option>
                       <option value="dinner">{t('meal.dinner')}</option>
-                      <option value="snack">{t('meal.other')}</option>
+                      <option value="snack">{t('meal.snack')}</option>
                     </select>
                   )}
                 </div>
