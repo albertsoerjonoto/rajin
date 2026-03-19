@@ -513,7 +513,7 @@ export default function LogPage() {
   const waterGoalMl = profile?.daily_water_goal_ml ?? 2000;
 
   const inputClass =
-    'w-full px-4 py-3.5 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
+    'w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
 
   const DeleteButton = ({ type, id }: { type: 'food' | 'exercise' | 'drink' | 'measurement'; id: string }) => (
     <button
@@ -954,7 +954,7 @@ export default function LogPage() {
                   min="0"
                   value={proteinG}
                   onChange={(e) => setProteinG(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                   placeholder={t('log.proteinG')}
                 />
                 <input
@@ -962,7 +962,7 @@ export default function LogPage() {
                   min="0"
                   value={carbsG}
                   onChange={(e) => setCarbsG(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                   placeholder={t('log.carbsG')}
                 />
                 <input
@@ -970,7 +970,7 @@ export default function LogPage() {
                   min="0"
                   value={fatG}
                   onChange={(e) => setFatG(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                   placeholder={t('log.fatG')}
                 />
               </div>
@@ -1011,7 +1011,7 @@ export default function LogPage() {
                   max="1440"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
+                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
                   placeholder={t('log.durationMin')}
                 />
                 <input
@@ -1020,7 +1020,7 @@ export default function LogPage() {
                   max="20000"
                   value={caloriesBurned}
                   onChange={(e) => setCaloriesBurned(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
+                  className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200"
                   placeholder={t('log.caloriesBurned')}
                 />
               </div>
@@ -1131,7 +1131,7 @@ export default function LogPage() {
                       min="0"
                       value={drinkProtein}
                       onChange={(e) => setDrinkProtein(e.target.value)}
-                      className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                      className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                       placeholder={t('log.proteinG')}
                     />
                     <input
@@ -1139,7 +1139,7 @@ export default function LogPage() {
                       min="0"
                       value={drinkCarbs}
                       onChange={(e) => setDrinkCarbs(e.target.value)}
-                      className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                      className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                       placeholder={t('log.carbsG')}
                     />
                     <input
@@ -1147,7 +1147,7 @@ export default function LogPage() {
                       min="0"
                       value={drinkFat}
                       onChange={(e) => setDrinkFat(e.target.value)}
-                      className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                      className="px-3 py-3 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
                       placeholder={t('log.fatG')}
                     />
                   </div>

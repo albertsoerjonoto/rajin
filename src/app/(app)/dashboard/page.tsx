@@ -828,7 +828,7 @@ export default function DashboardPage() {
                     type="text"
                     value={newHabitName}
                     onChange={(e) => setNewHabitName(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring"
+                    className="flex-1 px-3 py-2 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring"
                     placeholder={t('dashboard.habitPlaceholder')}
                     autoFocus
                   />
@@ -887,7 +887,7 @@ export default function DashboardPage() {
                               type="text"
                               value={editName}
                               onChange={(e) => setEditName(e.target.value)}
-                              className="flex-1 px-3 py-2 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring text-sm"
+                              className="flex-1 px-3 py-2 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring text-sm"
                               autoFocus
                             />
                           </div>
