@@ -67,6 +67,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
     const progress = loadTourProgress();
     if (progress?.active && progress.stepIndex < tourSteps.length) {
       indexRef.current = progress.stepIndex;
+      // Restoring persisted tour state on mount; synchronous setState is intentional.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentStepIndex(progress.stepIndex);
       setIsActive(true);
       // Navigate to the step's page if it has one

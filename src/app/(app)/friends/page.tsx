@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import { useLocale } from '@/lib/i18n';
 import { useToast } from '@/components/Toast';
-import { cn, getToday } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useDesktopLayout } from '@/hooks/useDesktopLayout';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import type { Friendship, FriendProfile, SharedHabit, FeedEvent } from '@/lib/types';
@@ -51,8 +51,6 @@ export default function FriendsPage() {
 
   // Shared habit invitations
   const [sharedInvites, setSharedInvites] = useState<(SharedHabit & { habit_name: string; habit_emoji: string; owner_name: string })[]>([]);
-
-  const today = getToday();
 
   const loadFriendships = useCallback(async () => {
     if (!user) return;
@@ -638,31 +636,6 @@ export default function FriendsPage() {
   });
 
   const groupedFeed = groupFeedEvents(filteredFeedEvents);
-
-  const activityIcon = (type: string) => {
-    switch (type) {
-      case 'food': return '🍽️';
-      case 'exercise': return '🏃';
-      case 'drink': return '💧';
-      case 'habit': return '✅';
-      default: return '📝';
-    }
-  };
-
-  const activityLabel = (type: string) => {
-    switch (type) {
-      case 'food': return t('friends.food');
-      case 'exercise': return t('friends.exercise');
-      case 'drink': return t('friends.drink');
-      case 'habit': return t('friends.habit');
-      default: return '';
-    }
-  };
-
-  const formatTime = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
 
   const getSearchButtonState = (userId: string) => {
     const fs = friendshipMap[userId];

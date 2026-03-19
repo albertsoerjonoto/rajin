@@ -22,6 +22,8 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
   useEffect(() => {
     if (prevStepRef.current !== currentStepIndex) {
       prevStepRef.current = currentStepIndex;
+      // Reset + re-trigger animation via double-rAF; synchronous reset is intentional.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAnimating(false);
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {

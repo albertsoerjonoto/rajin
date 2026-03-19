@@ -118,6 +118,7 @@ export default function ProfilePage() {
     };
 
     fetchOrCreateProfile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, showToast, t]);
 
   const saveProfile = async () => {
