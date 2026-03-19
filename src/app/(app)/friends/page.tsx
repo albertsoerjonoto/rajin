@@ -939,6 +939,8 @@ export default function FriendsPage() {
         open={!!confirmUnfriend}
         title={t('friends.unfriendConfirm')}
         message={confirmUnfriend ? `${t('friends.unfriend')} ${confirmUnfriend.name}?` : ''}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
         onConfirm={() => confirmUnfriend && unfriend(confirmUnfriend.id)}
         onCancel={() => setConfirmUnfriend(null)}
       />
@@ -947,6 +949,8 @@ export default function FriendsPage() {
         open={!!confirmDeleteEvent}
         title={t('friends.deleteConfirmTitle')}
         message={t('friends.deleteConfirmMessage')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
         onConfirm={() => confirmDeleteEvent && deleteFeedEvent(confirmDeleteEvent)}
         onCancel={() => setConfirmDeleteEvent(null)}
       />
