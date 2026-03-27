@@ -333,6 +333,12 @@ export const translations: Translations = {
   'emoji.productivity': { id: 'Produktivitas', en: 'Productivity' },
   'emoji.social': { id: 'Sosial', en: 'Social' },
   'emoji.nature': { id: 'Alam', en: 'Nature' },
+  'emoji.faces': { id: 'Wajah', en: 'Faces' },
+  'emoji.hands': { id: 'Tangan', en: 'Hands' },
+  'emoji.symbols': { id: 'Simbol', en: 'Symbols' },
+  'emoji.objects': { id: 'Benda', en: 'Objects' },
+  'emoji.travel': { id: 'Perjalanan', en: 'Travel' },
+  'emoji.flags': { id: 'Bendera', en: 'Flags' },
 
   // ── Log page habits tab ──
   'log.habits': { id: '✅ Kebiasaan', en: '✅ Habits' },
