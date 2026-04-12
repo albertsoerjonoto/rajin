@@ -406,10 +406,11 @@ export async function POST(request: NextRequest) {
           meal_type: ['breakfast', 'lunch', 'dinner', 'snack'].includes(f.meal_type as string)
             ? f.meal_type
             : 'lunch',
-          calories: clamp(Number(f.calories) || 0, 0, 20000),
-          protein_g: clamp(Number(f.protein_g) || 0, 0, 5000),
-          carbs_g: clamp(Number(f.carbs_g) || 0, 0, 5000),
-          fat_g: clamp(Number(f.fat_g) || 0, 0, 5000),
+          // food_logs columns are INTEGER — round so inserts don't fail on decimals.
+          calories: Math.round(clamp(Number(f.calories) || 0, 0, 20000)),
+          protein_g: Math.round(clamp(Number(f.protein_g) || 0, 0, 5000)),
+          carbs_g: Math.round(clamp(Number(f.carbs_g) || 0, 0, 5000)),
+          fat_g: Math.round(clamp(Number(f.fat_g) || 0, 0, 5000)),
         }))
       : [];
 
@@ -462,10 +463,11 @@ export async function POST(request: NextRequest) {
         if (edit.updated.meal_type !== undefined && ['breakfast', 'lunch', 'dinner', 'snack'].includes(edit.updated.meal_type)) {
           updated.meal_type = edit.updated.meal_type;
         }
-        if (edit.updated.calories !== undefined) updated.calories = clamp(Number(edit.updated.calories) || 0, 0, 20000);
-        if (edit.updated.protein_g !== undefined) updated.protein_g = clamp(Number(edit.updated.protein_g) || 0, 0, 5000);
-        if (edit.updated.carbs_g !== undefined) updated.carbs_g = clamp(Number(edit.updated.carbs_g) || 0, 0, 5000);
-        if (edit.updated.fat_g !== undefined) updated.fat_g = clamp(Number(edit.updated.fat_g) || 0, 0, 5000);
+        // food_logs columns are INTEGER — round so updates don't fail on decimals.
+        if (edit.updated.calories !== undefined) updated.calories = Math.round(clamp(Number(edit.updated.calories) || 0, 0, 20000));
+        if (edit.updated.protein_g !== undefined) updated.protein_g = Math.round(clamp(Number(edit.updated.protein_g) || 0, 0, 5000));
+        if (edit.updated.carbs_g !== undefined) updated.carbs_g = Math.round(clamp(Number(edit.updated.carbs_g) || 0, 0, 5000));
+        if (edit.updated.fat_g !== undefined) updated.fat_g = Math.round(clamp(Number(edit.updated.fat_g) || 0, 0, 5000));
 
         if (Object.keys(updated).length > 0) {
           foodEdits.push({

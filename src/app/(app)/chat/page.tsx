@@ -16,6 +16,18 @@ import { useTour } from '@/components/tour/useTour';
 import type { ParsedFood, ParsedExercise, ParsedDrink, ParsedMeasurement, MealType, DrinkType, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
 import { emitExerciseEvent, checkAndEmitGoalEvents } from '@/lib/feedEvents';
 
+// food_logs columns are INTEGER. Round any integer fields in a food edit
+// payload defensively, since older chat messages may have decimal macros
+// stored in chat_messages.food_edits.
+function roundFoodUpdate(updated: Partial<ParsedFood>): Partial<ParsedFood> {
+  const out: Partial<ParsedFood> = { ...updated };
+  if (out.calories !== undefined) out.calories = Math.round(out.calories);
+  if (out.protein_g !== undefined) out.protein_g = Math.round(out.protein_g);
+  if (out.carbs_g !== undefined) out.carbs_g = Math.round(out.carbs_g);
+  if (out.fat_g !== undefined) out.fat_g = Math.round(out.fat_g);
+  return out;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -914,7 +926,13 @@ export default function ChatPage() {
       const { error } = await supabase.from('food_logs').insert(
         foods.map((f) => ({
           user_id: user.id, date: today, meal_type: f.meal_type, description: f.description,
-          calories: f.calories, protein_g: f.protein_g, carbs_g: f.carbs_g, fat_g: f.fat_g, source: 'chat' as const,
+          // food_logs columns are INTEGER — round defensively in case the chat
+          // message was stored before the parse API rounded macros.
+          calories: Math.round(f.calories),
+          protein_g: Math.round(f.protein_g),
+          carbs_g: Math.round(f.carbs_g),
+          fat_g: Math.round(f.fat_g),
+          source: 'chat' as const,
         }))
       );
       if (error) hasError = true;
@@ -986,7 +1004,7 @@ export default function ChatPage() {
     let hasError = false;
 
     for (const edit of foodEdits) {
-      const { error } = await supabase.from('food_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
+      const { error } = await supabase.from('food_logs').update(roundFoodUpdate(edit.updated)).eq('id', edit.log_id).eq('user_id', user.id);
       if (error) hasError = true;
     }
 
@@ -1038,7 +1056,13 @@ export default function ChatPage() {
       const { error } = await supabase.from('food_logs').insert(
         msg.parsedFoods.map((f) => ({
           user_id: user.id, date: today, meal_type: f.meal_type, description: f.description,
-          calories: f.calories, protein_g: f.protein_g, carbs_g: f.carbs_g, fat_g: f.fat_g, source: 'chat' as const,
+          // food_logs columns are INTEGER — round defensively in case the chat
+          // message was stored before the parse API rounded macros.
+          calories: Math.round(f.calories),
+          protein_g: Math.round(f.protein_g),
+          carbs_g: Math.round(f.carbs_g),
+          fat_g: Math.round(f.fat_g),
+          source: 'chat' as const,
         }))
       );
       if (error) hasError = true;
@@ -1074,7 +1098,7 @@ export default function ChatPage() {
 
     if (msg.foodEdits) {
       for (const edit of msg.foodEdits) {
-        const { error } = await supabase.from('food_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
+        const { error } = await supabase.from('food_logs').update(roundFoodUpdate(edit.updated)).eq('id', edit.log_id).eq('user_id', user.id);
         if (error) hasError = true;
       }
     }
