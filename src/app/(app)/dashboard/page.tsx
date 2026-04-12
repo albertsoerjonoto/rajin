@@ -37,6 +37,14 @@ import WaterProgressChart from '@/components/analytics/WaterProgressChart';
 import WeightTrendChart from '@/components/analytics/WeightTrendChart';
 import HabitBreakdown from '@/components/analytics/HabitBreakdown';
 
+const MIN_STREAK_INTERVAL = 1;
+const MAX_STREAK_INTERVAL = 30;
+
+function clampInterval(n: number): number {
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(MAX_STREAK_INTERVAL, Math.max(MIN_STREAK_INTERVAL, Math.floor(n)));
+}
+
 function HabitCardContent({ habit, isDragging }: { habit: HabitWithLog; isDragging?: boolean }) {
   return (
     <div className="flex items-center gap-2">
@@ -113,12 +121,14 @@ export default function DashboardPage() {
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitEmoji, setNewHabitEmoji] = useState('⭐');
   const [newHabitPrivate, setNewHabitPrivate] = useState(false);
+  const [newHabitStreakInterval, setNewHabitStreakInterval] = useState(1);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmoji, setEditEmoji] = useState('');
   const [editPrivate, setEditPrivate] = useState(false);
+  const [editStreakInterval, setEditStreakInterval] = useState(1);
   const [activeHabit, setActiveHabit] = useState<HabitWithLog | null>(null);
   const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState<string | null>(null);
@@ -382,35 +392,45 @@ export default function DashboardPage() {
         }
       });
     // Calculate streaks from actual habit_logs instead of cached habit_streaks
-    // so that missed days correctly reset the streak to 0
-    sb.from('habit_logs')
-      .select('habit_id, date, completed')
-      .eq('user_id', user.id)
-      .eq('completed', true)
-      .order('date', { ascending: false })
-      .limit(5000)
-      .then(({ data: logs }) => {
-        if (!logs) return;
-        const today = getToday();
-        const logsByHabit = new Map<string, { date: string; completed: boolean }[]>();
-        for (const log of logs) {
-          const arr = logsByHabit.get(log.habit_id) ?? [];
-          arr.push({ date: log.date, completed: log.completed });
-          logsByHabit.set(log.habit_id, arr);
-        }
-        const map: Record<string, HabitStreak> = {};
-        for (const [habitId, habitLogs] of logsByHabit) {
-          const { current, longest, lastCompleted } = calculateStreak(habitLogs, today);
-          map[habitId] = {
-            habit_id: habitId,
-            user_id: user.id,
-            current_streak: current,
-            longest_streak: longest,
-            last_completed_date: lastCompleted,
-          } as HabitStreak;
-        }
-        setStreakMap(map);
-      });
+    // so that missed days correctly reset the streak to 0.
+    // Fetch habits alongside logs so we know each habit's streak_interval_days.
+    Promise.all([
+      sb.from('habit_logs')
+        .select('habit_id, date, completed')
+        .eq('user_id', user.id)
+        .eq('completed', true)
+        .order('date', { ascending: false })
+        .limit(5000),
+      sb.from('habits')
+        .select('id, streak_interval_days')
+        .eq('user_id', user.id),
+    ]).then(([{ data: logs }, { data: habitsMeta }]) => {
+      if (!logs) return;
+      const intervalByHabit = new Map<string, number>();
+      for (const h of habitsMeta ?? []) {
+        intervalByHabit.set(h.id, h.streak_interval_days ?? 1);
+      }
+      const today = getToday();
+      const logsByHabit = new Map<string, { date: string; completed: boolean }[]>();
+      for (const log of logs) {
+        const arr = logsByHabit.get(log.habit_id) ?? [];
+        arr.push({ date: log.date, completed: log.completed });
+        logsByHabit.set(log.habit_id, arr);
+      }
+      const map: Record<string, HabitStreak> = {};
+      for (const [habitId, habitLogs] of logsByHabit) {
+        const interval = intervalByHabit.get(habitId) ?? 1;
+        const { current, longest, lastCompleted } = calculateStreak(habitLogs, today, interval);
+        map[habitId] = {
+          habit_id: habitId,
+          user_id: user.id,
+          current_streak: current,
+          longest_streak: longest,
+          last_completed_date: lastCompleted,
+        } as HabitStreak;
+      }
+      setStreakMap(map);
+    });
   }, [user]);
 
   const shareHabit = async (habitId: string, friendId: string) => {
@@ -528,6 +548,7 @@ export default function DashboardPage() {
       emoji: newHabitEmoji || '⭐',
       sort_order: habits.length,
       is_private: newHabitPrivate,
+      streak_interval_days: clampInterval(newHabitStreakInterval),
     });
 
     if (error) {
@@ -538,6 +559,7 @@ export default function DashboardPage() {
     setNewHabitName('');
     setNewHabitEmoji('⭐');
     setNewHabitPrivate(false);
+    setNewHabitStreakInterval(1);
     setShowAddHabit(false);
     fetchData();
   };
@@ -547,6 +569,7 @@ export default function DashboardPage() {
     setEditName(habit.name);
     setEditEmoji(habit.emoji);
     setEditPrivate(habit.is_private);
+    setEditStreakInterval(habit.streak_interval_days ?? 1);
   };
 
   const saveEdit = async () => {
@@ -554,7 +577,12 @@ export default function DashboardPage() {
     const supabase = createClient();
     const { error } = await supabase
       .from('habits')
-      .update({ name: editName.trim(), emoji: editEmoji || '⭐', is_private: editPrivate })
+      .update({
+        name: editName.trim(),
+        emoji: editEmoji || '⭐',
+        is_private: editPrivate,
+        streak_interval_days: clampInterval(editStreakInterval),
+      })
       .eq('id', editingId);
     if (error) {
       showToast('error', t('dashboard.failedUpdateHabit'));
@@ -851,6 +879,19 @@ export default function DashboardPage() {
                   </div>
                   <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
                 </div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs text-text-secondary flex-1">{t('dashboard.streakInterval')}</span>
+                  <input
+                    type="number"
+                    min={MIN_STREAK_INTERVAL}
+                    max={MAX_STREAK_INTERVAL}
+                    value={newHabitStreakInterval}
+                    onChange={(e) => setNewHabitStreakInterval(clampInterval(parseInt(e.target.value, 10)))}
+                    className="w-16 px-2 py-1 rounded-lg bg-surface-secondary text-sm text-text-primary text-center focus:outline-none focus:ring-1 focus:ring-input-ring"
+                  />
+                  <span className="text-xs text-text-tertiary">{t('dashboard.streakIntervalDays')}</span>
+                </div>
+                <p className="text-[11px] text-text-tertiary mb-3 leading-snug">{t('dashboard.streakIntervalHint')}</p>
                 <div className="flex gap-2">
                   <button onClick={() => setShowAddHabit(false)} className="flex-1 py-2 text-sm text-text-secondary rounded-xl hover:bg-surface-hover transition-all duration-200">
                     {t('common.cancel')}
@@ -909,6 +950,19 @@ export default function DashboardPage() {
                             </div>
                             <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
                           </div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-xs text-text-secondary flex-1">{t('dashboard.streakInterval')}</span>
+                            <input
+                              type="number"
+                              min={MIN_STREAK_INTERVAL}
+                              max={MAX_STREAK_INTERVAL}
+                              value={editStreakInterval}
+                              onChange={(e) => setEditStreakInterval(clampInterval(parseInt(e.target.value, 10)))}
+                              className="w-16 px-2 py-1 rounded-lg bg-surface-secondary text-sm text-text-primary text-center focus:outline-none focus:ring-1 focus:ring-input-ring"
+                            />
+                            <span className="text-xs text-text-tertiary">{t('dashboard.streakIntervalDays')}</span>
+                          </div>
+                          <p className="text-[11px] text-text-tertiary mb-3 leading-snug">{t('dashboard.streakIntervalHint')}</p>
                           {!editPrivate && acceptedFriends.length > 0 && (
                             <div className="mb-3">
                               {showShareModal === habit.id ? (

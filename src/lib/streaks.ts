@@ -5,52 +5,47 @@ interface HabitLogEntry {
   completed: boolean;
 }
 
-export function calculateStreak(logs: HabitLogEntry[], today: string): { current: number; longest: number; lastCompleted: string | null } {
-  const completedDates = new Set(
+export function calculateStreak(
+  logs: HabitLogEntry[],
+  today: string,
+  intervalDays: number = 1
+): { current: number; longest: number; lastCompleted: string | null } {
+  const interval = Math.max(1, Math.floor(intervalDays));
+  const completedDates = [...new Set(
     logs.filter(l => l.completed).map(l => l.date)
-  );
+  )].sort(); // ascending
 
-  if (completedDates.size === 0) {
+  if (completedDates.length === 0) {
     return { current: 0, longest: 0, lastCompleted: null };
   }
 
-  // Sort dates descending
-  const sorted = [...completedDates].sort((a, b) => b.localeCompare(a));
-  const lastCompleted = sorted[0];
+  const lastCompleted = completedDates[completedDates.length - 1];
 
-  // Calculate current streak: consecutive days ending today or yesterday
+  // Current streak: alive if the last completion is within `interval` days
+  // of today. Walk backwards through completions, counting each as part of
+  // the chain while each gap between successive completions is ≤ interval.
   let current = 0;
-  let checkDate = today;
-
-  // If today isn't completed, start from yesterday
-  if (!completedDates.has(today)) {
-    checkDate = addDaysStr(today, -1);
-    if (!completedDates.has(checkDate)) {
-      // No streak (gap of 2+ days)
-      current = 0;
+  if (daysBetween(lastCompleted, today) <= interval) {
+    current = 1;
+    for (let i = completedDates.length - 2; i >= 0; i--) {
+      if (daysBetween(completedDates[i], completedDates[i + 1]) <= interval) {
+        current++;
+      } else {
+        break;
+      }
     }
   }
 
-  if (current === 0 && completedDates.has(checkDate)) {
-    let d = checkDate;
-    while (completedDates.has(d)) {
-      current++;
-      d = addDaysStr(d, -1);
-    }
-  }
-
-  // Calculate longest streak
-  let longest = 0;
-  let streak = 0;
-  // Sort ascending for longest
-  const asc = [...completedDates].sort();
-  for (let i = 0; i < asc.length; i++) {
-    if (i === 0 || asc[i] === addDaysStr(asc[i - 1], 1)) {
-      streak++;
+  // Longest streak: scan ascending, counting completions chained by ≤ interval gaps.
+  let longest = 1;
+  let run = 1;
+  for (let i = 1; i < completedDates.length; i++) {
+    if (daysBetween(completedDates[i - 1], completedDates[i]) <= interval) {
+      run++;
     } else {
-      streak = 1;
+      run = 1;
     }
-    longest = Math.max(longest, streak);
+    if (run > longest) longest = run;
   }
 
   return { current, longest, lastCompleted };
@@ -62,22 +57,32 @@ function addDaysStr(dateStr: string, days: number): string {
   return d.toISOString().split('T')[0];
 }
 
+function daysBetween(earlier: string, later: string): number {
+  const a = new Date(earlier + 'T12:00:00Z').getTime();
+  const b = new Date(later + 'T12:00:00Z').getTime();
+  return Math.round((b - a) / 86400000);
+}
+
 export async function updateHabitStreak(userId: string, habitId: string, today: string) {
   const sb = createClient();
 
-  // Fetch all logs for this habit
-  const { data: logs } = await sb
-    .from('habit_logs')
-    .select('date, completed')
-    .eq('habit_id', habitId)
-    .eq('user_id', userId)
-    .eq('completed', true)
-    .order('date', { ascending: false })
-    .limit(400);
+  // Fetch the habit's streak interval setting along with its completed logs.
+  const [habitRes, logsRes] = await Promise.all([
+    sb.from('habits').select('streak_interval_days').eq('id', habitId).single(),
+    sb.from('habit_logs')
+      .select('date, completed')
+      .eq('habit_id', habitId)
+      .eq('user_id', userId)
+      .eq('completed', true)
+      .order('date', { ascending: false })
+      .limit(400),
+  ]);
 
+  const logs = logsRes.data;
   if (!logs) return null;
 
-  const { current, longest, lastCompleted } = calculateStreak(logs, today);
+  const intervalDays = habitRes.data?.streak_interval_days ?? 1;
+  const { current, longest, lastCompleted } = calculateStreak(logs, today, intervalDays);
 
   // Upsert streak
   const { data } = await sb

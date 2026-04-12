@@ -64,6 +64,12 @@ export const translations: Translations = {
   'dashboard.failedAddHabit': { id: 'Gagal menambah kebiasaan', en: 'Failed to add habit' },
   'dashboard.failedDeleteHabit': { id: 'Gagal menghapus kebiasaan', en: 'Failed to delete habit' },
   'dashboard.privateHabit': { id: 'Privat (sembunyikan dari teman)', en: 'Private (hide from friends)' },
+  'dashboard.streakInterval': { id: 'Interval streak', en: 'Streak interval' },
+  'dashboard.streakIntervalDays': { id: 'hari', en: 'days' },
+  'dashboard.streakIntervalHint': {
+    id: 'Streak tetap berjalan selama kamu menyelesaikannya sekali dalam periode ini. Setiap kali selesai, hitungan mundur dimulai ulang.',
+    en: 'Streak stays alive as long as you complete it at least once within this many days. Each completion resets the cooldown.',
+  },
 
   // ── Nutrition labels ──
   'nutrition.protein': { id: 'Protein', en: 'Protein' },
