@@ -121,14 +121,14 @@ export default function DashboardPage() {
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitEmoji, setNewHabitEmoji] = useState('⭐');
   const [newHabitPrivate, setNewHabitPrivate] = useState(false);
-  const [newHabitStreakInterval, setNewHabitStreakInterval] = useState(1);
+  const [newHabitStreakInterval, setNewHabitStreakInterval] = useState('1');
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmoji, setEditEmoji] = useState('');
   const [editPrivate, setEditPrivate] = useState(false);
-  const [editStreakInterval, setEditStreakInterval] = useState(1);
+  const [editStreakInterval, setEditStreakInterval] = useState('1');
   const [activeHabit, setActiveHabit] = useState<HabitWithLog | null>(null);
   const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState<string | null>(null);
@@ -548,7 +548,7 @@ export default function DashboardPage() {
       emoji: newHabitEmoji || '⭐',
       sort_order: habits.length,
       is_private: newHabitPrivate,
-      streak_interval_days: clampInterval(newHabitStreakInterval),
+      streak_interval_days: clampInterval(parseInt(newHabitStreakInterval, 10)),
     });
 
     if (error) {
@@ -559,7 +559,7 @@ export default function DashboardPage() {
     setNewHabitName('');
     setNewHabitEmoji('⭐');
     setNewHabitPrivate(false);
-    setNewHabitStreakInterval(1);
+    setNewHabitStreakInterval('1');
     setShowAddHabit(false);
     fetchData();
   };
@@ -569,7 +569,7 @@ export default function DashboardPage() {
     setEditName(habit.name);
     setEditEmoji(habit.emoji);
     setEditPrivate(habit.is_private);
-    setEditStreakInterval(habit.streak_interval_days ?? 1);
+    setEditStreakInterval(String(habit.streak_interval_days ?? 1));
   };
 
   const saveEdit = async () => {
@@ -581,7 +581,7 @@ export default function DashboardPage() {
         name: editName.trim(),
         emoji: editEmoji || '⭐',
         is_private: editPrivate,
-        streak_interval_days: clampInterval(editStreakInterval),
+        streak_interval_days: clampInterval(parseInt(editStreakInterval, 10)),
       })
       .eq('id', editingId);
     if (error) {
@@ -883,11 +883,14 @@ export default function DashboardPage() {
                   <span className="text-xs text-text-secondary flex-1">{t('dashboard.streakInterval')}</span>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={MIN_STREAK_INTERVAL}
                     max={MAX_STREAK_INTERVAL}
                     value={newHabitStreakInterval}
-                    onChange={(e) => setNewHabitStreakInterval(clampInterval(parseInt(e.target.value, 10)))}
-                    className="w-16 px-2 py-1 rounded-lg bg-surface-secondary text-sm text-text-primary text-center focus:outline-none focus:ring-1 focus:ring-input-ring"
+                    onFocus={(e) => e.currentTarget.select()}
+                    onChange={(e) => setNewHabitStreakInterval(e.target.value.replace(/[^0-9]/g, ''))}
+                    onBlur={() => setNewHabitStreakInterval(String(clampInterval(parseInt(newHabitStreakInterval, 10))))}
+                    className="w-16 px-2 py-1 rounded-lg bg-surface-secondary text-sm text-text-primary text-center focus:outline-none focus:ring-1 focus:ring-input-ring caret-accent"
                   />
                   <span className="text-xs text-text-tertiary">{t('dashboard.streakIntervalDays')}</span>
                 </div>
@@ -954,11 +957,14 @@ export default function DashboardPage() {
                             <span className="text-xs text-text-secondary flex-1">{t('dashboard.streakInterval')}</span>
                             <input
                               type="number"
+                              inputMode="numeric"
                               min={MIN_STREAK_INTERVAL}
                               max={MAX_STREAK_INTERVAL}
                               value={editStreakInterval}
-                              onChange={(e) => setEditStreakInterval(clampInterval(parseInt(e.target.value, 10)))}
-                              className="w-16 px-2 py-1 rounded-lg bg-surface-secondary text-sm text-text-primary text-center focus:outline-none focus:ring-1 focus:ring-input-ring"
+                              onFocus={(e) => e.currentTarget.select()}
+                              onChange={(e) => setEditStreakInterval(e.target.value.replace(/[^0-9]/g, ''))}
+                              onBlur={() => setEditStreakInterval(String(clampInterval(parseInt(editStreakInterval, 10))))}
+                              className="w-16 px-2 py-1 rounded-lg bg-surface-secondary text-sm text-text-primary text-center focus:outline-none focus:ring-1 focus:ring-input-ring caret-accent"
                             />
                             <span className="text-xs text-text-tertiary">{t('dashboard.streakIntervalDays')}</span>
                           </div>
