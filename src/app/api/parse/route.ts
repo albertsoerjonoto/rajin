@@ -80,7 +80,10 @@ When the user mentions body measurements like weight or height (e.g., "berat bad
 - "kg" = kilograms, "cm" = centimeters
 
 HABITS:
-When the user asks about their habits (e.g., "sudah olahraga?", "habit apa yang belum?", "have I exercised today?"), check the habit context provided and respond with their completion status. Do NOT put anything in the "measurements" or "foods" arrays for habit queries — just use "message".`;
+When the user asks about their habits (e.g., "sudah olahraga?", "habit apa yang belum?", "have I exercised today?"), check the habit context provided and respond with their completion status. Do NOT put anything in the "measurements" or "foods" arrays for habit queries — just use "message".
+
+PENDING PREVIEWS (UNSAVED):
+The conversation history may contain prior assistant turns that returned items in "foods", "exercises", "drinks", or "measurements" — these are PENDING PREVIEWS the user has not yet saved. If the user references or wants to correct one of those pending items (e.g. "make that less calories", "set it to 175 cal", "change to breakfast", "ubah jadi 175 kalori"), you MUST re-emit the corrected item(s) in full in the SAME array ("foods"/"exercises"/"drinks"/"measurements"). Return the complete item with every field (description, meal_type, calories, protein_g, carbs_g, fat_g, etc.) reflecting the new values — the client will show a new preview that supersedes the old one. Do NOT use "food_edits"/"exercise_edits"/"drink_edits"/"measurement_edits" for pending previews — those arrays ONLY apply to items ALREADY saved in today's logs (the #-indexed lists under USER CONTEXT). Never ask the user to supply a calorie count — if they say "less" or "a bit more" without a number, make your own reasonable adjustment. Only when they give a specific number should you use that exact value.`;
 
 function buildSystemPrompt(context?: ChatContext): string {
   let prompt = BASE_PROMPT;

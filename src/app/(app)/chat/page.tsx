@@ -730,19 +730,13 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, userMsg]);
 
     // Build conversation history from recent messages (last 10, excluding welcome)
-    // Skip error messages (no parsed data/edits) so they don't pollute the model's context
-    // Include parsed data + edits so the LLM sees the correct response format
+    // Skip only messages flagged as errors (id prefixed "error-") so they don't pollute
+    // the model's context. Keep text-only assistant replies (e.g. clarification questions)
+    // so the model remembers what it just asked the user.
     const recentMessages = messages
       .filter((m) => {
         if (m.id === 'welcome') return false;
-        // Skip assistant error messages (no parsed data and no edits)
-        if (m.role === 'assistant') {
-          const hasData = (m.parsedFoods?.length ?? 0) > 0 || (m.parsedExercises?.length ?? 0) > 0 ||
-            (m.parsedDrinks?.length ?? 0) > 0 || (m.parsedMeasurements?.length ?? 0) > 0 ||
-            (m.foodEdits?.length ?? 0) > 0 || (m.exerciseEdits?.length ?? 0) > 0 ||
-            (m.drinkEdits?.length ?? 0) > 0 || (m.measurementEdits?.length ?? 0) > 0;
-          if (!hasData) return false;
-        }
+        if (m.role === 'assistant' && m.id.startsWith('error-')) return false;
         return true;
       })
       .slice(-10)
