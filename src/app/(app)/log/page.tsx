@@ -939,40 +939,52 @@ export default function LogPage() {
                 placeholder={t('log.whatDidYouEat')}
                 autoFocus
               />
-              <input
-                type="number"
-                min="0"
-                max="20000"
-                value={calories}
-                onChange={(e) => setCalories(e.target.value)}
-                className={inputClass}
-                placeholder={t('log.calories')}
-              />
+              <label className="block">
+                <span className="block text-xs font-medium text-text-muted mb-1 ml-1">{t('log.calories')}</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="20000"
+                  value={calories}
+                  onChange={(e) => setCalories(e.target.value)}
+                  className={inputClass}
+                  placeholder="0"
+                />
+              </label>
               <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  value={proteinG}
-                  onChange={(e) => setProteinG(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                  placeholder={t('log.proteinG')}
-                />
-                <input
-                  type="number"
-                  min="0"
-                  value={carbsG}
-                  onChange={(e) => setCarbsG(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                  placeholder={t('log.carbsG')}
-                />
-                <input
-                  type="number"
-                  min="0"
-                  value={fatG}
-                  onChange={(e) => setFatG(e.target.value)}
-                  className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                  placeholder={t('log.fatG')}
-                />
+                <label className="block">
+                  <span className="block text-xs font-medium text-text-muted mb-1 ml-1">{t('log.proteinG')}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={proteinG}
+                    onChange={(e) => setProteinG(e.target.value)}
+                    className="w-full px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                    placeholder="0"
+                  />
+                </label>
+                <label className="block">
+                  <span className="block text-xs font-medium text-text-muted mb-1 ml-1">{t('log.carbsG')}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={carbsG}
+                    onChange={(e) => setCarbsG(e.target.value)}
+                    className="w-full px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                    placeholder="0"
+                  />
+                </label>
+                <label className="block">
+                  <span className="block text-xs font-medium text-text-muted mb-1 ml-1">{t('log.fatG')}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={fatG}
+                    onChange={(e) => setFatG(e.target.value)}
+                    className="w-full px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                    placeholder="0"
+                  />
+                </label>
               </div>
               <button
                 onClick={saveFoodLog}
@@ -1116,40 +1128,52 @@ export default function LogPage() {
               </div>
               {drinkType !== 'water' && (
                 <>
-                  <input
-                    type="number"
-                    min="0"
-                    max="20000"
-                    value={drinkCalories}
-                    onChange={(e) => setDrinkCalories(e.target.value)}
-                    className={inputClass}
-                    placeholder={t('log.calories')}
-                  />
+                  <label className="block">
+                    <span className="block text-xs font-medium text-text-muted mb-1 ml-1">{t('log.calories')}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20000"
+                      value={drinkCalories}
+                      onChange={(e) => setDrinkCalories(e.target.value)}
+                      className={inputClass}
+                      placeholder="0"
+                    />
+                  </label>
                   <div className="grid grid-cols-3 gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      value={drinkProtein}
-                      onChange={(e) => setDrinkProtein(e.target.value)}
-                      className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                      placeholder={t('log.proteinG')}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      value={drinkCarbs}
-                      onChange={(e) => setDrinkCarbs(e.target.value)}
-                      className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                      placeholder={t('log.carbsG')}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      value={drinkFat}
-                      onChange={(e) => setDrinkFat(e.target.value)}
-                      className="px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
-                      placeholder={t('log.fatG')}
-                    />
+                    <label className="block">
+                      <span className="block text-xs font-medium text-text-muted mb-1 ml-1">{t('log.proteinG')}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={drinkProtein}
+                        onChange={(e) => setDrinkProtein(e.target.value)}
+                        className="w-full px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                        placeholder="0"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="block text-xs font-medium text-text-muted mb-1 ml-1">{t('log.carbsG')}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={drinkCarbs}
+                        onChange={(e) => setDrinkCarbs(e.target.value)}
+                        className="w-full px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                        placeholder="0"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="block text-xs font-medium text-text-muted mb-1 ml-1">{t('log.fatG')}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={drinkFat}
+                        onChange={(e) => setDrinkFat(e.target.value)}
+                        className="w-full px-3 py-3 rounded-xl-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200 text-sm"
+                        placeholder="0"
+                      />
+                    </label>
                   </div>
                 </>
               )}
