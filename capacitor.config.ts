@@ -4,18 +4,22 @@ const config: CapacitorConfig = {
   appId: 'com.rajin.app',
   appName: 'Rajin',
   webDir: 'ios-webdir',
-  // Remote mode: the iOS shell loads the deployed Next.js app from Vercel.
-  // This keeps API routes (/api/chat for Gemini), Supabase SSR, and middleware
-  // working unchanged. Override RAJIN_REMOTE_URL at build time if needed.
+  // Remote mode: the iOS shell loads the deployed Next.js app from the
+  // rajin.ai custom domain on Vercel. This keeps API routes (/api/chat for
+  // Gemini), Supabase SSR, and middleware working unchanged. Override
+  // RAJIN_REMOTE_URL at build time if needed (e.g. for staging).
   server: {
-    url: process.env.RAJIN_REMOTE_URL ?? 'https://rajin.vercel.app',
+    url: process.env.RAJIN_REMOTE_URL ?? 'https://rajin.ai',
     cleartext: false,
     // Allow the WebView to navigate within these hosts without falling back
     // to Safari. Add any custom domains here.
     allowNavigation: [
-      'rajin.vercel.app',
+      'rajin.ai',
+      '*.rajin.ai',
+      '*.vercel.app',
       '*.supabase.co',
       'generativelanguage.googleapis.com',
+      'accounts.google.com',
     ],
   },
   ios: {

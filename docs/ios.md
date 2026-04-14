@@ -40,7 +40,7 @@ In Xcode:
    if you want a different bundle ID.
 3. Plug in an iPhone (or pick a simulator) and hit **Run** (⌘R).
 
-The app launches, the WebView loads `https://rajin.vercel.app`, and you should
+The app launches, the WebView loads `https://rajin.ai`, and you should
 see the dashboard exactly as in mobile Safari.
 
 ## Day-to-day workflow
