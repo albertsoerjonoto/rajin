@@ -10,7 +10,8 @@
     "ios:sync": "cap sync ios",
     "ios:open": "cap open ios",
     "ios:run": "cap run ios",
-    "ios:assets": "capacitor-assets generate --ios --assetPath assets"
+    "ios:assets": "capacitor-assets generate --ios --assetPath assets",
+    "postios:assets": "node scripts/fix-ios-splash-darkmode.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.3.0",
