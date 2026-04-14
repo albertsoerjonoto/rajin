@@ -23,7 +23,7 @@
  *        (invoked automatically by `npm run ios:assets` via postios:assets)
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
 const IMAGESET_DIR = 'ios/App/App/Assets.xcassets/Splash.imageset';
@@ -102,17 +102,51 @@ for (const entry of manifest.images) {
   added += 1;
 }
 
-if (added === 0) {
+if (added > 0) {
+  manifest.images = [...manifest.images, ...newEntries];
+  writeFileSync(CONTENTS_JSON, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
   console.log(
-    `[fix-ios-splash-darkmode] Nothing to do. ` +
+    `[fix-ios-splash-darkmode] Added ${added} dark-mode entries to ${CONTENTS_JSON}`,
+  );
+} else {
+  console.log(
+    `[fix-ios-splash-darkmode] Nothing to add. ` +
       `(already-present: ${skippedAlreadyPresent}, no-dark-file: ${skippedNoDarkFile})`,
   );
-  process.exit(0);
 }
 
-manifest.images = [...manifest.images, ...newEntries];
-writeFileSync(CONTENTS_JSON, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-
-console.log(
-  `[fix-ios-splash-darkmode] Added ${added} dark-mode entries to ${CONTENTS_JSON}`,
+// Step 2: prune orphaned PNG files that are not referenced by any entry in
+// Contents.json. `@capacitor/assets` has, across versions, generated files
+// with different naming conventions (e.g. `splash-2732x2732.png` in older
+// releases, `Default@Nx~universal~anyany.png` in newer ones). When the tool
+// is upgraded or re-run on an older imageset, the stale files are left
+// behind and Xcode surfaces them as "Splash has N unassigned children"
+// warnings. Anything in the folder that isn't referenced by the manifest is
+// dead weight — delete it.
+const referencedFilenames = new Set(
+  manifest.images
+    .map((entry) => entry.filename)
+    .filter((name) => typeof name === 'string'),
 );
+
+const orphanFiles = [...filesInFolder].filter(
+  (file) => !referencedFilenames.has(file),
+);
+
+let deleted = 0;
+for (const file of orphanFiles) {
+  try {
+    unlinkSync(join(IMAGESET_DIR, file));
+    deleted += 1;
+  } catch (err) {
+    console.warn(
+      `[fix-ios-splash-darkmode] Failed to delete orphan ${file}: ${err.message}`,
+    );
+  }
+}
+
+if (deleted > 0) {
+  console.log(
+    `[fix-ios-splash-darkmode] Pruned ${deleted} orphaned PNG file(s) from ${IMAGESET_DIR}: ${orphanFiles.join(', ')}`,
+  );
+}
