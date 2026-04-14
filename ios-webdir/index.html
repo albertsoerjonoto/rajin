@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Rajin</title>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100dvh;
+        background: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        color: #18181b;
+      }
+      .center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100dvh;
+        gap: 12px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #10b981;
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.3; transform: scale(0.9); }
+        50%      { opacity: 1.0; transform: scale(1.1); }
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      This file only renders if Capacitor cannot reach the remote server.url
+      configured in capacitor.config.ts. Normally users see the Next.js app.
+    -->
+    <div class="center">
+      <div class="dot"></div>
+      <div>Loading Rajin…</div>
+    </div>
+  </body>
+</html>
