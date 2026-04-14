@@ -65,7 +65,7 @@ export default function SignupPage() {
 
   if (emailSent) {
     return (
-      <div className="h-dvh flex items-center justify-center bg-bg px-4 relative overflow-hidden">
+      <div className="h-dvh flex items-center justify-center bg-bg px-4 relative overflow-hidden safe-area-y">
         <div className="w-full max-w-sm text-center animate-fade-in">
           <div className="text-5xl mb-4">📧</div>
           <h1 className="text-2xl font-bold text-text-primary mb-2">{t('auth.checkEmail')}</h1>
@@ -84,9 +84,9 @@ export default function SignupPage() {
     'w-full px-4 py-3.5 rounded-xl border border-border-strong bg-surface focus:outline-none focus:ring-1 focus:ring-input-ring focus:border-transparent transition-all duration-200';
 
   return (
-    <div className="h-dvh flex items-center justify-center bg-bg px-4 relative overflow-hidden">
+    <div className="h-dvh flex items-center justify-center bg-bg px-4 relative overflow-hidden safe-area-y">
       {/* Language toggle */}
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] right-4">
         <div className="flex items-center bg-surface rounded-full border border-border-strong overflow-hidden">
           {(['id', 'en'] as const).map((code) => (
             <button

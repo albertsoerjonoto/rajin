@@ -185,7 +185,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-6 pt-8 pb-12 min-h-screen flex flex-col">
+    <div className="max-w-lg mx-auto px-6 pt-[calc(2rem+env(safe-area-inset-top,0px))] pb-[calc(3rem+env(safe-area-inset-bottom,0px))] min-h-screen flex flex-col">
       {ToastContainer}
 
       {/* Progress Bar */}

@@ -28,6 +28,18 @@ export default function CapacitorBoot() {
         import('@capacitor/status-bar'),
       ]);
 
+      // Make the status bar float on top of the WebView instead of pushing
+      // content down. Combined with ios.contentInset: 'never' in
+      // capacitor.config.ts, this lets the web app's bg-bg fill the notch
+      // area so the status bar background matches light/dark mode
+      // automatically. Web-app-side safe-area-inset padding keeps UI
+      // elements from hiding under the notch.
+      try {
+        await StatusBar.setOverlaysWebView({ overlay: true });
+      } catch {
+        // Older Capacitor versions may not support this; safe to ignore.
+      }
+
       // The splash screen has launchAutoHide=true with a 2s cap, but we
       // hide it as soon as React has mounted so fast loads don't linger.
       try {
@@ -38,10 +50,12 @@ export default function CapacitorBoot() {
 
       const applyStatusBar = async (isDark: boolean) => {
         try {
+          // Capacitor's Style.Dark = use on dark backgrounds = light content
+          // (light icons/text). Style.Light = use on light backgrounds = dark
+          // content. So dark-mode app → Style.Dark, light-mode app → Style.Light.
           await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
-          await StatusBar.setBackgroundColor({ color: isDark ? '#0a0a0b' : '#ffffff' });
         } catch {
-          // setBackgroundColor is a no-op on iOS but still safe to call.
+          // Ignore — setStyle is safe to retry on the next color scheme change.
         }
       };
 

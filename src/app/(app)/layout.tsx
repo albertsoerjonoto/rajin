@@ -61,10 +61,10 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   return (
-    <div className={cn('min-h-screen bg-bg', isExpanded ? 'sm:flex' : '')}>
+    <div className={cn('min-h-screen bg-bg safe-area-top', isExpanded ? 'sm:flex' : '')}>
       {/* Desktop sidebar — narrow (icon-only) at md, full at xl */}
       {isExpanded && (
-        <aside className="hidden sm:flex sm:flex-col sm:fixed sm:inset-y-0 sm:left-0 sm:w-16 xl:w-60 sm:bg-surface sm:border-r sm:border-border sm:z-50">
+        <aside className="hidden sm:flex sm:flex-col sm:fixed sm:inset-y-0 sm:left-0 sm:w-16 xl:w-60 sm:bg-surface sm:border-r sm:border-border sm:z-50 safe-area-top">
           {/* Logo */}
           <div className="flex items-center justify-center xl:justify-start xl:px-6 h-16 border-b border-border">
             <span className="text-lg font-bold text-text-primary xl:hidden">R</span>
@@ -103,7 +103,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content */}
-      <main className={cn('flex-1 pb-20', isExpanded && 'sm:pb-0 sm:ml-16 xl:ml-60')}>
+      <main className={cn('flex-1 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]', isExpanded && 'sm:pb-0 sm:ml-16 xl:ml-60')}>
         <ServiceWorkerRegister />
         {children}
       </main>

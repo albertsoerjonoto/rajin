@@ -155,8 +155,19 @@
   --color-input-ring: var(--c-input-ring);
 }
 
-/* iOS safe area support */
+/* iOS safe area support. Used by pages that render edge-to-edge under the
+ * notch and home indicator — in Capacitor's contentInset: 'never' mode and
+ * in standalone PWA mode on iOS (both rely on viewport-fit: cover, set in
+ * src/app/layout.tsx). On platforms without a safe area (desktop, Android
+ * browsers) env() returns 0, so these utilities are harmless no-ops. */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
 .safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-y {
+  padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
