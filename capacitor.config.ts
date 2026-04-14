@@ -28,6 +28,29 @@ const config: CapacitorConfig = {
     scrollEnabled: true,
     backgroundColor: '#ffffff',
   },
+  plugins: {
+    SplashScreen: {
+      // Hold the splash for up to 2s while the remote app loads, then fade
+      // out. The web app calls SplashScreen.hide() itself once mounted (see
+      // src/components/CapacitorBoot.tsx) so the splash always disappears
+      // promptly even on a fast network.
+      launchShowDuration: 2000,
+      launchAutoHide: true,
+      launchFadeOutDuration: 200,
+      backgroundColor: '#ffffff',
+      iosSpinnerStyle: 'small',
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: true,
+    },
+    StatusBar: {
+      // Match the white app shell. The web app flips this to dark content on
+      // dark mode via CapacitorBoot.
+      style: 'LIGHT',
+      backgroundColor: '#ffffff',
+      overlaysWebView: false,
+    },
+  },
 };
 
 export default config;

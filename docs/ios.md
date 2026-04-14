@@ -23,9 +23,15 @@ From the repo root, on the `claude/webapp-to-ios-conversion-WrfAs` branch:
 ```bash
 npm install
 npx cap add ios          # creates the ios/ native project
+npm run ios:assets       # generates icon + splash from assets/ → ios/App/App/Assets.xcassets
 npm run ios:sync         # copies capacitor.config.ts into the native project
 npm run ios:open         # opens ios/App/App.xcworkspace in Xcode
 ```
+
+The `ios:assets` step uses [`@capacitor/assets`](https://github.com/ionic-team/capacitor-assets)
+to generate every iOS icon size and launch image from the source PNGs in
+[`assets/`](../assets). The source files are committed to git, so the generated
+asset catalog inside `ios/` stays reproducible.
 
 In Xcode:
 1. Select the **App** target → **Signing & Capabilities**.
@@ -46,12 +52,14 @@ opens the app it loads the new code.
 You only need to rebuild + resubmit the iOS app when:
 - `capacitor.config.ts` changes (e.g. new allowed navigation host)
 - You add/update a Capacitor plugin
-- You change app icons, splash screen, or `Info.plist`
+- You change app icons or splash screen (re-run `npm run ios:assets`)
+- You change `Info.plist`
 - Apple requires a new minimum SDK
 
 After any of those, run:
 
 ```bash
+npm run ios:assets   # only if you changed assets/icon.png or assets/splash*.png
 npm run ios:sync
 npm run ios:open
 # In Xcode: Product → Archive → Distribute App → App Store Connect
@@ -65,11 +73,29 @@ Override the remote URL at build time (e.g. for staging):
 RAJIN_REMOTE_URL=https://rajin-staging.vercel.app npm run ios:sync
 ```
 
+## App icon and splash
+
+Source files live in [`assets/`](../assets):
+- `icon.png` (1024×1024, opaque white background, no alpha — Apple requires this)
+- `icon-foreground.png` + `icon-background.png` (used for Android adaptive icons; harmless on iOS)
+- `splash.png` (2732×2732, white background with the R logo centered)
+- `splash-dark.png` (2732×2732, dark variant for iOS dark-mode splash)
+
+To change the icon, replace `assets/icon.png` and rerun `npm run ios:assets`.
+The capacitor-assets tool will regenerate the entire `AppIcon.appiconset` and
+launch image set inside the iOS project.
+
+Splash behavior at runtime is controlled by the `SplashScreen` plugin block
+in [`capacitor.config.ts`](../capacitor.config.ts) and by
+[`src/components/CapacitorBoot.tsx`](../src/components/CapacitorBoot.tsx),
+which calls `SplashScreen.hide()` as soon as React mounts so the splash never
+lingers on a fast network. CapacitorBoot is a no-op outside the Capacitor
+runtime, so it adds nothing to the regular web bundle.
+
 ## App Store submission checklist
 
 - [ ] Bundle ID matches the one registered in App Store Connect
-- [ ] App icons in `ios/App/App/Assets.xcassets/AppIcon.appiconset` (Capacitor
-      seeds defaults; replace with the real icons from `public/icons/`)
+- [ ] Ran `npm run ios:assets` after the latest icon change
 - [ ] Launch screen colors match `#ffffff` background
 - [ ] `NSCameraUsageDescription` etc. added to `Info.plist` only if you
       actually call those APIs (Rajin currently doesn't)
