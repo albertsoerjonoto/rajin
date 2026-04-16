@@ -160,6 +160,10 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+.bottom-nav-offset {
+  bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* ── Animations ── */
 
 /* Habit completion — spring bounce with checkmark pop */

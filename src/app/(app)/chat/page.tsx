@@ -21,10 +21,10 @@ import { emitExerciseEvent, checkAndEmitGoalEvents } from '@/lib/feedEvents';
 // stored in chat_messages.food_edits.
 function roundFoodUpdate(updated: Partial<ParsedFood>): Partial<ParsedFood> {
   const out: Partial<ParsedFood> = { ...updated };
-  if (out.calories !== undefined) out.calories = Math.round(out.calories);
-  if (out.protein_g !== undefined) out.protein_g = Math.round(out.protein_g);
-  if (out.carbs_g !== undefined) out.carbs_g = Math.round(out.carbs_g);
-  if (out.fat_g !== undefined) out.fat_g = Math.round(out.fat_g);
+  if (out.calories != null) out.calories = Math.round(out.calories);
+  if (out.protein_g != null) out.protein_g = Math.round(out.protein_g);
+  if (out.carbs_g != null) out.carbs_g = Math.round(out.carbs_g);
+  if (out.fat_g != null) out.fat_g = Math.round(out.fat_g);
   return out;
 }
 
@@ -929,9 +929,9 @@ export default function ChatPage() {
           // food_logs columns are INTEGER — round defensively in case the chat
           // message was stored before the parse API rounded macros.
           calories: Math.round(f.calories),
-          protein_g: Math.round(f.protein_g),
-          carbs_g: Math.round(f.carbs_g),
-          fat_g: Math.round(f.fat_g),
+          protein_g: f.protein_g != null ? Math.round(f.protein_g) : null,
+          carbs_g: f.carbs_g != null ? Math.round(f.carbs_g) : null,
+          fat_g: f.fat_g != null ? Math.round(f.fat_g) : null,
           source: 'chat' as const,
         }))
       );
@@ -1059,9 +1059,9 @@ export default function ChatPage() {
           // food_logs columns are INTEGER — round defensively in case the chat
           // message was stored before the parse API rounded macros.
           calories: Math.round(f.calories),
-          protein_g: Math.round(f.protein_g),
-          carbs_g: Math.round(f.carbs_g),
-          fat_g: Math.round(f.fat_g),
+          protein_g: f.protein_g != null ? Math.round(f.protein_g) : null,
+          carbs_g: f.carbs_g != null ? Math.round(f.carbs_g) : null,
+          fat_g: f.fat_g != null ? Math.round(f.fat_g) : null,
           source: 'chat' as const,
         }))
       );
@@ -1178,8 +1178,8 @@ export default function ChatPage() {
 
   return (
     <div className={cn(
-      'fixed top-0 bottom-16 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col',
-      isExpanded && 'sm:bottom-0 sm:left-16 xl:left-60'
+      'fixed top-0 left-0 right-0 bg-bg overflow-hidden z-10 flex flex-col bottom-nav-offset',
+      isExpanded && 'sm:!bottom-0 sm:left-16 xl:left-60'
     )}>
       <div className={cn('max-w-lg mx-auto flex flex-col h-full w-full', isExpanded && 'lg:max-w-3xl')}>
       {ToastContainer}
