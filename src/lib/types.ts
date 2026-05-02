@@ -8,6 +8,7 @@ export type SharedHabitStatus = 'pending' | 'accepted' | 'rejected';
 export type FeedEventType = 'habit_completed' | 'streak_milestone' | 'friend_added' | 'shared_habit_started' | 'shared_streak' | 'shared_streak_milestone' | 'exercise_completed' | 'calorie_goal_met' | 'protein_goal_met' | 'fat_goal_met' | 'carbs_goal_met' | 'water_goal_met';
 export type Locale = 'id' | 'en';
 export type DesktopLayout = 'compact' | 'expanded';
+export type HabitCategory = 'habit' | 'supplement' | 'skincare';
 
 export interface Profile {
   id: string;
@@ -39,6 +40,7 @@ export interface Habit {
   is_private: boolean;
   streak_interval_days: number;
   sort_order: number;
+  category: HabitCategory;
   created_at: string;
 }
 

@@ -22,7 +22,7 @@ export async function PATCH(
   // Fetch the shared habit
   const { data: sharedHabit } = await supabase
     .from('shared_habits')
-    .select('*, habits!shared_habits_habit_id_fkey(name, emoji)')
+    .select('*, habits!shared_habits_habit_id_fkey(name, emoji, category)')
     .eq('id', id)
     .eq('friend_id', user.id)
     .single();
@@ -37,9 +37,10 @@ export async function PATCH(
   }
 
   // Accept: create or link habit for the friend
-  const habitInfo = sharedHabit.habits as { name: string; emoji: string } | null;
+  const habitInfo = sharedHabit.habits as { name: string; emoji: string; category: 'habit' | 'supplement' | 'skincare' | null } | null;
   const habitName = habitInfo?.name ?? 'Shared Habit';
   const habitEmoji = habitInfo?.emoji ?? '⭐';
+  const habitCategory = habitInfo?.category ?? 'habit';
 
   // Check if friend already has a habit with same name
   const { data: existing } = await supabase
@@ -62,6 +63,7 @@ export async function PATCH(
         name: habitName,
         emoji: habitEmoji,
         sort_order: 999,
+        category: habitCategory,
       })
       .select('id')
       .single();

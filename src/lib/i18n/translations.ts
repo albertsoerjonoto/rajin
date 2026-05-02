@@ -71,6 +71,17 @@ export const translations: Translations = {
     en: 'Streak stays alive as long as you complete it at least once within this many days. Each completion resets the cooldown.',
   },
 
+  // ── Dashboard sections (habit categories) ──
+  'dashboard.section.habits': { id: 'Kebiasaan', en: 'Habits' },
+  'dashboard.section.supplements': { id: 'Suplemen', en: 'Supplements' },
+  'dashboard.section.skincare': { id: 'Skincare', en: 'Skincare' },
+  'dashboard.addSupplement': { id: 'Tambah Suplemen', en: 'Add Supplement' },
+  'dashboard.addSkincare': { id: 'Tambah Skincare', en: 'Add Skincare' },
+  'dashboard.supplementPlaceholder': { id: 'Nama suplemen', en: 'Supplement name' },
+  'dashboard.skincarePlaceholder': { id: 'Nama produk', en: 'Product name' },
+  'dashboard.noSupplements': { id: 'Belum ada suplemen. Ketuk Tambah untuk membuat!', en: 'No supplements yet. Tap Add to create one!' },
+  'dashboard.noSkincare': { id: 'Belum ada skincare. Ketuk Tambah untuk membuat!', en: 'No skincare items yet. Tap Add to create one!' },
+
   // ── Nutrition labels ──
   'nutrition.protein': { id: 'Protein', en: 'Protein' },
   'nutrition.carbs': { id: 'Karbo', en: 'Carbs' },
