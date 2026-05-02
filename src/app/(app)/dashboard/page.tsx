@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, cn, getDateRange, getDatesInRange } from '@/lib/utils';
@@ -28,14 +29,18 @@ import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, Measuremen
 import { updateHabitStreak, isStreakMilestone, calculateStreak, updateSharedStreaks } from '@/lib/streaks';
 import { buildDayDataMap } from '@/components/analytics/types';
 import type { DayData } from '@/components/analytics/types';
-import StreakCard from '@/components/analytics/StreakCard';
-import HabitHeatmap from '@/components/analytics/HabitHeatmap';
-import CalorieBarChart from '@/components/analytics/CalorieBarChart';
-import MacroDonutChart from '@/components/analytics/MacroDonutChart';
-import ExerciseChart from '@/components/analytics/ExerciseChart';
-import WaterProgressChart from '@/components/analytics/WaterProgressChart';
-import WeightTrendChart from '@/components/analytics/WeightTrendChart';
-import HabitBreakdown from '@/components/analytics/HabitBreakdown';
+
+// Analytics charts only render when period !== 'day'. Dynamic import keeps
+// recharts (~50KB gz) and the chart components out of the day-view bundle.
+const chartFallback = <div className="bg-surface rounded-2xl h-48 animate-pulse" aria-hidden />;
+const StreakCard = dynamic(() => import('@/components/analytics/StreakCard'), { ssr: false, loading: () => chartFallback });
+const HabitHeatmap = dynamic(() => import('@/components/analytics/HabitHeatmap'), { ssr: false, loading: () => chartFallback });
+const CalorieBarChart = dynamic(() => import('@/components/analytics/CalorieBarChart'), { ssr: false, loading: () => chartFallback });
+const MacroDonutChart = dynamic(() => import('@/components/analytics/MacroDonutChart'), { ssr: false, loading: () => chartFallback });
+const ExerciseChart = dynamic(() => import('@/components/analytics/ExerciseChart'), { ssr: false, loading: () => chartFallback });
+const WaterProgressChart = dynamic(() => import('@/components/analytics/WaterProgressChart'), { ssr: false, loading: () => chartFallback });
+const WeightTrendChart = dynamic(() => import('@/components/analytics/WeightTrendChart'), { ssr: false, loading: () => chartFallback });
+const HabitBreakdown = dynamic(() => import('@/components/analytics/HabitBreakdown'), { ssr: false, loading: () => chartFallback });
 
 const MIN_STREAK_INTERVAL = 1;
 const MAX_STREAK_INTERVAL = 30;
@@ -621,56 +626,70 @@ export default function DashboardPage() {
   const range = useMemo(() => getDateRange(date, period), [date, period]);
   const dates = useMemo(() => getDatesInRange(range.start, range.end), [range]);
 
+  // Fetch profile once per user (independent of date/period). Avoids
+  // re-fetching the same row every time the user flips dates.
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    let cancelled = false;
+    (async () => {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (cancelled) return;
+      if (profileData) {
+        setProfile(profileData);
+      } else if (profileError?.code === 'PGRST116') {
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            display_name: user.email!.split('@')[0],
+            calorie_offset_min: -200,
+            calorie_offset_max: 200,
+          })
+          .select()
+          .single();
+        if (!cancelled && newProfile) setProfile(newProfile);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     const supabase = createClient();
 
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (profileData) {
-      setProfile(profileData);
-    } else if (profileError?.code === 'PGRST116') {
-      const { data: newProfile } = await supabase
-        .from('profiles')
-        .insert({
-          id: user.id,
-          email: user.email!,
-          display_name: user.email!.split('@')[0],
-          calorie_offset_min: -200,
-          calorie_offset_max: 200,
-        })
-        .select()
-        .single();
-      if (newProfile) setProfile(newProfile);
-    }
-
-    const { data: habitsData, error: habitsError } = await supabase
-      .from('habits')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .order('category')
-      .order('sort_order');
-
-    if (habitsError) {
-      showToast('error', t('dashboard.failedLoadHabits'));
-    }
-
-    const activeHabitCount = habitsData?.length ?? 0;
-    setTotalHabits(activeHabitCount);
-
     if (period === 'day') {
-      // Single day fetch (existing behavior)
-      const { data: logsData } = await supabase
-        .from('habit_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', date);
+      // Day view: kick off all 5 reads in parallel.
+      const [habitsRes, habitLogsRes, foodRes, exerciseRes, drinkRes] = await Promise.all([
+        supabase
+          .from('habits')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('category')
+          .order('sort_order'),
+        supabase.from('habit_logs').select('*').eq('user_id', user.id).eq('date', date),
+        supabase.from('food_logs').select('*').eq('user_id', user.id).eq('date', date).order('created_at'),
+        supabase.from('exercise_logs').select('*').eq('user_id', user.id).eq('date', date).order('created_at'),
+        supabase.from('drink_logs').select('*').eq('user_id', user.id).eq('date', date).order('created_at'),
+      ]);
+
+      if (habitsRes.error) showToast('error', t('dashboard.failedLoadHabits'));
+      if (foodRes.error) showToast('error', t('dashboard.failedLoadFood'));
+      if (exerciseRes.error) showToast('error', t('dashboard.failedLoadExercise'));
+      if (drinkRes.error) showToast('error', t('dashboard.failedLoadDrinks'));
+
+      const habitsData = habitsRes.data;
+      const logsData = habitLogsRes.data;
+      setTotalHabits(habitsData?.length ?? 0);
 
       if (habitsData) {
         const habitsWithLogs: HabitWithLog[] = habitsData.map((habit) => {
@@ -679,34 +698,23 @@ export default function DashboardPage() {
         });
         setHabits(habitsWithLogs);
       }
-
-      const { data: foodData, error: foodError } = await supabase
-        .from('food_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', date)
-        .order('created_at');
-      if (foodError) showToast('error', t('dashboard.failedLoadFood'));
-      if (foodData) setFoodLogs(foodData);
-
-      const { data: exerciseData, error: exerciseError } = await supabase
-        .from('exercise_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', date)
-        .order('created_at');
-      if (exerciseError) showToast('error', t('dashboard.failedLoadExercise'));
-      if (exerciseData) setExerciseLogs(exerciseData);
-
-      const { data: drinkData, error: drinkError } = await supabase
-        .from('drink_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', date)
-        .order('created_at');
-      if (drinkError) showToast('error', t('dashboard.failedLoadDrinks'));
-      if (drinkData) setDrinkLogs(drinkData);
+      if (foodRes.data) setFoodLogs(foodRes.data);
+      if (exerciseRes.data) setExerciseLogs(exerciseRes.data);
+      if (drinkRes.data) setDrinkLogs(drinkRes.data);
     } else {
+      const { data: habitsData, error: habitsError } = await supabase
+        .from('habits')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('category')
+        .order('sort_order');
+
+      if (habitsError) showToast('error', t('dashboard.failedLoadHabits'));
+
+      const activeHabitCount = habitsData?.length ?? 0;
+      setTotalHabits(activeHabitCount);
+
       // Range fetch for analytics
       const { start, end } = range;
 
