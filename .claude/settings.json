@@ -3,20 +3,74 @@
     "allow": [
       "Bash(npm run:*)",
       "Bash(npm install:*)",
+      "Bash(npm ci:*)",
       "Bash(npm ls:*)",
       "Bash(npx tsc:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx playwright:*)",
+      "Bash(npx lhci:*)",
+      "Bash(npx vercel:*)",
+      "Bash(supabase:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
       "Bash(git stash:*)",
       "Bash(git checkout:*)",
+      "Bash(git switch:*)",
       "Bash(git merge:*)",
       "Bash(git pull:*)",
       "Bash(git push:*)",
       "Bash(git cherry-pick:*)",
       "Bash(git rm:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh run:*)",
+      "Bash(gh workflow:*)",
+      "Bash(gh issue:*)",
       "mcp__Claude_Preview__preview_start",
-      "WebSearch"
+      "mcp__Claude_Preview__preview_stop",
+      "mcp__Claude_Preview__preview_eval",
+      "mcp__Claude_Preview__preview_screenshot",
+      "mcp__Claude_Preview__preview_snapshot",
+      "mcp__Claude_Preview__preview_console_logs",
+      "mcp__Claude_Preview__preview_logs",
+      "mcp__Claude_Preview__preview_network",
+      "mcp__Claude_Preview__preview_click",
+      "mcp__Claude_Preview__preview_fill",
+      "mcp__Claude_Preview__preview_resize",
+      "mcp__Claude_Preview__preview_inspect",
+      "WebSearch",
+      "WebFetch(domain:vercel.com)",
+      "WebFetch(domain:supabase.com)",
+      "WebFetch(domain:nextjs.org)",
+      "WebFetch(domain:react.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:web.dev)",
+      "WebFetch(domain:googlechrome.github.io)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git branch -D:*)",
+      "Bash(git clean -fdx:*)",
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ~:*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); if [ -n \"$BRANCH\" ] && [ \"$BRANCH\" != \"main\" ] && [ \"$BRANCH\" != \"master\" ]; then DIRTY=$(git status --porcelain 2>/dev/null | head -1); if [ -n \"$DIRTY\" ]; then echo 'Reminder: uncommitted changes on branch '\"$BRANCH\"'. Per CLAUDE.md > Autonomous Loop Protocol: commit + push + open PR, or run /loop-once.'; fi; fi"
+          }
+        ]
+      }
     ]
   }
 }
