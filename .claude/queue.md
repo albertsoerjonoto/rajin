@@ -4,7 +4,7 @@ Ordered list of tasks the loop picks from when no user is driving. Newer tasks a
 
 ## Next up
 
-- [ ] **Tighten LCP budget back to 1800 ms** — current `lighthouserc.json` has it at 4000 ms after PR #48 merge to unblock CI. Real ambition is <1500 ms per CLAUDE.md. Investigate the signup page LCP (currently 3.2s in CI), trim it (font preloading, defer non-critical JS, simplify hero), and ratchet the budget down once it lands.
+- [ ] **Push signup/login LCP under 2000 ms** — landed cycle 2 brought it 3137ms → 2714ms (lazy Supabase SDK + TourProvider lifted out of root). Budget is now 3200ms. Next moves to investigate: critical-CSS inline for the h1, render the auth pages fully server-side (extract the form into a small `'use client'` island), font preload hints, or `display: optional` on Geist for first paint.
 
 - [ ] **Convert remaining `useEffect` data fetches to `use()` + Suspense** — React 19 supports it, eliminates loading-state boilerplate, and makes the dashboard feel faster on warm nav. Start with friends + log + chat pages.
 
@@ -36,3 +36,4 @@ Ordered list of tasks the loop picks from when no user is driving. Newer tasks a
 - [x] **Phase 4: Vercel + Supabase MCP + secrets bootstrap** — PR #48.
 - [x] **Pre-existing tour lint errors** — eslint-disable with rationale (PR #48). Long-term refactor to `useSyncExternalStore` if React 19 ever inlines that path.
 - [x] **Apply migration 022_perf_indexes to production** — applied 2026-05-03 via Supabase Management API.
+- [x] **Cycle 2: signup/login LCP 3137 → 2714ms (-13%)** — lazy-loaded Supabase SDK on form submit instead of at module scope; lifted TourProvider out of root providers into (app)/layout (auth pages no longer pay tour cost); removed `animate-fade-in` opacity gate on auth-page hero. Lighthouse budget ratcheted: Perf ≥0.92, LCP <3200ms, TBT <200ms, FCP <1500ms (warn).

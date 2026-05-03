@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLocale } from '@/lib/i18n';
 import { DesktopLayoutProvider, useDesktopLayout } from '@/hooks/useDesktopLayout';
 import { ServiceWorkerRegister } from './sw-register';
+import { TourProvider } from '@/components/tour/TourProvider';
 import { TourOverlay } from '@/components/tour/TourOverlay';
 import { useTour } from '@/components/tour/useTour';
 import type { Locale, DesktopLayout } from '@/lib/types';
@@ -146,7 +147,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -195,6 +196,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <DesktopLayoutProvider initialLayout={desktopLayout}>
       <AppLayoutInner>{children}</AppLayoutInner>
     </DesktopLayoutProvider>
+  );
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <TourProvider>
+      <AppShell>{children}</AppShell>
+    </TourProvider>
   );
 }
 
