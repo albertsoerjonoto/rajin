@@ -364,14 +364,14 @@ function HabitsSection({
         {streakMap[habit.id]?.current_streak > 1 ? (
           <span
             className={cn(
-              'relative inline-flex items-center justify-center shrink-0 w-5 h-5 text-[18px] leading-none',
+              'relative inline-flex items-center justify-center shrink-0 w-4 h-4 text-[14px] leading-none',
               !habit.completed && 'grayscale opacity-40'
             )}
             aria-label={`${streakMap[habit.id].current_streak} day streak`}
           >
             <span aria-hidden>🔥</span>
             <span
-              className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white leading-none pt-[3px] tabular-nums"
+              className="absolute inset-0 flex items-center justify-center text-[7px] font-bold text-black leading-none pt-[2px] tabular-nums"
               aria-hidden
             >
               {streakMap[habit.id].current_streak}
