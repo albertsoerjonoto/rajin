@@ -42,3 +42,20 @@ Mobile-first PWA for tracking daily habits, food intake, and exercise. Built for
 - Accent: emerald green (#10b981)
 - Aesthetic: Apple Health meets Notion
 - Smooth animations, calm and encouraging tone
+
+## Per-PR Workflow (REQUIRED — do not skip)
+
+Every code-change PR must go through this loop end-to-end before being handed to the user for merge. Do NOT mark a PR "ready" or ask for merge until every applicable step has run clean.
+
+1. Edit + `npm run build` — TypeScript + lint must pass
+2. Local verification via `preview_*` tools — exercise the changed feature in the dev server, check console + network for regressions (skip only if the change isn't observable in a browser, e.g. types-only)
+3. Commit + `git push` to a feature branch (never to `main`)
+4. `gh pr create` — open the PR
+5. `/review` — runs structural diff review (SQL safety, auth, side effects, trust boundaries). Fix anything it flags, push, re-run until clean.
+6. Wait for the Vercel preview deploy to be live (`gh pr checks` or watch for the preview URL comment on the PR)
+7. `/browse` against the preview URL — smoke-test the changed feature (golden path + edge cases) and look for regressions in unrelated tabs
+8. `/qa` against the preview URL — broad regression sweep across all top-level routes. /qa will commit fixes atomically; re-run until it reports clean.
+9. Hand the PR to the user for merge — never `gh pr merge` yourself unless explicitly asked
+10. After user merges + prod deploys, re-verify on production (for perf PRs: re-measure against the baseline; for feature PRs: smoke-test the live URL), THEN start the next PR
+
+If a step doesn't apply (e.g. `/browse` on a pure types-only PR, or `/qa` on a backend-only migration), say so explicitly in the PR body or your end-of-turn summary — don't silently skip.
