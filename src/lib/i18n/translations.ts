@@ -88,6 +88,9 @@ export const translations: Translations = {
   'dashboard.fullProductPlaceholderSupplement': { id: 'Produk lengkap (cth: Thorne Basic Nutrients 2/Day)', en: 'Full product (e.g. Thorne Basic Nutrients 2/Day)' },
   'dashboard.fullProductPlaceholderSkincare': { id: 'Produk lengkap (cth: La Roche-Posay Anthelios UVMune 400 SPF50+)', en: 'Full product (e.g. La Roche-Posay Anthelios UVMune 400 SPF50+)' },
   'dashboard.fullProductHint': { id: 'Opsional. Disimpan setiap kali kamu centang — Chat AI pakai ini untuk lacak produk persis yang kamu pakai.', en: 'Optional. Saved each time you check it off — Chat AI uses it to track your exact product over time.' },
+  'dashboard.optionalHabit': { id: 'Opsional (sembunyikan secara default)', en: 'Optional (hide by default)' },
+  'dashboard.showOptional': { id: 'Tampilkan opsional', en: 'Show optional' },
+  'dashboard.hideOptional': { id: 'Sembunyikan opsional', en: 'Hide optional' },
 
   // ── Nutrition labels ──
   'nutrition.protein': { id: 'Protein', en: 'Protein' },
