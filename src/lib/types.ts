@@ -38,6 +38,7 @@ export interface Habit {
   frequency: Frequency;
   is_active: boolean;
   is_private: boolean;
+  is_optional: boolean;
   streak_interval_days: number;
   sort_order: number;
   category: HabitCategory;

@@ -158,6 +158,7 @@ function HabitsSection({
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitEmoji, setNewHabitEmoji] = useState('⭐');
   const [newHabitPrivate, setNewHabitPrivate] = useState(false);
+  const [newHabitOptional, setNewHabitOptional] = useState(false);
   const [newHabitStreakInterval, setNewHabitStreakInterval] = useState('1');
   const [newHabitProductName, setNewHabitProductName] = useState('');
   const [editMode, setEditMode] = useState(false);
@@ -165,10 +166,12 @@ function HabitsSection({
   const [editName, setEditName] = useState('');
   const [editEmoji, setEditEmoji] = useState('');
   const [editPrivate, setEditPrivate] = useState(false);
+  const [editOptional, setEditOptional] = useState(false);
   const [editStreakInterval, setEditStreakInterval] = useState('1');
   const [editProductName, setEditProductName] = useState('');
   const [activeHabit, setActiveHabit] = useState<HabitWithLog | null>(null);
   const [showShareModal, setShowShareModal] = useState<string | null>(null);
+  const [showOptional, setShowOptional] = useState(false);
   const supportsProduct = category === 'supplement' || category === 'skincare';
   const productPlaceholderKey = category === 'supplement'
     ? 'dashboard.fullProductPlaceholderSupplement'
@@ -179,7 +182,9 @@ function HabitsSection({
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
-  const completedCount = habits.filter((h) => h.completed).length;
+  const requiredHabits = useMemo(() => habits.filter((h) => !h.is_optional), [habits]);
+  const optionalHabits = useMemo(() => habits.filter((h) => h.is_optional), [habits]);
+  const completedCount = requiredHabits.filter((h) => h.completed).length;
 
   const handleDragStart = (event: DragStartEvent) => {
     const dragged = habits.find((h) => h.id === event.active.id);
@@ -217,6 +222,7 @@ function HabitsSection({
       emoji: newHabitEmoji || '⭐',
       sort_order: habits.length,
       is_private: newHabitPrivate,
+      is_optional: newHabitOptional,
       streak_interval_days: clampInterval(parseInt(newHabitStreakInterval, 10)),
       category,
       product_name: supportsProduct ? (newHabitProductName.trim() || null) : null,
@@ -230,6 +236,7 @@ function HabitsSection({
     setNewHabitName('');
     setNewHabitEmoji('⭐');
     setNewHabitPrivate(false);
+    setNewHabitOptional(false);
     setNewHabitStreakInterval('1');
     setNewHabitProductName('');
     setShowAddHabit(false);
@@ -241,6 +248,7 @@ function HabitsSection({
     setEditName(habit.name);
     setEditEmoji(habit.emoji);
     setEditPrivate(habit.is_private);
+    setEditOptional(habit.is_optional);
     setEditStreakInterval(String(habit.streak_interval_days ?? 1));
     setEditProductName(habit.product_name ?? '');
   };
@@ -254,6 +262,7 @@ function HabitsSection({
         name: editName.trim(),
         emoji: editEmoji || '⭐',
         is_private: editPrivate,
+        is_optional: editOptional,
         streak_interval_days: clampInterval(parseInt(editStreakInterval, 10)),
         ...(supportsProduct ? { product_name: editProductName.trim() || null } : {}),
       })
@@ -281,14 +290,110 @@ function HabitsSection({
     onChange();
   };
 
+  const renderToggleCard = (habit: HabitWithLog) => (
+    <button
+      key={habit.id}
+      onClick={() => onToggle(habit)}
+      disabled={togglingId === habit.id}
+      className={cn(
+        'bg-surface rounded-xl px-3 py-2.5 text-left transition-all duration-200 active:scale-[0.97]',
+        habit.completed && 'border border-positive-border bg-positive-surface',
+        togglingId === habit.id && 'opacity-60'
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span className={cn('text-base leading-none shrink-0', habit.completed && 'animate-checkmark inline-block')}>
+          {habit.emoji}
+        </span>
+        <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
+          {habit.name}
+        </span>
+        {streakMap[habit.id]?.current_streak > 1 && (
+          <span className="text-[10px] font-semibold text-orange-500 shrink-0">
+            🔥{streakMap[habit.id].current_streak}
+          </span>
+        )}
+        {(() => {
+          const sharedFriends = getSharedFriends(habit.id);
+          if (sharedFriends.length === 0) return null;
+          const sharedHabit = sharedHabits.find(
+            sh => sh.habit_id === habit.id && sh.status === 'accepted'
+          );
+          const sharedStreak = sharedHabit ? sharedStreakMap[sharedHabit.id] : null;
+          const sharedStreakCount = sharedStreak?.current_streak ?? 0;
+
+          if (sharedStreakCount > 0) {
+            const friend = sharedFriends[0];
+            return (
+              <div className="flex items-center gap-0.5 shrink-0 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-full px-1 py-0.5">
+                <div className="w-3.5 h-3.5 rounded-full bg-accent/10 border border-white flex items-center justify-center">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+                  ) : (
+                    <span className="text-[5px] font-bold text-accent">{(profile?.display_name ?? '?')[0].toUpperCase()}</span>
+                  )}
+                </div>
+                <span className="text-[9px] font-bold text-orange-600 dark:text-orange-400">🔥{sharedStreakCount}</span>
+                <div className="w-3.5 h-3.5 rounded-full bg-accent/10 border border-white flex items-center justify-center">
+                  {friend.avatar_url ? (
+                    <img src={friend.avatar_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+                  ) : (
+                    <span className="text-[5px] font-bold text-accent">{(friend.display_name ?? '?')[0].toUpperCase()}</span>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex -space-x-1 shrink-0">
+              {sharedFriends.slice(0, 2).map(f => (
+                <div key={f.id} className="w-4 h-4 rounded-full bg-accent/10 border border-surface flex items-center justify-center">
+                  {f.avatar_url ? (
+                    <img src={f.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                  ) : (
+                    <span className="text-[6px] font-bold text-accent">{(f.display_name ?? '?')[0].toUpperCase()}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+        {habit.is_private && (
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-text-tertiary">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        )}
+        <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
+          {habit.completed && (
+            <g>
+              <circle cx="12" cy="12" r="10" fill="var(--c-positive)" className="animate-circle-fill" />
+              <path
+                d="M7 12.5l3.5 3.5 6.5-7"
+                fill="none"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="animate-check-draw"
+              />
+            </g>
+          )}
+        </svg>
+      </div>
+    </button>
+  );
+
   return (
     <section className="mb-6 animate-stagger-in" style={{ animationDelay: `${animationDelayMs}ms` }}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-baseline gap-2">
           <h2 className="text-lg font-semibold text-text-primary">{t(titleKey)}</h2>
-          {habits.length > 0 && (
+          {requiredHabits.length > 0 && (
             <span className="text-xs text-text-tertiary font-medium tabular-nums">
-              {completedCount}/{habits.length}
+              {completedCount}/{requiredHabits.length}
             </span>
           )}
         </div>
@@ -366,6 +471,24 @@ function HabitsSection({
               )} />
             </div>
             <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
+          </div>
+          <div className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setNewHabitOptional(!newHabitOptional)}>
+            <div
+              role="switch"
+              aria-checked={newHabitOptional}
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setNewHabitOptional(!newHabitOptional); } }}
+              className={cn(
+                'relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0',
+                newHabitOptional ? 'bg-accent' : 'bg-surface-secondary'
+              )}
+            >
+              <span className={cn(
+                'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200',
+                newHabitOptional && 'translate-x-4'
+              )} />
+            </div>
+            <span className="text-xs text-text-secondary">{t('dashboard.optionalHabit')}</span>
           </div>
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs text-text-secondary flex-1">{t('dashboard.streakInterval')}</span>
@@ -452,6 +575,24 @@ function HabitsSection({
                         )} />
                       </div>
                       <span className="text-xs text-text-secondary">{t('dashboard.privateHabit')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setEditOptional(!editOptional)}>
+                      <div
+                        role="switch"
+                        aria-checked={editOptional}
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setEditOptional(!editOptional); } }}
+                        className={cn(
+                          'relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0',
+                          editOptional ? 'bg-accent' : 'bg-surface-secondary'
+                        )}
+                      >
+                        <span className={cn(
+                          'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200',
+                          editOptional && 'translate-x-4'
+                        )} />
+                      </div>
+                      <span className="text-xs text-text-secondary">{t('dashboard.optionalHabit')}</span>
                     </div>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-xs text-text-secondary flex-1">{t('dashboard.streakInterval')}</span>
@@ -546,103 +687,31 @@ function HabitsSection({
           </DragOverlay>
         </DndContext>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {habits.map((habit) => (
+        <>
+          {requiredHabits.length > 0 && (
+            <div className="grid grid-cols-2 gap-2">
+              {requiredHabits.map(renderToggleCard)}
+            </div>
+          )}
+          {showOptional && optionalHabits.length > 0 && (
+            <div className={cn('grid grid-cols-2 gap-2 animate-fade-in', requiredHabits.length > 0 && 'mt-2')}>
+              {optionalHabits.map(renderToggleCard)}
+            </div>
+          )}
+          {optionalHabits.length > 0 && (
             <button
-              key={habit.id}
-              onClick={() => onToggle(habit)}
-              disabled={togglingId === habit.id}
-              className={cn(
-                'bg-surface rounded-xl px-3 py-2.5 text-left transition-all duration-200 active:scale-[0.97]',
-                habit.completed && 'border border-positive-border bg-positive-surface',
-                togglingId === habit.id && 'opacity-60'
-              )}
+              type="button"
+              onClick={() => setShowOptional(!showOptional)}
+              aria-expanded={showOptional}
+              aria-label={t(showOptional ? 'dashboard.hideOptional' : 'dashboard.showOptional')}
+              className="mt-2 mx-auto block py-1.5 px-2 text-text-tertiary hover:text-text-secondary transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <span className={cn('text-base leading-none shrink-0', habit.completed && 'animate-checkmark inline-block')}>
-                  {habit.emoji}
-                </span>
-                <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
-                  {habit.name}
-                </span>
-                {streakMap[habit.id]?.current_streak > 1 && (
-                  <span className="text-[10px] font-semibold text-orange-500 shrink-0">
-                    🔥{streakMap[habit.id].current_streak}
-                  </span>
-                )}
-                {(() => {
-                  const sharedFriends = getSharedFriends(habit.id);
-                  if (sharedFriends.length === 0) return null;
-                  const sharedHabit = sharedHabits.find(
-                    sh => sh.habit_id === habit.id && sh.status === 'accepted'
-                  );
-                  const sharedStreak = sharedHabit ? sharedStreakMap[sharedHabit.id] : null;
-                  const sharedStreakCount = sharedStreak?.current_streak ?? 0;
-
-                  if (sharedStreakCount > 0) {
-                    const friend = sharedFriends[0];
-                    return (
-                      <div className="flex items-center gap-0.5 shrink-0 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-full px-1 py-0.5">
-                        <div className="w-3.5 h-3.5 rounded-full bg-accent/10 border border-white flex items-center justify-center">
-                          {profile?.avatar_url ? (
-                            <img src={profile.avatar_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
-                          ) : (
-                            <span className="text-[5px] font-bold text-accent">{(profile?.display_name ?? '?')[0].toUpperCase()}</span>
-                          )}
-                        </div>
-                        <span className="text-[9px] font-bold text-orange-600 dark:text-orange-400">🔥{sharedStreakCount}</span>
-                        <div className="w-3.5 h-3.5 rounded-full bg-accent/10 border border-white flex items-center justify-center">
-                          {friend.avatar_url ? (
-                            <img src={friend.avatar_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
-                          ) : (
-                            <span className="text-[5px] font-bold text-accent">{(friend.display_name ?? '?')[0].toUpperCase()}</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="flex -space-x-1 shrink-0">
-                      {sharedFriends.slice(0, 2).map(f => (
-                        <div key={f.id} className="w-4 h-4 rounded-full bg-accent/10 border border-surface flex items-center justify-center">
-                          {f.avatar_url ? (
-                            <img src={f.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover" />
-                          ) : (
-                            <span className="text-[6px] font-bold text-accent">{(f.display_name ?? '?')[0].toUpperCase()}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-                {habit.is_private && (
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-text-tertiary">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                )}
-                <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
-                  <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
-                  {habit.completed && (
-                    <g>
-                      <circle cx="12" cy="12" r="10" fill="var(--c-positive)" className="animate-circle-fill" />
-                      <path
-                        d="M7 12.5l3.5 3.5 6.5-7"
-                        fill="none"
-                        stroke="white"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="animate-check-draw"
-                      />
-                    </g>
-                  )}
-                </svg>
-              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={cn('transition-transform duration-200', showOptional && 'rotate-180')}>
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </section>
   );
