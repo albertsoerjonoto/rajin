@@ -1026,6 +1026,7 @@ export default function DashboardPage() {
     habit: habits.filter((h) => h.category === 'habit'),
     supplement: habits.filter((h) => h.category === 'supplement'),
     skincare: habits.filter((h) => h.category === 'skincare'),
+    superfood: habits.filter((h) => h.category === 'superfood'),
   }), [habits]);
 
   // Day view computations
@@ -1250,7 +1251,7 @@ export default function DashboardPage() {
       ) : (
         /* ──── Day View (unchanged) ──── */
         <>
-          {/* Habits / Supplements / Skincare sections */}
+          {/* Habits / Supplements / Skincare / Superfoods sections */}
           <HabitsSection
             category="habit"
             titleKey="dashboard.section.habits"
@@ -1310,6 +1311,26 @@ export default function DashboardPage() {
             profile={profile}
             showToast={showToast}
             animationDelayMs={100}
+          />
+          <HabitsSection
+            category="superfood"
+            titleKey="dashboard.section.superfoods"
+            addLabelKey="dashboard.addSuperfood"
+            placeholderKey="dashboard.superfoodPlaceholder"
+            emptyStateKey="dashboard.noSuperfoods"
+            habits={habitsByCategory.superfood}
+            togglingId={togglingId}
+            onToggle={toggleHabit}
+            onChange={fetchData}
+            onShare={shareHabit}
+            getSharedFriends={getSharedFriendsForHabit}
+            streakMap={streakMap}
+            sharedStreakMap={sharedStreakMap}
+            sharedHabits={sharedHabits}
+            acceptedFriends={acceptedFriends}
+            profile={profile}
+            showToast={showToast}
+            animationDelayMs={150}
           />
 
           {/* Diet + Exercise wrapper — side by side on desktop */}
