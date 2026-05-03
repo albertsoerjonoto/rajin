@@ -10,6 +10,11 @@ import type {
   MeasurementEdit,
 } from '@/lib/types';
 
+// Per-message image cap. Bounds Gemini payload size, storage cost, and request
+// latency. Enforced symmetrically on the client (input picker + previews) and
+// the server (parse API trims its accepted image_urls list to this length).
+export const MAX_CHAT_IMAGES_PER_MESSAGE = 4;
+
 export interface ChatMessageView {
   id: string;
   role: 'user' | 'assistant';

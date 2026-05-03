@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@/lib/supabase/server';
 import { clamp } from '@/lib/validation';
 import type { ChatContext, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit } from '@/lib/types';
+import { MAX_CHAT_IMAGES_PER_MESSAGE } from '@/lib/chat-helpers';
 
 // Allow up to 60s for Gemini API calls (default Vercel limit is 10s on hobby, 60s on pro)
 export const maxDuration = 60;
@@ -353,7 +354,7 @@ export async function POST(request: NextRequest) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const safeUrls = candidateUrls
         .filter((u) => supabaseUrl && u.startsWith(supabaseUrl))
-        .slice(0, 4);
+        .slice(0, MAX_CHAT_IMAGES_PER_MESSAGE);
 
       // Fetch images in parallel; preserve input order.
       const fetched = await Promise.all(

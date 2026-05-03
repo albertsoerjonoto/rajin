@@ -16,7 +16,7 @@ import { useDesktopLayout } from '@/hooks/useDesktopLayout';
 import { useTour } from '@/components/tour/useTour';
 import type { ParsedFood, ParsedExercise, ParsedDrink, ParsedMeasurement, MealType, DrinkType, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
 import { emitExerciseEvent, checkAndEmitGoalEvents } from '@/lib/feedEvents';
-import { roundFoodUpdate, dbRowToMessage, buildHistory, type ChatMessageView } from '@/lib/chat-helpers';
+import { roundFoodUpdate, dbRowToMessage, buildHistory, MAX_CHAT_IMAGES_PER_MESSAGE, type ChatMessageView } from '@/lib/chat-helpers';
 
 type Message = ChatMessageView;
 
@@ -619,13 +619,11 @@ export default function ChatPage() {
   }, [loadingMessages, messages.length]);
 
 
-  const MAX_IMAGES = 4;
-
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []);
     if (picked.length === 0) return;
     setImageFiles((prev) => {
-      const remaining = MAX_IMAGES - prev.length;
+      const remaining = MAX_CHAT_IMAGES_PER_MESSAGE - prev.length;
       if (remaining <= 0) {
         showToast('error', t('chat.tooManyImages'));
         return prev;
@@ -1274,7 +1272,7 @@ export default function ChatPage() {
       {/* Input — only visible for today */}
       {isToday && (
       <div className="px-4 pt-2 pb-4">
-        {/* Image previews — gallery for up to MAX_IMAGES, each individually removable */}
+        {/* Image previews — gallery for up to MAX_CHAT_IMAGES_PER_MESSAGE, each individually removable */}
         {imagePreviews.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
             {imagePreviews.map((preview, i) => (
@@ -1311,7 +1309,7 @@ export default function ChatPage() {
             <>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                disabled={loading || imageFiles.length >= MAX_IMAGES}
+                disabled={loading || imageFiles.length >= MAX_CHAT_IMAGES_PER_MESSAGE}
                 className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
                 aria-label="Attach photo"
               >
