@@ -1,0 +1,79 @@
+name: Post-deploy verification
+
+# Vercel deploys via its GitHub integration — this workflow listens for
+# the success status it reports and runs smoke + Lighthouse against the
+# real prod URL. Catches deploy-time regressions that CI's localhost
+# build can't (CDN headers, env-var differences, edge runtime behaviour).
+on:
+  deployment_status:
+
+concurrency:
+  group: deploy-verify-${{ github.event.deployment.environment }}-${{ github.event.deployment.sha }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Smoke + Lighthouse on prod URL
+    if: >-
+      github.event.deployment_status.state == 'success'
+      && (github.event.deployment.environment == 'Production' || github.event.deployment.environment == 'production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha }}
+
+      - name: Resolve prod URL
+        id: url
+        run: |
+          URL="${{ github.event.deployment_status.target_url || github.event.deployment_status.environment_url }}"
+          if [ -z "$URL" ]; then
+            echo "::error::No deployment URL on the event"
+            exit 1
+          fi
+          # Strip trailing slash so we can $URL/path consistently
+          URL="${URL%/}"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Verifying $URL"
+
+      - name: Smoke test public routes
+        env:
+          URL: ${{ steps.url.outputs.url }}
+        run: |
+          set -eo pipefail
+          fail=0
+          for path in / /login /signup; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$URL$path")
+            if [ "$code" != "200" ] && [ "$code" != "307" ]; then
+              echo "::error::Smoke FAIL: $URL$path returned $code"
+              fail=1
+            else
+              echo "OK $URL$path → $code"
+            fi
+          done
+          exit $fail
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Lighthouse on prod URL
+        env:
+          URL: ${{ steps.url.outputs.url }}
+        run: |
+          npx lhci collect \
+            --url="$URL/login" \
+            --url="$URL/signup" \
+            --numberOfRuns=2
+          npx lhci assert
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-prod-report
+          path: .lighthouseci
+          retention-days: 14
