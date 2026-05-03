@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import type { Session, User } from '@supabase/supabase-js';
 
 type AuthState = {
@@ -26,26 +25,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     mountedRef.current = true;
-    const supabase = createClient();
+    let unsubscribe: (() => void) | undefined;
 
-    // getSession() is cookie-only — no network call. The JWT is verified by
-    // RLS on each database query, so we don't need to round-trip to the auth
-    // server here. getUser() was costing 150-400ms on initial mount.
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Dynamic import keeps `@supabase/ssr` out of the auth-page initial
+    // bundle. The login/signup pages never need the SDK before the user
+    // submits a form, and authed pages get it asynchronously here without
+    // blocking first paint. Saves ~47 KB of unused JS on /login + /signup.
+    (async () => {
+      const { createClient } = await import('@/lib/supabase/client');
+      if (!mountedRef.current) return;
+      const supabase = createClient();
+
+      // getSession() is cookie-only — no network call. The JWT is verified
+      // by RLS on each database query, so we don't need to round-trip to
+      // the auth server here. getUser() was costing 150-400ms on mount.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!mountedRef.current) return;
       setState({ user: session?.user ?? null, session, loading: false });
-    });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mountedRef.current) return;
-      setState({ user: session?.user ?? null, session, loading: false });
-    });
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!mountedRef.current) return;
+        setState({ user: session?.user ?? null, session, loading: false });
+      });
+      unsubscribe = () => subscription.unsubscribe();
+    })();
 
     return () => {
       mountedRef.current = false;
-      subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 
