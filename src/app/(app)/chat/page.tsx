@@ -16,34 +16,9 @@ import { useDesktopLayout } from '@/hooks/useDesktopLayout';
 import { useTour } from '@/components/tour/useTour';
 import type { ParsedFood, ParsedExercise, ParsedDrink, ParsedMeasurement, MealType, DrinkType, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit, ChatContext, Profile, ChatMessage } from '@/lib/types';
 import { emitExerciseEvent, checkAndEmitGoalEvents } from '@/lib/feedEvents';
+import { roundFoodUpdate, dbRowToMessage, buildHistory, type ChatMessageView } from '@/lib/chat-helpers';
 
-// food_logs columns are INTEGER. Round any integer fields in a food edit
-// payload defensively, since older chat messages may have decimal macros
-// stored in chat_messages.food_edits.
-function roundFoodUpdate(updated: Partial<ParsedFood>): Partial<ParsedFood> {
-  const out: Partial<ParsedFood> = { ...updated };
-  if (out.calories != null) out.calories = Math.round(out.calories);
-  if (out.protein_g != null) out.protein_g = Math.round(out.protein_g);
-  if (out.carbs_g != null) out.carbs_g = Math.round(out.carbs_g);
-  if (out.fat_g != null) out.fat_g = Math.round(out.fat_g);
-  return out;
-}
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  imageUrl?: string;
-  parsedFoods?: ParsedFood[];
-  parsedExercises?: ParsedExercise[];
-  parsedDrinks?: ParsedDrink[];
-  parsedMeasurements?: ParsedMeasurement[];
-  foodEdits?: FoodEdit[];
-  exerciseEdits?: ExerciseEdit[];
-  drinkEdits?: DrinkEdit[];
-  measurementEdits?: MeasurementEdit[];
-  saved?: boolean;
-}
+type Message = ChatMessageView;
 
 interface MessageBubbleProps {
   msg: Message;
@@ -90,16 +65,21 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
             : 'bg-surface'
         )}
       >
-        {msg.imageUrl && (
-          <Image
-            src={msg.imageUrl}
-            alt="Attached"
-            width={400}
-            height={300}
-            className="rounded-xl mb-2 max-h-48 w-auto h-auto"
-            style={{ width: 'auto', height: 'auto', maxHeight: '12rem' }}
-            unoptimized={msg.imageUrl.startsWith('data:')}
-          />
+        {msg.imageUrls && msg.imageUrls.length > 0 && (
+          <div className={cn('mb-2 grid gap-1.5', msg.imageUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1')}>
+            {msg.imageUrls.map((url, i) => (
+              <Image
+                key={i}
+                src={url}
+                alt={`Attached ${i + 1}`}
+                width={400}
+                height={300}
+                className="rounded-xl w-full h-auto object-cover max-h-48"
+                style={{ maxHeight: '12rem' }}
+                unoptimized={url.startsWith('data:') || url.startsWith('blob:')}
+              />
+            ))}
+          </div>
         )}
         {msg.role === 'assistant' ? (
           <MarkdownContent content={msg.content} />
@@ -377,23 +357,6 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
   );
 });
 
-function dbRowToMessage(row: ChatMessage): Message {
-  return {
-    id: row.id,
-    role: row.role,
-    content: row.content,
-    imageUrl: row.image_url ?? undefined,
-    parsedFoods: row.parsed_foods ?? undefined,
-    parsedExercises: row.parsed_exercises ?? undefined,
-    parsedDrinks: row.parsed_drinks ?? undefined,
-    parsedMeasurements: row.parsed_measurements ?? undefined,
-    foodEdits: row.food_edits ?? undefined,
-    exerciseEdits: row.exercise_edits ?? undefined,
-    drinkEdits: row.drink_edits ?? undefined,
-    measurementEdits: row.measurement_edits ?? undefined,
-    saved: row.saved,
-  };
-}
 
 export default function ChatPage() {
   const { user } = useAuth();
@@ -433,29 +396,29 @@ export default function ChatPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [voiceRecording, setVoiceRecording] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<ChatContext | null>(null);
   const shouldAutoScroll = useRef(false);
-  const imagePreviewRef = useRef<string | null>(null);
+  const imagePreviewsRef = useRef<string[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const savingLockRef = useRef(false);
 
   const isToday = date === getToday();
   const [hasHistoryMessages, setHasHistoryMessages] = useState(false);
 
-  // Track imagePreview in ref so cleanup always has the latest value
+  // Track imagePreviews in ref so cleanup always has the latest value
   useEffect(() => {
-    imagePreviewRef.current = imagePreview;
-  }, [imagePreview]);
+    imagePreviewsRef.current = imagePreviews;
+  }, [imagePreviews]);
 
-  // Revoke image preview blob URL on unmount
+  // Revoke image preview blob URLs on unmount
   useEffect(() => {
     return () => {
-      if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
+      for (const url of imagePreviewsRef.current) URL.revokeObjectURL(url);
     };
   }, []);
 
@@ -472,7 +435,7 @@ export default function ChatPage() {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('chat_messages')
-      .select('id,user_id,role,content,image_url,parsed_foods,parsed_exercises,parsed_drinks,parsed_measurements,food_edits,exercise_edits,drink_edits,measurement_edits,saved,date,created_at')
+      .select('id,user_id,role,content,image_url,image_urls,parsed_foods,parsed_exercises,parsed_drinks,parsed_measurements,food_edits,exercise_edits,drink_edits,measurement_edits,saved,date,created_at')
       .eq('user_id', user.id)
       .eq('date', date)
       .order('created_at', { ascending: true });
@@ -656,26 +619,40 @@ export default function ChatPage() {
   }, [loadingMessages, messages.length]);
 
 
+  const MAX_IMAGES = 4;
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    // Revoke previous preview URL before creating a new one
-    if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
-    setImageFile(file);
-    const url = URL.createObjectURL(file);
-    setImagePreview(url);
+    const picked = Array.from(e.target.files ?? []);
+    if (picked.length === 0) return;
+    setImageFiles((prev) => {
+      const remaining = MAX_IMAGES - prev.length;
+      if (remaining <= 0) {
+        showToast('error', t('chat.tooManyImages'));
+        return prev;
+      }
+      const accepted = picked.slice(0, remaining);
+      if (picked.length > remaining) {
+        showToast('error', t('chat.tooManyImages'));
+      }
+      const urls = accepted.map((f) => URL.createObjectURL(f));
+      setImagePreviews((prevUrls) => [...prevUrls, ...urls]);
+      return [...prev, ...accepted];
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const clearImage = () => {
-    setImageFile(null);
-    if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const removeImageAt = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const sendMessage = async (textOverride?: string) => {
     const messageText = textOverride ?? input;
-    if ((!messageText.trim() && !imageFile) || loading || !isToday) return;
+    if ((!messageText.trim() && imageFiles.length === 0) || loading || !isToday) return;
 
     if (messageText.trim().length > 1000) {
       showToast('error', t('chat.messageTooLong'));
@@ -687,11 +664,18 @@ export default function ChatPage() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const userContent = messageText.trim() || (imageFile ? t('chat.whatsInPhoto') : '');
-    const currentImageFile = imageFile;
-    const currentImagePreview = imagePreview;
+    const userContent = messageText.trim() || (imageFiles.length > 0 ? t('chat.whatsInPhoto') : '');
+    const currentImageFiles = imageFiles;
+    const currentImagePreviews = imagePreviews;
     setInput('');
-    clearImage();
+    // Detach the file refs from state but DO NOT revoke the blob URLs yet — they're
+    // still rendered in the optimistic-fallback bubble below. We revoke after either
+    // the user row is committed (and we swap to the uploaded public URLs) or the
+    // fallback bubble is mounted (the browser has already decoded the blob into the
+    // <img> tag, so revoking after first paint is safe).
+    setImageFiles([]);
+    setImagePreviews([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setLoading(true);
     shouldAutoScroll.current = true;
 
@@ -707,75 +691,91 @@ export default function ChatPage() {
 
     const supabase = createClient();
 
-    // Upload image to Supabase Storage if present
-    let uploadedImageUrl: string | null = null;
-    if (currentImageFile) {
-      try {
-        const compressed = await compressChatImage(currentImageFile);
-        const path = `${user!.id}/${Date.now()}.jpg`;
-        const { error: uploadError } = await supabase.storage
-          .from('chat-images')
-          .upload(path, compressed, { contentType: 'image/jpeg' });
-
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('chat-images').getPublicUrl(path);
-          uploadedImageUrl = urlData.publicUrl;
-        }
-      } catch {
-        // If upload fails, still send the text message
+    // Upload images to Supabase Storage in parallel; collect successful URLs in input order.
+    const uploadedImageUrls: string[] = [];
+    if (currentImageFiles.length > 0) {
+      const uploads = await Promise.all(
+        currentImageFiles.map(async (file, i) => {
+          try {
+            const compressed = await compressChatImage(file);
+            const path = `${user!.id}/${Date.now()}-${i}.jpg`;
+            const { error: uploadError } = await supabase.storage
+              .from('chat-images')
+              .upload(path, compressed, { contentType: 'image/jpeg' });
+            if (uploadError) return null;
+            const { data: urlData } = supabase.storage.from('chat-images').getPublicUrl(path);
+            return urlData.publicUrl;
+          } catch {
+            return null;
+          }
+        })
+      );
+      for (const url of uploads) {
+        if (url) uploadedImageUrls.push(url);
       }
     }
 
-    // Insert user message to DB
+    // Insert user message to DB. Write to both image_urls (new) and image_url (legacy first-photo)
+    // so older readers / API endpoints that still consult image_url keep working.
     const { data: userRow } = await supabase
       .from('chat_messages')
-      .insert({ user_id: user!.id, date, role: 'user', content: userContent, image_url: uploadedImageUrl })
+      .insert({
+        user_id: user!.id,
+        date,
+        role: 'user',
+        content: userContent,
+        image_url: uploadedImageUrls[0] ?? null,
+        image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : null,
+      })
       .select()
       .single();
 
+    const fallbackUrls = uploadedImageUrls.length > 0
+      ? uploadedImageUrls
+      : currentImagePreviews.length > 0
+        ? currentImagePreviews
+        : undefined;
+
     const userMsg: Message = userRow
       ? dbRowToMessage(userRow)
-      : { id: `temp-${Date.now()}`, role: 'user', content: userContent, imageUrl: uploadedImageUrl || currentImagePreview || undefined };
+      : {
+          id: `temp-${Date.now()}`,
+          role: 'user',
+          content: userContent,
+          imageUrls: fallbackUrls,
+        };
 
     setMessages((prev) => [...prev, userMsg]);
 
-    // Build conversation history from recent messages (last 10, excluding welcome)
-    // Skip error messages (no parsed data/edits) so they don't pollute the model's context
-    // Include parsed data + edits so the LLM sees the correct response format
-    const recentMessages = messages
-      .filter((m) => {
-        if (m.id === 'welcome') return false;
-        // Skip assistant error messages (no parsed data and no edits)
-        if (m.role === 'assistant') {
-          const hasData = (m.parsedFoods?.length ?? 0) > 0 || (m.parsedExercises?.length ?? 0) > 0 ||
-            (m.parsedDrinks?.length ?? 0) > 0 || (m.parsedMeasurements?.length ?? 0) > 0 ||
-            (m.foodEdits?.length ?? 0) > 0 || (m.exerciseEdits?.length ?? 0) > 0 ||
-            (m.drinkEdits?.length ?? 0) > 0 || (m.measurementEdits?.length ?? 0) > 0;
-          if (!hasData) return false;
-        }
-        return true;
-      })
-      .slice(-10)
-      .map((m) => ({
-        role: m.role,
-        content: m.content,
-        ...(m.role === 'assistant' ? {
-          parsedFoods: m.parsedFoods,
-          parsedExercises: m.parsedExercises,
-          parsedDrinks: m.parsedDrinks,
-          parsedMeasurements: m.parsedMeasurements,
-          foodEdits: m.foodEdits,
-          exerciseEdits: m.exerciseEdits,
-          drinkEdits: m.drinkEdits,
-          measurementEdits: m.measurementEdits,
-        } : {}),
-      }));
+    // Once the bubble is mounted, the browser has already decoded the blob src into
+    // the <img>, so we can free the blob URLs. (If the userMsg uses uploaded public
+    // URLs, the blobs aren't referenced at all — revoking is pure cleanup.)
+    queueMicrotask(() => {
+      for (const url of currentImagePreviews) URL.revokeObjectURL(url);
+    });
+
+    // Build conversation history from the messages snapshot captured at the start
+    // of this send call. The just-pushed `userMsg` is intentionally NOT in
+    // `recentMessages` because the API takes the current message via the `message`
+    // field separately. The previous filter dropped any assistant message without
+    // parsed data, which silently erased every text-only Q&A turn from the model's
+    // memory ("memory per day sucks" bug). The helper keeps conversational replies
+    // and only drops the welcome stub + transient error- bubbles (never persisted).
+    const recentMessages = buildHistory(messages, 20);
 
     try {
       const res = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userContent, context: contextRef.current, history: recentMessages, image_url: uploadedImageUrl, locale }),
+        body: JSON.stringify({
+          message: userContent,
+          context: contextRef.current,
+          history: recentMessages,
+          image_urls: uploadedImageUrls,
+          // image_url kept for backwards-compat with older API deploys
+          image_url: uploadedImageUrls[0] ?? null,
+          locale,
+        }),
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(65000)]),
       });
 
@@ -1012,29 +1012,37 @@ export default function ChatPage() {
     setSavingId(msgId);
     const supabase = createClient();
     let hasError = false;
+    let missingRow = false;
 
+    // .select() forces the row to come back so a 0-row update (target was deleted) is visible.
+    // Without this, supabase-js silently returns success for "update matched no rows", which is
+    // the cause of "the edit said it applied but my log didn't change".
     for (const edit of foodEdits) {
-      const { error } = await supabase.from('food_logs').update(roundFoodUpdate(edit.updated)).eq('id', edit.log_id).eq('user_id', user.id);
+      const { data, error } = await supabase.from('food_logs').update(roundFoodUpdate(edit.updated)).eq('id', edit.log_id).eq('user_id', user.id).select('id');
       if (error) hasError = true;
+      else if (!data || data.length === 0) missingRow = true;
     }
 
     for (const edit of exerciseEdits) {
-      const { error } = await supabase.from('exercise_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
+      const { data, error } = await supabase.from('exercise_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id).select('id');
       if (error) hasError = true;
+      else if (!data || data.length === 0) missingRow = true;
     }
 
     for (const edit of drinkEdits) {
-      const { error } = await supabase.from('drink_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
+      const { data, error } = await supabase.from('drink_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id).select('id');
       if (error) hasError = true;
+      else if (!data || data.length === 0) missingRow = true;
     }
 
     for (const edit of measurementEdits) {
-      const { error } = await supabase.from('measurement_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
+      const { data, error } = await supabase.from('measurement_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id).select('id');
       if (error) hasError = true;
+      else if (!data || data.length === 0) missingRow = true;
     }
 
-    if (hasError) {
-      showToast('error', t('chat.failedApply'));
+    if (hasError || missingRow) {
+      showToast('error', missingRow && !hasError ? t('chat.editTargetMissing') : t('chat.failedApply'));
       setSavingId(null);
       savingLockRef.current = false;
       return;
@@ -1106,33 +1114,38 @@ export default function ChatPage() {
       if (error) hasError = true;
     }
 
+    let missingRow = false;
     if (msg.foodEdits) {
       for (const edit of msg.foodEdits) {
-        const { error } = await supabase.from('food_logs').update(roundFoodUpdate(edit.updated)).eq('id', edit.log_id).eq('user_id', user.id);
+        const { data, error } = await supabase.from('food_logs').update(roundFoodUpdate(edit.updated)).eq('id', edit.log_id).eq('user_id', user.id).select('id');
         if (error) hasError = true;
+        else if (!data || data.length === 0) missingRow = true;
       }
     }
     if (msg.exerciseEdits) {
       for (const edit of msg.exerciseEdits) {
-        const { error } = await supabase.from('exercise_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
+        const { data, error } = await supabase.from('exercise_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id).select('id');
         if (error) hasError = true;
+        else if (!data || data.length === 0) missingRow = true;
       }
     }
     if (msg.drinkEdits) {
       for (const edit of msg.drinkEdits) {
-        const { error } = await supabase.from('drink_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
+        const { data, error } = await supabase.from('drink_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id).select('id');
         if (error) hasError = true;
+        else if (!data || data.length === 0) missingRow = true;
       }
     }
     if (msg.measurementEdits) {
       for (const edit of msg.measurementEdits) {
-        const { error } = await supabase.from('measurement_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id);
+        const { data, error } = await supabase.from('measurement_logs').update(edit.updated).eq('id', edit.log_id).eq('user_id', user.id).select('id');
         if (error) hasError = true;
+        else if (!data || data.length === 0) missingRow = true;
       }
     }
 
-    if (hasError) {
-      showToast('error', t('chat.failedSave'));
+    if (hasError || missingRow) {
+      showToast('error', missingRow && !hasError ? t('chat.editTargetMissing') : t('chat.failedSave'));
       setSavingId(null);
       savingLockRef.current = false;
       return;
@@ -1261,25 +1274,28 @@ export default function ChatPage() {
       {/* Input — only visible for today */}
       {isToday && (
       <div className="px-4 pt-2 pb-4">
-        {/* Image preview */}
-        {imagePreview && (
-          <div className="mb-2 relative inline-block">
-            <Image
-              src={imagePreview}
-              alt="Preview"
-              width={120}
-              height={80}
-              className="h-20 w-auto rounded-xl object-cover"
-              style={{ width: 'auto' }}
-              unoptimized
-            />
-            <button
-              onClick={clearImage}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-text-primary text-bg rounded-full flex items-center justify-center text-xs"
-              aria-label="Remove image"
-            >
-              &times;
-            </button>
+        {/* Image previews — gallery for up to MAX_IMAGES, each individually removable */}
+        {imagePreviews.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {imagePreviews.map((preview, i) => (
+              <div key={preview} className="relative">
+                <Image
+                  src={preview}
+                  alt={`Preview ${i + 1}`}
+                  width={80}
+                  height={80}
+                  className="h-20 w-20 rounded-xl object-cover"
+                  unoptimized
+                />
+                <button
+                  onClick={() => removeImageAt(i)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-text-primary text-bg rounded-full flex items-center justify-center text-xs"
+                  aria-label={`Remove image ${i + 1}`}
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
           </div>
         )}
         <div className="flex items-center bg-surface-secondary rounded-2xl px-4 py-1" data-tour="chat-input">
@@ -1287,6 +1303,7 @@ export default function ChatPage() {
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple
             onChange={handleImageSelect}
             className="hidden"
           />
@@ -1294,7 +1311,7 @@ export default function ChatPage() {
             <>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                disabled={loading}
+                disabled={loading || imageFiles.length >= MAX_IMAGES}
                 className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
                 aria-label="Attach photo"
               >
@@ -1325,7 +1342,7 @@ export default function ChatPage() {
           {!voiceRecording && (
             <button
               onClick={() => sendMessage()}
-              disabled={loading || (!input.trim() && !imageFile)}
+              disabled={loading || (!input.trim() && imageFiles.length === 0)}
               className="p-2 text-text-tertiary hover:text-text-primary disabled:opacity-30 transition-colors rounded-lg"
               aria-label="Send message"
             >
