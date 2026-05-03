@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 
 type AuthState = {
@@ -21,19 +21,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session: null,
     loading: true,
   });
-  const mountedRef = useRef(true);
 
   useEffect(() => {
-    mountedRef.current = true;
+    // Closure-local flag (not a useRef) so each effect invocation has its own
+    // — prevents StrictMode mount/unmount/mount from leaking a subscription
+    // when the first invocation's async closure resolves after the second
+    // mount has already reset a shared ref.
+    let mounted = true;
     let unsubscribe: (() => void) | undefined;
 
-    // Dynamic import keeps `@supabase/ssr` out of the auth-page initial
-    // bundle. The login/signup pages never need the SDK before the user
-    // submits a form, and authed pages get it asynchronously here without
-    // blocking first paint. Saves ~47 KB of unused JS on /login + /signup.
+    // Dynamic import keeps `@supabase/ssr` off the auth-page critical path.
+    // login/signup never need the SDK before the user submits a form; authed
+    // pages still get it here, just after first paint instead of blocking it.
+    // The chunk still ships (Next.js preloads it) — what shifts is parse/eval
+    // off the critical chain, which is what Lighthouse penalizes.
     (async () => {
       const { createClient } = await import('@/lib/supabase/client');
-      if (!mountedRef.current) return;
+      if (!mounted) return;
       const supabase = createClient();
 
       // getSession() is cookie-only — no network call. The JWT is verified
@@ -42,20 +46,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!mountedRef.current) return;
+      if (!mounted) return;
       setState({ user: session?.user ?? null, session, loading: false });
 
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (!mountedRef.current) return;
+        if (!mounted) return;
         setState({ user: session?.user ?? null, session, loading: false });
       });
       unsubscribe = () => subscription.unsubscribe();
     })();
 
     return () => {
-      mountedRef.current = false;
+      mounted = false;
       unsubscribe?.();
     };
   }, []);
