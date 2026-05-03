@@ -152,46 +152,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { setLocale } = useLocale();
   const { startTour } = useTour();
-  const [ready, setReady] = useState(false);
   const [desktopLayout, setDesktopLayout] = useState<DesktopLayout>('expanded');
   const checkedRef = useRef(false);
   const tourStartedRef = useRef(false);
 
-  // Check if the user has completed onboarding + sync locale + desktop layout
+  // Resolve locale + desktop layout + onboarding status in the background.
+  // We render the shell immediately — locale/layout fall back to defaults and
+  // the profile fetch updates them when it lands. Only `onboarding_completed
+  // === false` triggers a redirect, so users who have onboarded never wait.
   useEffect(() => {
     if (authLoading || !user || checkedRef.current) return;
     checkedRef.current = true;
 
-    const checkOnboarding = async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (data?.locale) {
-        setLocale(data.locale as Locale);
-      }
-
-      if (data?.desktop_layout) {
-        setDesktopLayout(data.desktop_layout as DesktopLayout);
-      }
-
-      if (data && data.onboarding_completed === false) {
-        router.replace('/onboarding');
-        return;
-      }
-
-      setReady(true);
-    };
-
-    checkOnboarding();
+    const supabase = createClient();
+    supabase
+      .from('profiles')
+      .select('locale, desktop_layout, onboarding_completed')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.locale) setLocale(data.locale as Locale);
+        if (data?.desktop_layout) setDesktopLayout(data.desktop_layout as DesktopLayout);
+        if (data && data.onboarding_completed === false) {
+          router.replace('/onboarding');
+        }
+      });
   }, [user, authLoading, router, setLocale]);
 
   // Detect ?tour=start and trigger tour
   useEffect(() => {
-    if (!ready || tourStartedRef.current) return;
+    if (authLoading || tourStartedRef.current) return;
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('tour') === 'start') {
@@ -199,11 +189,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       startTour();
       router.replace(pathname);
     }
-  }, [ready, startTour, router, pathname]);
-
-  if (!ready) {
-    return <div className="min-h-screen bg-bg" />;
-  }
+  }, [authLoading, startTour, router, pathname]);
 
   return (
     <DesktopLayoutProvider initialLayout={desktopLayout}>
