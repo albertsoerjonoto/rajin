@@ -62,11 +62,12 @@ export default function RootLayout({
       </head>
       <body className={`${GeistSans.variable} font-sans antialiased bg-bg text-text-primary`}>
         <Providers>{children}</Providers>
-        {/* Real-user Core Web Vitals reporting. No-op in dev; in prod
-            posts LCP/CLS/INP/FCP/TTFB to Vercel Speed Insights so we
-            see how the iPhone PWA actually feels in Jakarta — beats
-            Lighthouse Lantern's pessimistic projections. */}
-        <SpeedInsights />
+        {/* Real-user Core Web Vitals reporting on Vercel deploys.
+            Gated on NEXT_PUBLIC_VERCEL_ENV so the script doesn't 404
+            in non-Vercel environments (Playwright CI, localhost) —
+            its loader fetches /_vercel/speed-insights/script.js which
+            only exists when served by Vercel. */}
+        {process.env.NEXT_PUBLIC_VERCEL_ENV && <SpeedInsights />}
       </body>
     </html>
   );
