@@ -78,6 +78,19 @@ describe('EmojiPicker search', () => {
     expect(onChange).toHaveBeenCalledWith('🔥');
   });
 
+  it('finds newly-added superfood emojis (olive, ginger, beans)', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    renderPicker('😀', onChange);
+
+    await user.click(screen.getByRole('button', { name: /😀/ }));
+    await user.type(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), 'olive');
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: '🫒' }).length).toBeGreaterThan(0);
+    });
+  });
+
   it('shows a no-results message when nothing matches', async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
