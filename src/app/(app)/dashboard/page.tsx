@@ -341,18 +341,6 @@ function HabitsSection({
         <span className={cn('text-xs font-medium leading-snug flex-1 min-w-0', habit.completed ? 'text-positive-text' : 'text-text-secondary')}>
           {habit.name}
         </span>
-        {streakMap[habit.id]?.current_streak > 1 && (
-          <span
-            className={cn(
-              'text-[10px] font-semibold text-orange-500 shrink-0',
-              !habit.completed && 'grayscale opacity-50',
-              habit.completed && celebratingIds.has(habit.id) && 'animate-streak-celebrate',
-              habit.completed && !celebratingIds.has(habit.id) && 'hidden'
-            )}
-          >
-            🔥{streakMap[habit.id].current_streak}
-          </span>
-        )}
         {(() => {
           const sharedFriends = getSharedFriends(habit.id);
           if (sharedFriends.length === 0) return null;
@@ -405,23 +393,42 @@ function HabitsSection({
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
         )}
-        <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
-          <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
-          {habit.completed && (
-            <g>
-              <circle cx="12" cy="12" r="10" fill="var(--c-positive)" className="animate-circle-fill" />
-              <path
-                d="M7 12.5l3.5 3.5 6.5-7"
-                fill="none"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="animate-check-draw"
-              />
-            </g>
-          )}
-        </svg>
+        {streakMap[habit.id]?.current_streak > 1 && (!habit.completed || celebratingIds.has(habit.id)) ? (
+          <span
+            className={cn(
+              'relative inline-flex items-center justify-center shrink-0 w-4 h-4 text-[14px] leading-none',
+              !habit.completed && 'grayscale opacity-50',
+              habit.completed && celebratingIds.has(habit.id) && 'animate-streak-celebrate'
+            )}
+            aria-label={`${streakMap[habit.id].current_streak} day streak`}
+          >
+            <span aria-hidden>🔥</span>
+            <span
+              className="absolute inset-0 flex items-center justify-center text-[7px] font-bold text-black leading-none pt-[2px] tabular-nums"
+              aria-hidden
+            >
+              {streakMap[habit.id].current_streak}
+            </span>
+          </span>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-border-strong)" strokeWidth="1.5" />
+            {habit.completed && (
+              <g>
+                <circle cx="12" cy="12" r="10" fill="var(--c-positive)" className="animate-circle-fill" />
+                <path
+                  d="M7 12.5l3.5 3.5 6.5-7"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="animate-check-draw"
+                />
+              </g>
+            )}
+          </svg>
+        )}
       </div>
     </button>
   );
