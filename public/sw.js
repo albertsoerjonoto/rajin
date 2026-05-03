@@ -1,6 +1,6 @@
 // Bump CACHE_VERSION whenever the cache strategy or shell changes.
 // The activate handler purges any cache that doesn't match.
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const RUNTIME_CACHE = `rajin-runtime-${CACHE_VERSION}`;
 const STATIC_CACHE = `rajin-static-${CACHE_VERSION}`;
 
