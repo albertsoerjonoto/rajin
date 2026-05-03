@@ -186,7 +186,6 @@ function HabitsSection({
 
   const requiredHabits = useMemo(() => habits.filter((h) => !h.is_optional), [habits]);
   const optionalHabits = useMemo(() => habits.filter((h) => h.is_optional), [habits]);
-  const completedCount = requiredHabits.filter((h) => h.completed).length;
 
   const handleDragStart = (event: DragStartEvent) => {
     const dragged = habits.find((h) => h.id === event.active.id);
@@ -391,25 +390,20 @@ function HabitsSection({
   return (
     <section className={cn('animate-stagger-in', optionalHabits.length > 0 ? 'mb-2' : 'mb-6')} style={{ animationDelay: `${animationDelayMs}ms` }}>
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-lg font-semibold text-text-primary">{t(titleKey)}</h2>
-          {requiredHabits.length > 0 && (
-            <span className="text-xs text-text-tertiary font-medium tabular-nums">
-              {completedCount}/{requiredHabits.length}
-            </span>
-          )}
-        </div>
+        <h2 className="text-lg font-semibold text-text-primary">{t(titleKey)}</h2>
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => { setShowAddHabit(true); setEditMode(false); setEditingId(null); }}
-            aria-label={t('common.add')}
-            className="text-text-tertiary p-1.5 rounded-full hover:bg-surface-hover transition-all duration-200"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
+          {(editMode || habits.length === 0) && (
+            <button
+              onClick={() => { setShowAddHabit(true); setEditingId(null); }}
+              aria-label={t('common.add')}
+              className="text-text-tertiary p-1.5 rounded-full hover:bg-surface-hover transition-all duration-200"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          )}
           {habits.length > 0 && (
             <button
               onClick={() => { setEditMode(!editMode); setEditingId(null); }}
@@ -1256,7 +1250,7 @@ export default function DashboardPage() {
   return (
     <div className={cn('max-w-lg mx-auto px-4', isExpanded && 'lg:max-w-5xl lg:px-8')}>
       {ToastContainer}
-      <div className="sticky top-0 z-20 bg-bg flex items-center justify-between pb-4 -mx-4 px-4 pt-[max(env(safe-area-inset-top),0.75rem)]">
+      <div className="sticky top-0 z-20 bg-bg flex items-center justify-between pb-2 -mx-4 px-4 pt-[env(safe-area-inset-top)]">
         <h1 className="text-xl font-bold text-text-primary">{t('nav.overview')}</h1>
         <DateNav date={date} onDateChange={setDate} period={period} onPeriodChange={setPeriod} showPeriodPicker />
       </div>
