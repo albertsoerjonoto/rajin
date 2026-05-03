@@ -1250,7 +1250,7 @@ export default function DashboardPage() {
   return (
     <div className={cn('max-w-lg mx-auto px-4', isExpanded && 'lg:max-w-5xl lg:px-8')}>
       {ToastContainer}
-      <div className="sticky top-0 z-20 bg-bg flex items-center justify-between pb-2 -mx-4 px-4 pt-[env(safe-area-inset-top)]">
+      <div className="sticky top-0 z-20 bg-bg flex items-center justify-between pb-4 -mx-4 px-4 pt-[max(env(safe-area-inset-top),0.75rem)]">
         <h1 className="text-xl font-bold text-text-primary">{t('nav.overview')}</h1>
         <DateNav date={date} onDateChange={setDate} period={period} onPeriodChange={setPeriod} showPeriodPicker />
       </div>
