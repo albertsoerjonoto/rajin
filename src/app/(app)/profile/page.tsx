@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -350,7 +351,7 @@ export default function ProfilePage() {
                 disabled={uploading}
               >
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  <Image src={avatarUrl} alt="Avatar" width={80} height={80} className="w-full h-full object-cover" priority />
                 ) : (
                   <span className="text-2xl font-bold text-white flex items-center justify-center w-full h-full">
                     {initials}
