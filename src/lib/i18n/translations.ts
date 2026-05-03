@@ -155,6 +155,8 @@ export const translations: Translations = {
   'chat.messageTooLong': { id: 'Pesan terlalu panjang (maks 1.000 karakter)', en: 'Message too long (max 1,000 characters)' },
   'chat.failedSave': { id: 'Gagal menyimpan beberapa entri. Coba lagi.', en: 'Failed to save some entries. Please try again.' },
   'chat.failedApply': { id: 'Gagal menerapkan beberapa edit. Coba lagi.', en: 'Failed to apply some edits. Please try again.' },
+  'chat.editTargetMissing': { id: 'Log yang ingin diubah sudah tidak ada. Coba minta perubahan lagi.', en: "The log you wanted to change no longer exists. Please ask for the change again." },
+  'chat.tooManyImages': { id: 'Maks 4 foto per pesan.', en: 'Max 4 photos per message.' },
   'chat.somethingWrong': { id: 'Maaf, terjadi kesalahan. Silakan coba lagi.', en: 'Sorry, something went wrong. Please try again.' },
   'chat.requestTimeout': { id: 'Permintaan terlalu lama. Silakan coba lagi.', en: 'Request timed out. Please try again.' },
   'chat.whatsInPhoto': { id: 'Apa isi foto ini?', en: "What's in this photo?" },

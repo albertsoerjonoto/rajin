@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@/lib/supabase/server';
 import { clamp } from '@/lib/validation';
 import type { ChatContext, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit } from '@/lib/types';
+import { MAX_CHAT_IMAGES_PER_MESSAGE } from '@/lib/chat-helpers';
 
 // Allow up to 60s for Gemini API calls (default Vercel limit is 10s on hobby, 60s on pro)
 export const maxDuration = 60;
@@ -235,6 +236,9 @@ Rules:
 - Use "food_edits"/"exercise_edits"/"drink_edits"/"measurement_edits" when the user wants to CHANGE an existing log. Reference the log by its # index from the context above.
 - CRITICAL EDIT RULE: In "updated", ONLY include the specific field(s) the user asked to change. For example, if the user says "change that to breakfast", return ONLY {"meal_type": "breakfast"} — do NOT also change calories, protein, carbs, or fat unless the user explicitly asked. Never recalculate or adjust fields the user didn't mention.
 - CRITICAL: You CANNOT apply changes yourself. The system applies changes ONLY when you return structured edit data (food_edits, etc.). If the user confirms, corrects, or adjusts a previously suggested edit, you MUST return a NEW food_edit/exercise_edit/drink_edit/measurement_edit with the corrected values. NEVER just say "I've updated it" or "Done" without returning the edit data — that will NOT actually change anything.
+- EDIT INDEX RULE: edit indices MUST come from the "Today's *** logs" section in the context above. Each line starts with "  #N: ..." — use that N as "index". Never invent indices. If the user's request doesn't clearly identify a logged item, ask which one in "message" instead of guessing.
+- MEMORY / FOLLOW-UPS: You receive the recent conversation history. Use it. If the user says "actually that was 700 cal" or "make it breakfast" right after you logged or edited something, treat the most recently mentioned item as the target and return the corresponding edit. Do not ask the user to repeat themselves when the antecedent is obvious from the previous turn.
+- MULTIPLE PHOTOS: when the user attaches more than one image with a single message, treat them as ONE meal/event unless the user clearly distinguishes them. Combine the items you see across all photos into a single "foods" / "drinks" / "exercises" set with combined totals — don't double-log the same item if it appears in more than one photo.
 - Use "message" for answering questions, giving recommendations, or any conversational response. Keep it concise and friendly.
 - CRITICAL LANGUAGE RULE: The "message" field MUST be written in the SAME language the user used. If the user writes in English, the message MUST be in English. If in Bahasa Indonesia, reply in Bahasa Indonesia. If in Chinese, reply in Chinese. Always match the user's language exactly.
 - Multiple arrays can be populated at once (e.g., add new food AND edit an existing one)
@@ -262,7 +266,7 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Input validation ---
-    const { message, context, history, image_url } = await request.json();
+    const { message, context, history, image_url, image_urls } = await request.json();
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -330,23 +334,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Add the current user message, optionally with image
+    // Add the current user message, optionally with image(s).
+    // We accept image_urls (array) — preferred — and image_url (single, legacy).
+    // Cap at 4 to bound Gemini payload size and per-request latency.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userParts: any[] = [{ text: message }];
 
-    if (image_url && typeof image_url === 'string') {
-      // Only fetch images from our own Supabase storage to prevent SSRF
+    const candidateUrls: string[] = [];
+    if (Array.isArray(image_urls)) {
+      for (const url of image_urls) {
+        if (typeof url === 'string' && url.length > 0) candidateUrls.push(url);
+      }
+    }
+    if (candidateUrls.length === 0 && typeof image_url === 'string' && image_url.length > 0) {
+      candidateUrls.push(image_url);
+    }
+
+    if (candidateUrls.length > 0) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (supabaseUrl && image_url.startsWith(supabaseUrl)) {
-        try {
-          const imgResponse = await fetch(image_url, { signal: AbortSignal.timeout(5000) });
-          const imgBuffer = await imgResponse.arrayBuffer();
-          const base64 = Buffer.from(imgBuffer).toString('base64');
-          const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg';
-          userParts.push({ inlineData: { mimeType, data: base64 } });
-        } catch {
-          // If image fetch fails, proceed with text only
-        }
+      const safeUrls = candidateUrls
+        .filter((u) => supabaseUrl && u.startsWith(supabaseUrl))
+        .slice(0, MAX_CHAT_IMAGES_PER_MESSAGE);
+
+      // Fetch images in parallel; preserve input order.
+      const fetched = await Promise.all(
+        safeUrls.map(async (url) => {
+          try {
+            const imgResponse = await fetch(url, { signal: AbortSignal.timeout(5000) });
+            if (!imgResponse.ok) return null;
+            const imgBuffer = await imgResponse.arrayBuffer();
+            const base64 = Buffer.from(imgBuffer).toString('base64');
+            const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg';
+            return { mimeType, data: base64 };
+          } catch {
+            return null;
+          }
+        })
+      );
+      for (const part of fetched) {
+        if (part) userParts.push({ inlineData: part });
       }
     }
 

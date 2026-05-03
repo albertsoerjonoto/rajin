@@ -300,6 +300,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   image_url: string | null;
+  image_urls: string[] | null;
   parsed_foods: ParsedFood[] | null;
   parsed_exercises: ParsedExercise[] | null;
   parsed_drinks: ParsedDrink[] | null;
