@@ -1,6 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { roundFoodUpdate, dbRowToMessage, buildHistory } from './chat-helpers';
+import {
+  roundFoodUpdate,
+  dbRowToMessage,
+  buildHistory,
+  MAX_CHAT_IMAGES_PER_MESSAGE,
+  CHAT_HISTORY_WINDOW,
+} from './chat-helpers';
 import type { ChatMessage } from './types';
+
+describe('exported constants', () => {
+  it('caps per-message image count at 4', () => {
+    // Drift guard — the parse route imports the same constant.
+    expect(MAX_CHAT_IMAGES_PER_MESSAGE).toBe(4);
+  });
+
+  it('keeps history window at 20 messages on both client and server', () => {
+    // Drift guard — server (parse route) and client both slice by this constant.
+    expect(CHAT_HISTORY_WINDOW).toBe(20);
+  });
+});
 
 const baseRow: ChatMessage = {
   id: 'r1',
@@ -141,5 +159,46 @@ describe('buildHistory', () => {
       { id: 'm1', role: 'user', content: 'hi' },
     ]);
     expect(out[0]).toEqual({ role: 'user', content: 'hi' });
+  });
+
+  it('drops the welcome stub even when it is not at index 0', () => {
+    // Defensive — the welcome bubble is ALWAYS index 0 in production today, but
+    // a future refactor could reshuffle. Filter must not rely on position.
+    const out = buildHistory([
+      { id: 'm0', role: 'user', content: 'first' },
+      { id: 'welcome', role: 'assistant', content: 'how can I help?' },
+      { id: 'm2', role: 'user', content: 'second' },
+    ]);
+    expect(out.map((m) => m.content)).toEqual(['first', 'second']);
+  });
+
+  it('drops every error- bubble while keeping their neighbours intact', () => {
+    const out = buildHistory([
+      { id: 'm1', role: 'user', content: 'q1' },
+      { id: 'error-1', role: 'assistant', content: 'transient fail 1' },
+      { id: 'm2', role: 'user', content: 'q2' },
+      { id: 'error-2', role: 'assistant', content: 'transient fail 2' },
+      { id: 'm3', role: 'user', content: 'q3' },
+    ]);
+    expect(out.map((m) => m.content)).toEqual(['q1', 'q2', 'q3']);
+  });
+
+  it('keeps message ordering when slicing past the limit', () => {
+    const msgs = Array.from({ length: 25 }, (_, i) => ({
+      id: `m${i}`,
+      role: 'user' as const,
+      content: `msg-${i}`,
+    }));
+    const out = buildHistory(msgs, 5);
+    expect(out.map((m) => m.content)).toEqual(['msg-20', 'msg-21', 'msg-22', 'msg-23', 'msg-24']);
+  });
+
+  it('uses CHAT_HISTORY_WINDOW (20) when called with no explicit limit', () => {
+    const msgs = Array.from({ length: 30 }, (_, i) => ({
+      id: `m${i}`,
+      role: 'user' as const,
+      content: `msg-${i}`,
+    }));
+    expect(buildHistory(msgs)).toHaveLength(20);
   });
 });

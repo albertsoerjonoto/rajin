@@ -3,7 +3,16 @@ import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@/lib/supabase/server';
 import { clamp } from '@/lib/validation';
 import type { ChatContext, FoodEdit, ExerciseEdit, DrinkEdit, MeasurementEdit } from '@/lib/types';
-import { MAX_CHAT_IMAGES_PER_MESSAGE } from '@/lib/chat-helpers';
+import { MAX_CHAT_IMAGES_PER_MESSAGE, CHAT_HISTORY_WINDOW } from '@/lib/chat-helpers';
+import {
+  gatherCandidateImageUrls,
+  isSafeImageUrl,
+  extractJsonString,
+  clampParsedFoods,
+  clampParsedExercises,
+  clampParsedDrinks,
+  clampParsedMeasurements,
+} from '@/lib/parse-helpers';
 
 // Allow up to 60s for Gemini API calls (default Vercel limit is 10s on hobby, 60s on pro)
 export const maxDuration = 60;
@@ -296,7 +305,7 @@ export async function POST(request: NextRequest) {
     const contents: { role: 'user' | 'model'; parts: any[] }[] = [];
 
     if (Array.isArray(history)) {
-      for (const msg of history.slice(-10)) {
+      for (const msg of history.slice(-CHAT_HISTORY_WINDOW)) {
         if (msg.role === 'user' && typeof msg.content === 'string') {
           contents.push({ role: 'user', parts: [{ text: msg.content }] });
         } else if (msg.role === 'assistant' && typeof msg.content === 'string') {
@@ -340,20 +349,12 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userParts: any[] = [{ text: message }];
 
-    const candidateUrls: string[] = [];
-    if (Array.isArray(image_urls)) {
-      for (const url of image_urls) {
-        if (typeof url === 'string' && url.length > 0) candidateUrls.push(url);
-      }
-    }
-    if (candidateUrls.length === 0 && typeof image_url === 'string' && image_url.length > 0) {
-      candidateUrls.push(image_url);
-    }
+    const candidateUrls = gatherCandidateImageUrls({ image_urls, image_url });
 
     if (candidateUrls.length > 0) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const safeUrls = candidateUrls
-        .filter((u) => supabaseUrl && u.startsWith(supabaseUrl))
+        .filter((u) => isSafeImageUrl(u, supabaseUrl))
         .slice(0, MAX_CHAT_IMAGES_PER_MESSAGE);
 
       // Fetch images in parallel; preserve input order.
@@ -394,19 +395,7 @@ export async function POST(request: NextRequest) {
     // Extract JSON from the response (handle markdown code blocks, or raw JSON)
     let parsed: Record<string, unknown>;
     try {
-      let jsonStr = text;
-      // Try markdown code block first
-      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[1].trim();
-      } else {
-        // Try to find JSON object in the text (Gemini sometimes adds explanation around it)
-        const braceMatch = text.match(/\{[\s\S]*\}/);
-        if (braceMatch) {
-          jsonStr = braceMatch[0];
-        }
-      }
-      parsed = JSON.parse(jsonStr);
+      parsed = JSON.parse(extractJsonString(text));
     } catch {
       // JSON parse failed — Gemini returned plain text. Wrap it as a message response.
       console.warn('Gemini returned non-JSON response, wrapping as message:', text.substring(0, 200));
@@ -426,51 +415,11 @@ export async function POST(request: NextRequest) {
     // --- Validate and clamp parsed output ---
     const responseMessage = typeof parsed.message === 'string' ? parsed.message : null;
 
-    const foods = Array.isArray(parsed.foods)
-      ? parsed.foods.map((f: Record<string, unknown>) => ({
-          description: typeof f.description === 'string' ? f.description : 'Unknown food',
-          meal_type: ['breakfast', 'lunch', 'dinner', 'snack'].includes(f.meal_type as string)
-            ? f.meal_type
-            : 'lunch',
-          // food_logs columns are INTEGER — round so inserts don't fail on decimals.
-          calories: Math.round(clamp(Number(f.calories) || 0, 0, 20000)),
-          protein_g: Math.round(clamp(Number(f.protein_g) || 0, 0, 5000)),
-          carbs_g: Math.round(clamp(Number(f.carbs_g) || 0, 0, 5000)),
-          fat_g: Math.round(clamp(Number(f.fat_g) || 0, 0, 5000)),
-        }))
-      : [];
-
-    const exercises = Array.isArray(parsed.exercises)
-      ? parsed.exercises.map((e: Record<string, unknown>) => ({
-          exercise_type: typeof e.exercise_type === 'string' ? e.exercise_type : 'Exercise',
-          duration_minutes: clamp(Number(e.duration_minutes) || 0, 0, 1440),
-          calories_burned: clamp(Number(e.calories_burned) || 0, 0, 20000),
-          notes: typeof e.notes === 'string' ? e.notes : '',
-        }))
-      : [];
-
+    const foods = clampParsedFoods(parsed.foods);
+    const exercises = clampParsedExercises(parsed.exercises);
     const DRINK_TYPES = ['water', 'coffee', 'tea', 'juice', 'soda', 'milk', 'other'];
-    const drinks = Array.isArray(parsed.drinks)
-      ? parsed.drinks.map((d: Record<string, unknown>) => ({
-          description: typeof d.description === 'string' ? d.description : 'Unknown drink',
-          drink_type: DRINK_TYPES.includes(d.drink_type as string)
-            ? d.drink_type
-            : 'other',
-          volume_ml: clamp(Number(d.volume_ml) || 250, 0, 10000),
-          calories: clamp(Number(d.calories) || 0, 0, 20000),
-          protein_g: clamp(Number(d.protein_g) || 0, 0, 5000),
-          carbs_g: clamp(Number(d.carbs_g) || 0, 0, 5000),
-          fat_g: clamp(Number(d.fat_g) || 0, 0, 5000),
-        }))
-      : [];
-
-    const measurements = Array.isArray(parsed.measurements)
-      ? parsed.measurements.map((m: Record<string, unknown>) => ({
-          height_cm: m.height_cm !== null && m.height_cm !== undefined ? clamp(Number(m.height_cm) || 0, 50, 300) : null,
-          weight_kg: m.weight_kg !== null && m.weight_kg !== undefined ? clamp(Number(m.weight_kg) || 0, 10, 500) : null,
-          notes: typeof m.notes === 'string' ? m.notes : null,
-        })).filter((m: { height_cm: number | null; weight_kg: number | null }) => m.height_cm !== null || m.weight_kg !== null)
-      : [];
+    const drinks = clampParsedDrinks(parsed.drinks);
+    const measurements = clampParsedMeasurements(parsed.measurements);
 
     // --- Process edits: map indices to real log IDs ---
     const foodEdits: FoodEdit[] = [];
