@@ -8,8 +8,6 @@ Ordered list of tasks the loop picks from when no user is driving. Newer tasks a
 
 - [ ] **Convert remaining `useEffect` data fetches to `use()` + Suspense** — React 19 supports it, eliminates loading-state boilerplate, and makes the dashboard feel faster on warm nav. Start with friends + log + chat pages.
 
-- [ ] **Wire `deploy.yml` GitHub Actions workflow** — Vercel deploys on push to main automatically (GitHub integration), but a post-deploy smoke + Lighthouse run on the prod URL would catch deploy-time regressions. Use the `VERCEL_TOKEN` already in secrets.
-
 - [ ] **Sentry or `web-vitals` → Supabase RUM table** — wire client-side LCP/CLS/INP reporting so we have a real-user signal, not just lab Lighthouse.
 
 - [ ] **Add seeded test user for authenticated Playwright flows** — the smoke tests currently cover only public routes. Add a CI-only Supabase project (or seed via service-role) so we can E2E test the dashboard / log / chat happy path.
@@ -34,4 +32,6 @@ Ordered list of tasks the loop picks from when no user is driving. Newer tasks a
 - [x] **Optional habits, collapsed by default on Overview** — adds `is_optional` flag (migration 024); per-section chevron only when optional items exist; counter excludes optional. PR #54.
 - [x] **`<img>` → `next/image` for avatars + chat photos** — adds Supabase Storage `remotePatterns`, profile avatar gets `priority` hint, chat attached image preserves fluid aspect via auto width/height + `max-h-48`. PR #58.
 - [x] **`@next/bundle-analyzer`** — `npm run analyze` exposes per-route bundle composition for Turbopack builds. PR #66.
+- [x] **`deploy.yml` post-deploy verification** — listens for Vercel's `deployment_status` success on Production; runs smoke (`/`, `/login`, `/signup`) + Lighthouse on the real prod URL with the same lhci budgets. PR #71.
+- [x] **`measurement_logs` (user_id, date) index** — found by `EXPLAIN ANALYZE` audit; was Seq Scan + Filter, now Index Scan once data grows past planner's threshold. Migration 026, PR #70.
 - [x] **RLS / hot-path audit** — `EXPLAIN ANALYZE` on day-view tables (`food_logs`, `exercise_logs`, `drink_logs`, `habit_logs`, `measurement_logs`, `chat_messages`). Only finding: `measurement_logs` had only its pkey, no `(user_id, date)` index; planner was Seq Scan + Filter. Migration 026 adds the composite. Other tables already use Index Scan via migration 022 + the explicit `idx_*_user_date` indexes from migration 001.
