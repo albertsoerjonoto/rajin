@@ -389,7 +389,7 @@ function HabitsSection({
   );
 
   return (
-    <section className="mb-6 animate-stagger-in" style={{ animationDelay: `${animationDelayMs}ms` }}>
+    <section className={cn('animate-stagger-in', optionalHabits.length > 0 ? 'mb-3' : 'mb-6')} style={{ animationDelay: `${animationDelayMs}ms` }}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-baseline gap-2">
           <h2 className="text-lg font-semibold text-text-primary">{t(titleKey)}</h2>
