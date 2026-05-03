@@ -9,6 +9,18 @@ export type FeedEventType = 'habit_completed' | 'streak_milestone' | 'friend_add
 export type Locale = 'id' | 'en';
 export type DesktopLayout = 'compact' | 'expanded';
 export type HabitCategory = 'habit' | 'supplement' | 'skincare' | 'superfood';
+export type DashboardSectionId =
+  | 'habits'
+  | 'supplements'
+  | 'skincare'
+  | 'superfoods'
+  | 'diet'
+  | 'exercise';
+
+export interface DashboardSection {
+  id: DashboardSectionId;
+  visible: boolean;
+}
 
 export interface Profile {
   id: string;
@@ -27,6 +39,7 @@ export interface Profile {
   daily_water_goal_ml: number;
   locale: Locale;
   desktop_layout: DesktopLayout;
+  dashboard_sections: DashboardSection[] | null;
   created_at: string;
 }
 
