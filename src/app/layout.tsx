@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import Providers from './providers';
 import './globals.css';
 
@@ -61,6 +62,11 @@ export default function RootLayout({
       </head>
       <body className={`${GeistSans.variable} font-sans antialiased bg-bg text-text-primary`}>
         <Providers>{children}</Providers>
+        {/* Real-user Core Web Vitals reporting. No-op in dev; in prod
+            posts LCP/CLS/INP/FCP/TTFB to Vercel Speed Insights so we
+            see how the iPhone PWA actually feels in Jakarta — beats
+            Lighthouse Lantern's pessimistic projections. */}
+        <SpeedInsights />
       </body>
     </html>
   );
