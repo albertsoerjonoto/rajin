@@ -495,8 +495,8 @@ export default function ChatPage() {
       supabase.from('food_logs').select('id,description,meal_type,calories,protein_g,carbs_g,fat_g').eq('user_id', user.id).eq('date', today).order('created_at'),
       supabase.from('exercise_logs').select('id,exercise_type,duration_minutes,calories_burned').eq('user_id', user.id).eq('date', today).order('created_at'),
       supabase.from('drink_logs').select('id,drink_type,description,volume_ml,calories,protein_g,carbs_g,fat_g').eq('user_id', user.id).eq('date', today).order('created_at'),
-      supabase.from('habits').select('id,name,emoji').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
-      supabase.from('habit_logs').select('habit_id,completed,logged_at').eq('user_id', user.id).eq('date', today),
+      supabase.from('habits').select('id,name,emoji,product_name').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
+      supabase.from('habit_logs').select('habit_id,completed,logged_at,product_name').eq('user_id', user.id).eq('date', today),
       supabase.from('measurement_logs').select('id,height_cm,weight_kg,notes,logged_at').eq('user_id', user.id).eq('date', today).order('logged_at', { ascending: false }),
     ]);
 
@@ -584,8 +584,8 @@ export default function ChatPage() {
         carbs_g: log.carbs_g,
         fat_g: log.fat_g,
       })),
-      todayHabitLogs: habitsData.map((habit: { id: string; name: string; emoji: string }, i: number) => {
-        const log = habitLogsData.find((l: { habit_id: string }) => l.habit_id === habit.id);
+      todayHabitLogs: habitsData.map((habit: { id: string; name: string; emoji: string; product_name: string | null }, i: number) => {
+        const log = habitLogsData.find((l: { habit_id: string }) => l.habit_id === habit.id) as { habit_id: string; completed: boolean; logged_at: string | null; product_name: string | null } | undefined;
         return {
           index: i + 1,
           id: habit.id,
@@ -593,6 +593,7 @@ export default function ChatPage() {
           emoji: habit.emoji,
           completed: log?.completed ?? false,
           logged_at: log?.logged_at ?? null,
+          product_name: log?.product_name ?? habit.product_name ?? null,
         };
       }),
       todayMeasurementLogs: measurementLogs.map((log: { id: string; height_cm: number | null; weight_kg: number | null; notes: string | null; logged_at: string }, i: number) => ({
