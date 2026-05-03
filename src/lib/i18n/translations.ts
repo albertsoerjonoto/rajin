@@ -197,6 +197,11 @@ export const translations: Translations = {
   'profile.desktopLayout': { id: 'Tata Letak Desktop', en: 'Desktop Layout' },
   'profile.compact': { id: 'Kompak', en: 'Compact' },
   'profile.expanded': { id: 'Lebar', en: 'Expanded' },
+  'profile.customizeOverview': { id: 'Sesuaikan Dashboard', en: 'Customize Overview' },
+  'profile.dragToReorder': {
+    id: 'Seret untuk mengurutkan ulang. Gunakan switch untuk menyembunyikan bagian.',
+    en: 'Drag to reorder. Use the switch to hide a section.',
+  },
   'profile.saveChanges': { id: 'Simpan Perubahan', en: 'Save Changes' },
   'profile.signOut': { id: 'Keluar', en: 'Sign Out' },
   'profile.deleteAccount': { id: 'Hapus Akun', en: 'Delete Account' },

@@ -17,7 +17,16 @@ import { compressAvatar } from '@/lib/image';
 import { useLocale } from '@/lib/i18n';
 import { useDesktopLayout } from '@/hooks/useDesktopLayout';
 import { useTour } from '@/components/tour/useTour';
-import type { Profile, Gender, Locale } from '@/lib/types';
+import type { Profile, Gender, Locale, DashboardSection } from '@/lib/types';
+import { resolveSections } from '@/lib/dashboard-sections';
+import dynamic from 'next/dynamic';
+
+// Loaded only when the user opens the profile page; keeps dnd-kit out of any
+// route that doesn't show the customizer.
+const SectionCustomizer = dynamic(() => import('@/components/SectionCustomizer'), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-surface rounded-2xl animate-pulse" aria-hidden />,
+});
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -37,6 +46,7 @@ export default function ProfilePage() {
   const [heightCm, setHeightCm] = useState('');
   const [weightKg, setWeightKg] = useState('');
   const [waterGoalMl, setWaterGoalMl] = useState('2000');
+  const [dashboardSections, setDashboardSections] = useState<DashboardSection[]>(() => resolveSections(null));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -75,6 +85,7 @@ export default function ProfilePage() {
     setHeightCm(p.height_cm ? String(p.height_cm) : '');
     setWeightKg(p.weight_kg ? String(p.weight_kg) : '');
     if (p.desktop_layout) setDesktopLayout(p.desktop_layout);
+    setDashboardSections(resolveSections(p.dashboard_sections));
   };
 
   useEffect(() => {
@@ -202,6 +213,10 @@ export default function ProfilePage() {
 
       if (profile && 'desktop_layout' in profile) {
         payload.desktop_layout = desktopLayout;
+      }
+
+      if (profile && 'dashboard_sections' in profile) {
+        payload.dashboard_sections = dashboardSections;
       }
 
       // Body stats and other nullable fields — always safe to include
@@ -705,6 +720,15 @@ export default function ProfilePage() {
           </div>
           </div>{/* end Body Stats column */}
           </div>{/* end 2-column grid wrapper */}
+
+          {/* Dashboard section customization */}
+          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider px-1 mt-8 mb-2">
+            {t('profile.customizeOverview')}
+          </p>
+          <SectionCustomizer
+            sections={dashboardSections}
+            onChange={setDashboardSections}
+          />
 
           {/* Display section — only visible on desktop */}
           <div className="hidden lg:block">
