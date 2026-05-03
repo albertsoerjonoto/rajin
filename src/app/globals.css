@@ -157,11 +157,11 @@
 
 /* iOS safe area support */
 .safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
 }
 
 .bottom-nav-offset {
-  bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(3rem + max(env(safe-area-inset-bottom, 0px), 0.5rem));
 }
 
 /* ── Animations ── */
