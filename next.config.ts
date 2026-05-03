@@ -10,6 +10,18 @@ const nextConfig: NextConfig = {
       '@dnd-kit/utilities',
     ],
   },
+  // Avatars and chat images are served from Supabase Storage; allow the
+  // image optimizer to fetch them so next/image can emit responsive
+  // srcsets and modern formats (avif/webp).
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
   async headers() {
     return [
       {

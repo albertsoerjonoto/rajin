@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, cn, getDateRange, getDatesInRange } from '@/lib/utils';
@@ -328,7 +329,7 @@ function HabitsSection({
               <div className="flex items-center gap-0.5 shrink-0 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-full px-1 py-0.5">
                 <div className="w-3.5 h-3.5 rounded-full bg-accent/10 border border-white flex items-center justify-center">
                   {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+                    <Image src={profile.avatar_url} alt="" width={14} height={14} className="w-3.5 h-3.5 rounded-full object-cover" />
                   ) : (
                     <span className="text-[5px] font-bold text-accent">{(profile?.display_name ?? '?')[0].toUpperCase()}</span>
                   )}
@@ -336,7 +337,7 @@ function HabitsSection({
                 <span className="text-[9px] font-bold text-orange-600 dark:text-orange-400">🔥{sharedStreakCount}</span>
                 <div className="w-3.5 h-3.5 rounded-full bg-accent/10 border border-white flex items-center justify-center">
                   {friend.avatar_url ? (
-                    <img src={friend.avatar_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+                    <Image src={friend.avatar_url} alt="" width={14} height={14} className="w-3.5 h-3.5 rounded-full object-cover" />
                   ) : (
                     <span className="text-[5px] font-bold text-accent">{(friend.display_name ?? '?')[0].toUpperCase()}</span>
                   )}
@@ -350,7 +351,7 @@ function HabitsSection({
               {sharedFriends.slice(0, 2).map(f => (
                 <div key={f.id} className="w-4 h-4 rounded-full bg-accent/10 border border-surface flex items-center justify-center">
                   {f.avatar_url ? (
-                    <img src={f.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                    <Image src={f.avatar_url} alt="" width={16} height={16} className="w-4 h-4 rounded-full object-cover" />
                   ) : (
                     <span className="text-[6px] font-bold text-accent">{(f.display_name ?? '?')[0].toUpperCase()}</span>
                   )}
@@ -624,7 +625,7 @@ function HabitsSection({
                                 >
                                   <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
                                     {friend.avatar_url ? (
-                                      <img src={friend.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                                      <Image src={friend.avatar_url} alt="" width={24} height={24} className="w-6 h-6 rounded-full object-cover" />
                                     ) : (
                                       <span className="text-[10px] font-semibold text-accent">{(friend.display_name ?? '?')[0].toUpperCase()}</span>
                                     )}

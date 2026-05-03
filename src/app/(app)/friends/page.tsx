@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import { useLocale } from '@/lib/i18n';
@@ -983,14 +984,17 @@ export default function FriendsPage() {
 
 function Avatar({ url, name, size = 'md' }: { url: string | null; name: string | null; size?: 'sm' | 'md' }) {
   const initials = (name ?? '?').charAt(0).toUpperCase();
+  const px = size === 'sm' ? 32 : 40;
   const sizeClass = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
   const textClass = size === 'sm' ? 'text-xs' : 'text-sm';
 
   if (url) {
     return (
-      <img
+      <Image
         src={url}
         alt={name ?? 'Avatar'}
+        width={px}
+        height={px}
         className={cn(sizeClass, 'rounded-full object-cover flex-shrink-0')}
       />
     );

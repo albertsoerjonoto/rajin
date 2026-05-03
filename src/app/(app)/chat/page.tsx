@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, memo } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getToday, cn, formatDisplayDate } from '@/lib/utils';
@@ -90,7 +91,15 @@ const MessageBubble = memo(function MessageBubble({ msg, savingId, onButtonClick
         )}
       >
         {msg.imageUrl && (
-          <img src={msg.imageUrl} alt="Attached" className="rounded-xl mb-2 max-h-48 w-auto" />
+          <Image
+            src={msg.imageUrl}
+            alt="Attached"
+            width={400}
+            height={300}
+            className="rounded-xl mb-2 max-h-48 w-auto h-auto"
+            style={{ width: 'auto', height: 'auto', maxHeight: '12rem' }}
+            unoptimized={msg.imageUrl.startsWith('data:')}
+          />
         )}
         {msg.role === 'assistant' ? (
           <MarkdownContent content={msg.content} />
@@ -1255,7 +1264,15 @@ export default function ChatPage() {
         {/* Image preview */}
         {imagePreview && (
           <div className="mb-2 relative inline-block">
-            <img src={imagePreview} alt="Preview" className="h-20 rounded-xl object-cover" />
+            <Image
+              src={imagePreview}
+              alt="Preview"
+              width={120}
+              height={80}
+              className="h-20 w-auto rounded-xl object-cover"
+              style={{ width: 'auto' }}
+              unoptimized
+            />
             <button
               onClick={clearImage}
               className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-text-primary text-bg rounded-full flex items-center justify-center text-xs"
