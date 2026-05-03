@@ -108,7 +108,7 @@ function Row({ section, title, isLast, onToggle }: RowProps) {
       <button
         type="button"
         className="touch-none p-1 -m-1 text-text-tertiary hover:text-text-secondary cursor-grab active:cursor-grabbing"
-        aria-label="Reorder section"
+        aria-label={`Reorder ${title}`}
         {...attributes}
         {...listeners}
       >
@@ -134,6 +134,7 @@ function Row({ section, title, isLast, onToggle }: RowProps) {
         onClick={onToggle}
         role="switch"
         aria-checked={section.visible}
+        aria-label={`Toggle visibility of ${title}`}
         className={cn(
           'relative w-10 h-6 rounded-full transition-colors',
           section.visible ? 'bg-accent' : 'bg-surface-secondary'
