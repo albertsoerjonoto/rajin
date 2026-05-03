@@ -705,9 +705,9 @@ function HabitsSection({
               onClick={() => setShowOptional(!showOptional)}
               aria-expanded={showOptional}
               aria-label={t(showOptional ? 'dashboard.hideOptional' : 'dashboard.showOptional')}
-              className="mt-2 mx-auto block py-1.5 px-2 text-text-tertiary hover:text-text-secondary transition-colors"
+              className="mx-auto block py-0.5 px-2 text-text-tertiary hover:text-text-secondary transition-colors"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={cn('transition-transform duration-200', showOptional && 'rotate-180')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={cn('transition-transform duration-200', showOptional && 'rotate-180')}>
                 <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
