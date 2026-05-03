@@ -182,7 +182,7 @@ export function PerfTracker() {
       tryLog();
     }
 
-    const fallback = window.setTimeout(tryLog, 2000);
+    const fallback = window.setTimeout(tryLog, 5000);
     return () => window.clearTimeout(fallback);
   }, []);
 
