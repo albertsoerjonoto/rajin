@@ -154,14 +154,20 @@ function HabitsSection({
   const [newHabitEmoji, setNewHabitEmoji] = useState('⭐');
   const [newHabitPrivate, setNewHabitPrivate] = useState(false);
   const [newHabitStreakInterval, setNewHabitStreakInterval] = useState('1');
+  const [newHabitProductName, setNewHabitProductName] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmoji, setEditEmoji] = useState('');
   const [editPrivate, setEditPrivate] = useState(false);
   const [editStreakInterval, setEditStreakInterval] = useState('1');
+  const [editProductName, setEditProductName] = useState('');
   const [activeHabit, setActiveHabit] = useState<HabitWithLog | null>(null);
   const [showShareModal, setShowShareModal] = useState<string | null>(null);
+  const supportsProduct = category === 'supplement' || category === 'skincare';
+  const productPlaceholderKey = category === 'supplement'
+    ? 'dashboard.fullProductPlaceholderSupplement'
+    : 'dashboard.fullProductPlaceholderSkincare';
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -208,6 +214,7 @@ function HabitsSection({
       is_private: newHabitPrivate,
       streak_interval_days: clampInterval(parseInt(newHabitStreakInterval, 10)),
       category,
+      product_name: supportsProduct ? (newHabitProductName.trim() || null) : null,
     });
 
     if (error) {
@@ -219,6 +226,7 @@ function HabitsSection({
     setNewHabitEmoji('⭐');
     setNewHabitPrivate(false);
     setNewHabitStreakInterval('1');
+    setNewHabitProductName('');
     setShowAddHabit(false);
     onChange();
   };
@@ -229,6 +237,7 @@ function HabitsSection({
     setEditEmoji(habit.emoji);
     setEditPrivate(habit.is_private);
     setEditStreakInterval(String(habit.streak_interval_days ?? 1));
+    setEditProductName(habit.product_name ?? '');
   };
 
   const saveEdit = async () => {
@@ -241,6 +250,7 @@ function HabitsSection({
         emoji: editEmoji || '⭐',
         is_private: editPrivate,
         streak_interval_days: clampInterval(parseInt(editStreakInterval, 10)),
+        ...(supportsProduct ? { product_name: editProductName.trim() || null } : {}),
       })
       .eq('id', editingId);
     if (error) {
@@ -305,6 +315,18 @@ function HabitsSection({
               autoFocus
             />
           </div>
+          {supportsProduct && (
+            <div className="mb-3">
+              <input
+                type="text"
+                value={newHabitProductName}
+                onChange={(e) => setNewHabitProductName(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl-strong bg-surface-secondary text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-input-ring"
+                placeholder={t(productPlaceholderKey)}
+              />
+              <p className="text-[11px] text-text-tertiary mt-1.5 leading-snug">{t('dashboard.fullProductHint')}</p>
+            </div>
+          )}
           <div className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setNewHabitPrivate(!newHabitPrivate)}>
             <div
               role="switch"
@@ -379,6 +401,18 @@ function HabitsSection({
                         autoFocus
                       />
                     </div>
+                    {supportsProduct && (
+                      <div className="mb-3">
+                        <input
+                          type="text"
+                          value={editProductName}
+                          onChange={(e) => setEditProductName(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl-strong bg-surface-secondary text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-input-ring"
+                          placeholder={t(productPlaceholderKey)}
+                        />
+                        <p className="text-[11px] text-text-tertiary mt-1.5 leading-snug">{t('dashboard.fullProductHint')}</p>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 mb-3 cursor-pointer" onClick={() => setEditPrivate(!editPrivate)}>
                       <div
                         role="switch"
@@ -934,6 +968,7 @@ export default function DashboardPage() {
             user_id: user.id,
             date: date,
             completed: true,
+            product_name: habit.product_name ?? null,
           })
           .select()
           .single();

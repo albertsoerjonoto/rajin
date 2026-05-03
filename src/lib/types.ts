@@ -41,6 +41,7 @@ export interface Habit {
   streak_interval_days: number;
   sort_order: number;
   category: HabitCategory;
+  product_name: string | null;
   created_at: string;
 }
 
@@ -51,6 +52,7 @@ export interface HabitLog {
   date: string;
   completed: boolean;
   logged_at: string;
+  product_name: string | null;
   created_at: string;
 }
 
@@ -249,7 +251,7 @@ export interface ChatContext {
   todayFoodLogs: { index: number; id: string; description: string; meal_type: MealType; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
   todayExerciseLogs: { index: number; id: string; exercise_type: string; duration_minutes: number; calories_burned: number }[];
   todayDrinkLogs: { index: number; id: string; drink_type: DrinkType; description: string; volume_ml: number; calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
-  todayHabitLogs: { index: number; id: string; habit_name: string; emoji: string; completed: boolean; logged_at: string | null }[];
+  todayHabitLogs: { index: number; id: string; habit_name: string; emoji: string; completed: boolean; logged_at: string | null; product_name?: string | null }[];
   todayMeasurementLogs: { index: number; id: string; height_cm: number | null; weight_kg: number | null; notes: string | null; logged_at: string }[];
   profile: {
     display_name: string | null;
