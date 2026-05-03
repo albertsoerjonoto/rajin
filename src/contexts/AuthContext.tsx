@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import type { Session, User } from '@supabase/supabase-js';
 
 type AuthState = {
@@ -15,26 +16,42 @@ const AuthContext = createContext<AuthState>({
   loading: true,
 });
 
+// Routes that don't need the Supabase SDK on initial mount. These pages
+// either run pre-auth (login/signup) or do their own SDK load on submit
+// (the login/signup page handlers `await import('@/lib/supabase/client')`
+// directly). Skipping the AuthProvider load drops the 47 KB chunk fetch
+// off the auth-page critical path entirely — not just defers it.
+const AUTH_ROUTES = ['/login', '/signup'];
+
+function isPreAuthRoute(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return AUTH_ROUTES.includes(pathname);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const skipLoad = isPreAuthRoute(pathname);
+
   const [state, setState] = useState<AuthState>({
     user: null,
     session: null,
-    loading: true,
+    loading: !skipLoad,
   });
 
   useEffect(() => {
-    // Closure-local flag (not a useRef) so each effect invocation has its own
-    // — prevents StrictMode mount/unmount/mount from leaking a subscription
-    // when the first invocation's async closure resolves after the second
-    // mount has already reset a shared ref.
+    if (skipLoad) {
+      // Pre-auth route: no session work needed. Synchronous resolve so
+      // consumers (none on /login or /signup, but the contract holds)
+      // don't hang on `loading: true`.
+      setState({ user: null, session: null, loading: false });
+      return;
+    }
+
+    // Closure-local flag so each effect invocation has its own —
+    // prevents StrictMode mount/unmount/mount from leaking a subscription.
     let mounted = true;
     let unsubscribe: (() => void) | undefined;
 
-    // Dynamic import keeps `@supabase/ssr` off the auth-page critical path.
-    // login/signup never need the SDK before the user submits a form; authed
-    // pages still get it here, just after first paint instead of blocking it.
-    // The chunk still ships (Next.js preloads it) — what shifts is parse/eval
-    // off the critical chain, which is what Lighthouse penalizes.
     (async () => {
       const { createClient } = await import('@/lib/supabase/client');
       if (!mounted) return;
@@ -62,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       unsubscribe?.();
     };
-  }, []);
+  }, [skipLoad]);
 
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
 }
