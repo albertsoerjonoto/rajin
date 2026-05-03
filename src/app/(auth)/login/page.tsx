@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { useLocale } from '@/lib/i18n';
 
@@ -14,7 +13,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
   const { t, locale, setLocale } = useLocale();
 
   const [initialError] = useState(() => {
@@ -29,10 +27,14 @@ export default function LoginPage() {
     }
   }, [initialError, t]);
 
+  // Lazy-load the Supabase client so the auth-page initial bundle stays small.
+  // The user only needs the SDK when they actually submit the form.
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -50,6 +52,8 @@ export default function LoginPage() {
 
   const handleOAuthLogin = async (provider: 'google' | 'apple') => {
     setError('');
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -86,7 +90,7 @@ export default function LoginPage() {
           ))}
         </div>
       </div>
-      <div className="w-full max-w-sm animate-fade-in">
+      <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-text-primary">{t('auth.appName')}</h1>
           <p className="text-text-secondary mt-2">{t('auth.loginSubtitle')}</p>

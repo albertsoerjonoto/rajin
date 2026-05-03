@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { useLocale } from '@/lib/i18n';
 
@@ -14,9 +13,10 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const supabase = createClient();
   const { t, locale, setLocale } = useLocale();
 
+  // Lazy-load the Supabase client so the auth-page initial bundle stays small.
+  // The user only needs the SDK when they actually submit the form.
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -32,6 +32,8 @@ export default function SignupPage() {
     }
 
     setLoading(true);
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -52,6 +54,8 @@ export default function SignupPage() {
 
   const handleOAuthSignup = async (provider: 'google' | 'apple') => {
     setError('');
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -66,7 +70,7 @@ export default function SignupPage() {
   if (emailSent) {
     return (
       <div className="h-dvh flex items-center justify-center bg-bg px-4 relative overflow-hidden">
-        <div className="w-full max-w-sm text-center animate-fade-in">
+        <div className="w-full max-w-sm text-center">
           <div className="text-5xl mb-4">📧</div>
           <h1 className="text-2xl font-bold text-text-primary mb-2">{t('auth.checkEmail')}</h1>
           <p className="text-text-secondary mb-6">
@@ -105,7 +109,7 @@ export default function SignupPage() {
           ))}
         </div>
       </div>
-      <div className="w-full max-w-sm animate-fade-in">
+      <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-text-primary">{t('auth.appName')}</h1>
           <p className="text-text-secondary mt-2">{t('auth.signupSubtitle')}</p>
