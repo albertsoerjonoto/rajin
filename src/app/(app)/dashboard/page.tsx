@@ -26,7 +26,8 @@ import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDesktopLayout } from '@/hooks/useDesktopLayout';
-import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile, FriendProfile, SharedHabit, SharedStreak, HabitStreak, HabitCategory } from '@/lib/types';
+import type { HabitWithLog, FoodLog, ExerciseLog, DrinkLog, HabitLog, MeasurementLog, Profile, FriendProfile, SharedHabit, SharedStreak, HabitStreak, HabitCategory, DashboardSectionId } from '@/lib/types';
+import { resolveSections } from '@/lib/dashboard-sections';
 import { updateHabitStreak, isStreakMilestone, calculateStreak, updateSharedStreaks } from '@/lib/streaks';
 import { buildDayDataMap } from '@/components/analytics/types';
 import type { DayData } from '@/components/analytics/types';
@@ -1115,6 +1116,11 @@ export default function DashboardPage() {
     superfood: habits.filter((h) => h.category === 'superfood'),
   }), [habits]);
 
+  const visibleSections = useMemo(
+    () => resolveSections(profile?.dashboard_sections).filter((s) => s.visible),
+    [profile?.dashboard_sections]
+  );
+
   // Day view computations
   const totalFoodCalories = foodLogs.reduce((sum, f) => sum + f.calories, 0);
   const totalDrinkCalories = drinkLogs.reduce((sum, d) => sum + d.calories, 0);
@@ -1335,94 +1341,110 @@ export default function DashboardPage() {
           )}
         </div>
       ) : (
-        /* ──── Day View (unchanged) ──── */
+        /* ──── Day View — sections render in user's saved order ──── */
         <>
-          {/* Habits / Supplements / Skincare / Superfoods sections */}
-          <HabitsSection
-            category="habit"
-            titleKey="dashboard.section.habits"
-            addLabelKey="dashboard.addHabit"
-            placeholderKey="dashboard.habitPlaceholder"
-            emptyStateKey="dashboard.noHabits"
-            habits={habitsByCategory.habit}
-            togglingId={togglingId}
-            onToggle={toggleHabit}
-            onChange={fetchData}
-            onShare={shareHabit}
-            getSharedFriends={getSharedFriendsForHabit}
-            streakMap={streakMap}
-            sharedStreakMap={sharedStreakMap}
-            sharedHabits={sharedHabits}
-            acceptedFriends={acceptedFriends}
-            profile={profile}
-            showToast={showToast}
-            animationDelayMs={0}
-          />
-          <HabitsSection
-            category="supplement"
-            titleKey="dashboard.section.supplements"
-            addLabelKey="dashboard.addSupplement"
-            placeholderKey="dashboard.supplementPlaceholder"
-            emptyStateKey="dashboard.noSupplements"
-            habits={habitsByCategory.supplement}
-            togglingId={togglingId}
-            onToggle={toggleHabit}
-            onChange={fetchData}
-            onShare={shareHabit}
-            getSharedFriends={getSharedFriendsForHabit}
-            streakMap={streakMap}
-            sharedStreakMap={sharedStreakMap}
-            sharedHabits={sharedHabits}
-            acceptedFriends={acceptedFriends}
-            profile={profile}
-            showToast={showToast}
-            animationDelayMs={50}
-          />
-          <HabitsSection
-            category="skincare"
-            titleKey="dashboard.section.skincare"
-            addLabelKey="dashboard.addSkincare"
-            placeholderKey="dashboard.skincarePlaceholder"
-            emptyStateKey="dashboard.noSkincare"
-            habits={habitsByCategory.skincare}
-            togglingId={togglingId}
-            onToggle={toggleHabit}
-            onChange={fetchData}
-            onShare={shareHabit}
-            getSharedFriends={getSharedFriendsForHabit}
-            streakMap={streakMap}
-            sharedStreakMap={sharedStreakMap}
-            sharedHabits={sharedHabits}
-            acceptedFriends={acceptedFriends}
-            profile={profile}
-            showToast={showToast}
-            animationDelayMs={100}
-          />
-          <HabitsSection
-            category="superfood"
-            titleKey="dashboard.section.superfoods"
-            addLabelKey="dashboard.addSuperfood"
-            placeholderKey="dashboard.superfoodPlaceholder"
-            emptyStateKey="dashboard.noSuperfoods"
-            habits={habitsByCategory.superfood}
-            togglingId={togglingId}
-            onToggle={toggleHabit}
-            onChange={fetchData}
-            onShare={shareHabit}
-            getSharedFriends={getSharedFriendsForHabit}
-            streakMap={streakMap}
-            sharedStreakMap={sharedStreakMap}
-            sharedHabits={sharedHabits}
-            acceptedFriends={acceptedFriends}
-            profile={profile}
-            showToast={showToast}
-            animationDelayMs={150}
-          />
-
-          {/* Diet + Exercise wrapper — side by side on desktop */}
-          <div className={cn(isExpanded && 'lg:grid lg:grid-cols-3 lg:gap-6')}>
-          {/* Diet Section */}
-          <section className={cn('mb-6 animate-stagger-in', isExpanded && 'lg:col-span-2 lg:mb-0')} style={{ animationDelay: '50ms' }}>
+          {visibleSections.map((section, idx) => {
+            const delay = idx * 50;
+            switch (section.id as DashboardSectionId) {
+              case 'habits':
+                return (
+                  <HabitsSection
+                    key="habits"
+                    category="habit"
+                    titleKey="dashboard.section.habits"
+                    addLabelKey="dashboard.addHabit"
+                    placeholderKey="dashboard.habitPlaceholder"
+                    emptyStateKey="dashboard.noHabits"
+                    habits={habitsByCategory.habit}
+                    togglingId={togglingId}
+                    onToggle={toggleHabit}
+                    onChange={fetchData}
+                    onShare={shareHabit}
+                    getSharedFriends={getSharedFriendsForHabit}
+                    streakMap={streakMap}
+                    sharedStreakMap={sharedStreakMap}
+                    sharedHabits={sharedHabits}
+                    acceptedFriends={acceptedFriends}
+                    profile={profile}
+                    showToast={showToast}
+                    animationDelayMs={delay}
+                  />
+                );
+              case 'supplements':
+                return (
+                  <HabitsSection
+                    key="supplements"
+                    category="supplement"
+                    titleKey="dashboard.section.supplements"
+                    addLabelKey="dashboard.addSupplement"
+                    placeholderKey="dashboard.supplementPlaceholder"
+                    emptyStateKey="dashboard.noSupplements"
+                    habits={habitsByCategory.supplement}
+                    togglingId={togglingId}
+                    onToggle={toggleHabit}
+                    onChange={fetchData}
+                    onShare={shareHabit}
+                    getSharedFriends={getSharedFriendsForHabit}
+                    streakMap={streakMap}
+                    sharedStreakMap={sharedStreakMap}
+                    sharedHabits={sharedHabits}
+                    acceptedFriends={acceptedFriends}
+                    profile={profile}
+                    showToast={showToast}
+                    animationDelayMs={delay}
+                  />
+                );
+              case 'skincare':
+                return (
+                  <HabitsSection
+                    key="skincare"
+                    category="skincare"
+                    titleKey="dashboard.section.skincare"
+                    addLabelKey="dashboard.addSkincare"
+                    placeholderKey="dashboard.skincarePlaceholder"
+                    emptyStateKey="dashboard.noSkincare"
+                    habits={habitsByCategory.skincare}
+                    togglingId={togglingId}
+                    onToggle={toggleHabit}
+                    onChange={fetchData}
+                    onShare={shareHabit}
+                    getSharedFriends={getSharedFriendsForHabit}
+                    streakMap={streakMap}
+                    sharedStreakMap={sharedStreakMap}
+                    sharedHabits={sharedHabits}
+                    acceptedFriends={acceptedFriends}
+                    profile={profile}
+                    showToast={showToast}
+                    animationDelayMs={delay}
+                  />
+                );
+              case 'superfoods':
+                return (
+                  <HabitsSection
+                    key="superfoods"
+                    category="superfood"
+                    titleKey="dashboard.section.superfoods"
+                    addLabelKey="dashboard.addSuperfood"
+                    placeholderKey="dashboard.superfoodPlaceholder"
+                    emptyStateKey="dashboard.noSuperfoods"
+                    habits={habitsByCategory.superfood}
+                    togglingId={togglingId}
+                    onToggle={toggleHabit}
+                    onChange={fetchData}
+                    onShare={shareHabit}
+                    getSharedFriends={getSharedFriendsForHabit}
+                    streakMap={streakMap}
+                    sharedStreakMap={sharedStreakMap}
+                    sharedHabits={sharedHabits}
+                    acceptedFriends={acceptedFriends}
+                    profile={profile}
+                    showToast={showToast}
+                    animationDelayMs={delay}
+                  />
+                );
+              case 'diet':
+                return (
+          <section key="diet" className="mb-6 animate-stagger-in" style={{ animationDelay: `${delay}ms` }}>
             <h2 className="text-lg font-semibold text-text-primary mb-3">{t('dashboard.diet')}</h2>
             <div className="bg-surface rounded-2xl p-5" data-tour="diet-card">
               {/* Calorie Summary */}
@@ -1612,9 +1634,10 @@ export default function DashboardPage() {
               )}
             </div>
           </section>
-
-          {/* Exercise Section */}
-          <section className={cn('mb-6 animate-stagger-in', isExpanded && 'lg:col-span-1 lg:mb-0')} style={{ animationDelay: '100ms' }}>
+                );
+              case 'exercise':
+                return (
+          <section key="exercise" className="mb-6 animate-stagger-in" style={{ animationDelay: `${delay}ms` }}>
             <h2 className="text-lg font-semibold text-text-primary mb-3">{t('dashboard.exercise')}</h2>
             <div className="bg-surface rounded-2xl p-5">
               {exerciseLogs.length === 0 ? (
@@ -1650,7 +1673,11 @@ export default function DashboardPage() {
               )}
             </div>
           </section>
-          </div>{/* end diet+exercise grid wrapper */}
+                );
+              default:
+                return null;
+            }
+          })}
         </>
       )}
     </div>
