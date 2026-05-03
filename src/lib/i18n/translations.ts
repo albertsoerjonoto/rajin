@@ -366,6 +366,8 @@ export const translations: Translations = {
   'emoji.objects': { id: 'Benda', en: 'Objects' },
   'emoji.travel': { id: 'Perjalanan', en: 'Travel' },
   'emoji.flags': { id: 'Bendera', en: 'Flags' },
+  'emoji.search': { id: 'Cari emoji…', en: 'Search emojis…' },
+  'emoji.noResults': { id: 'Tidak ada hasil', en: 'No results' },
 
   // ── Log page habits tab ──
   'log.habits': { id: '✅ Kebiasaan', en: '✅ Habits' },
