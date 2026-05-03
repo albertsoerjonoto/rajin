@@ -8,8 +8,6 @@ Ordered list of tasks the loop picks from when no user is driving. Newer tasks a
 
 - [ ] **Convert remaining `useEffect` data fetches to `use()` + Suspense** — React 19 supports it, eliminates loading-state boilerplate, and makes the dashboard feel faster on warm nav. Start with friends + log + chat pages.
 
-- [ ] **Move static images to `next/image` with priority hints** — the `<img>` tags flagged by lint are friend avatars and chat images; use `next/image` with `loading="lazy"` and intrinsic sizing for LCP.
-
 - [ ] **Add `@next/bundle-analyzer`** so `scripts/check-bundle.mjs` has accurate per-route data and the 200 KB First Load JS budget actually bites.
 
 - [ ] **Wire `deploy.yml` GitHub Actions workflow** — Vercel deploys on push to main automatically (GitHub integration), but a post-deploy smoke + Lighthouse run on the prod URL would catch deploy-time regressions. Use the `VERCEL_TOKEN` already in secrets.
@@ -37,3 +35,5 @@ Ordered list of tasks the loop picks from when no user is driving. Newer tasks a
 - [x] **Pre-existing tour lint errors** — eslint-disable with rationale (PR #48). Long-term refactor to `useSyncExternalStore` if React 19 ever inlines that path.
 - [x] **Apply migration 022_perf_indexes to production** — applied 2026-05-03 via Supabase Management API.
 - [x] **Cycle 2: signup/login LCP 3137 → 2714ms (-13%)** — lazy-loaded Supabase SDK on form submit instead of at module scope; lifted TourProvider out of root providers into (app)/layout (auth pages no longer pay tour cost); removed `animate-fade-in` opacity gate on auth-page hero. Lighthouse budget ratcheted: Perf ≥0.92, LCP <3200ms, TBT <200ms, FCP <1500ms (warn).
+- [x] **Optional habits, collapsed by default on Overview** — adds `is_optional` flag (migration 024); per-section chevron only when optional items exist; counter excludes optional. PR #54.
+- [x] **`<img>` → `next/image` for avatars + chat photos** — adds Supabase Storage `remotePatterns`, profile avatar gets `priority` hint, chat attached image preserves fluid aspect via auto width/height + `max-h-48`. PR #58.
