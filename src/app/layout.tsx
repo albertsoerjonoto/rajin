@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import Providers from './providers';
 import './globals.css';
 
@@ -61,6 +62,12 @@ export default function RootLayout({
       </head>
       <body className={`${GeistSans.variable} font-sans antialiased bg-bg text-text-primary`}>
         <Providers>{children}</Providers>
+        {/* Real-user Core Web Vitals reporting on Vercel deploys.
+            Gated on NEXT_PUBLIC_VERCEL_ENV so the script doesn't 404
+            in non-Vercel environments (Playwright CI, localhost) —
+            its loader fetches /_vercel/speed-insights/script.js which
+            only exists when served by Vercel. */}
+        {process.env.NEXT_PUBLIC_VERCEL_ENV && <SpeedInsights />}
       </body>
     </html>
   );
