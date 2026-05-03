@@ -392,7 +392,7 @@ function HabitsSection({
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold text-text-primary">{t(titleKey)}</h2>
         <div className="flex items-center gap-1">
-          {editMode && (
+          {(editMode || habits.length === 0) && (
             <button
               onClick={() => { setShowAddHabit(true); setEditingId(null); }}
               aria-label={t('common.add')}
