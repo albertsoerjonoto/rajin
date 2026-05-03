@@ -60,16 +60,18 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const indexRef = useRef(0);
   const restoredRef = useRef(false);
 
-  // Restore tour progress from localStorage on mount
+  // Restore tour progress from localStorage on mount. Synchronous setState
+  // here is the right shape: localStorage is an external system being read
+  // once at mount, exactly the case the rule docs call out as fine.
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
     const progress = loadTourProgress();
     if (progress?.active && progress.stepIndex < tourSteps.length) {
       indexRef.current = progress.stepIndex;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentStepIndex(progress.stepIndex);
       setIsActive(true);
-      // Navigate to the step's page if it has one
       const step = tourSteps[progress.stepIndex];
       if (step.navigateTo) {
         router.replace(step.navigateTo);

@@ -22,6 +22,12 @@ export function TourBubble({ spotlight }: TourBubbleProps) {
   useEffect(() => {
     if (prevStepRef.current !== currentStepIndex) {
       prevStepRef.current = currentStepIndex;
+      // The synchronous setState is intentional: we need React to commit a
+      // frame with `animating:false` so the CSS transition has a clean
+      // starting state, then the double-rAF re-applies `animating:true` on
+      // the next two frames to retrigger the fade-in. Disabling the lint
+      // here is correct — the alternative (useTransition) loses the frame.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAnimating(false);
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {

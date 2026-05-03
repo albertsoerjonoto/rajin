@@ -13,6 +13,8 @@ concurrency:
 
 env:
   NODE_VERSION: '20'
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
 
 jobs:
   lint-typecheck-test:
@@ -41,25 +43,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - run: npm ci
-      - name: Build (production)
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
-        run: npm run build
-      - name: Bundle budget
-        run: npm run check:bundle
-      - name: Upload .next artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: next-build
-          path: .next
-          retention-days: 1
+      - run: npm run build
+      - run: npm run check:bundle
 
   e2e:
     name: Playwright Smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -68,18 +58,11 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Download build
-        uses: actions/download-artifact@v4
-        with:
-          name: next-build
-          path: .next
+      - run: npm run build
       - name: Start server + run smoke
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
         run: |
           npx next start &
-          npx wait-on http://localhost:3000/login --timeout 60000
+          npx -y wait-on http://localhost:3000/login --timeout 60000
           npm run test:e2e -- --project=mobile-chromium
       - uses: actions/upload-artifact@v4
         if: always()
@@ -92,7 +75,6 @@ jobs:
     name: Lighthouse CI
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -100,16 +82,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - run: npm ci
-      - name: Download build
-        uses: actions/download-artifact@v4
-        with:
-          name: next-build
-          path: .next
+      - run: npm run build
       - name: Start server + lhci
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
         run: |
           npx next start &
-          npx wait-on http://localhost:3000/login --timeout 60000
+          npx -y wait-on http://localhost:3000/login --timeout 60000
           npm run lhci
