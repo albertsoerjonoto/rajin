@@ -114,18 +114,21 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         'fixed bottom-0 left-0 right-0 bg-nav-bg backdrop-blur-md safe-area-bottom z-50',
         isExpanded ? 'sm:hidden' : ''
       )}>
-        <div className="max-w-lg mx-auto flex justify-around items-center h-16">
+        <div className="max-w-lg mx-auto flex justify-around items-center h-12">
           {TAB_DEFS.map((tab) => {
             const isTabActive = pathname === tab.href;
             const showBadge = tab.href === '/friends' && pendingCount > 0;
             const dimmed = tourActive && !isTabActive;
+            const label = t(tab.labelKey);
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
+                aria-label={label}
+                title={label}
                 data-tour={tab.href === '/log' ? 'nav-log' : tab.href === '/dashboard' ? 'nav-overview' : undefined}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-colors duration-200 relative',
+                  'flex items-center justify-center px-2 py-2 rounded-xl transition-colors duration-200 relative',
                   isTabActive ? 'text-nav-active' : 'text-nav-inactive hover:text-nav-inactive-hover',
                   dimmed && 'opacity-40'
                 )}
@@ -136,7 +139,6 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                     <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
                   )}
                 </div>
-                <span className="text-[10px] font-medium">{t(tab.labelKey)}</span>
               </Link>
             );
           })}
