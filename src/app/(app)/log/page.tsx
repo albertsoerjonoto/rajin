@@ -590,9 +590,13 @@ export default function LogPage() {
                   <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">{t('log.meals')}</h3>
                   <button
                     onClick={() => { setMealType('lunch'); setModal('food'); }}
-                    className="text-accent-text text-xs font-medium"
+                    aria-label={t('common.add')}
+                    className="text-accent-text p-1.5 rounded-full hover:bg-surface-hover transition-all duration-200"
                   >
-                    {t('common.add')}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
                   </button>
                 </div>
                 {mealLogs.length === 0 ? (
@@ -631,9 +635,13 @@ export default function LogPage() {
                   <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">{t('log.snacks')}</h3>
                   <button
                     onClick={() => { setMealType('snack'); setModal('food'); }}
-                    className="text-accent-text text-xs font-medium"
+                    aria-label={t('common.add')}
+                    className="text-accent-text p-1.5 rounded-full hover:bg-surface-hover transition-all duration-200"
                   >
-                    {t('common.add')}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
                   </button>
                 </div>
                 {snackLogs.length === 0 ? (
@@ -672,9 +680,13 @@ export default function LogPage() {
                   <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">{t('log.drinks')}</h3>
                   <button
                     onClick={() => setModal('drink')}
-                    className="text-accent-text text-xs font-medium"
+                    aria-label={t('common.add')}
+                    className="text-accent-text p-1.5 rounded-full hover:bg-surface-hover transition-all duration-200"
                   >
-                    {t('common.add')}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
                   </button>
                 </div>
 
