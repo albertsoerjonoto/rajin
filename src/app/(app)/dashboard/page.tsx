@@ -330,7 +330,7 @@ function HabitsSection({
       disabled={togglingId === habit.id}
       className={cn(
         'bg-surface rounded-xl px-3 py-2.5 text-left transition-all duration-200 active:scale-[0.97]',
-        habit.completed && 'border border-positive-border bg-positive-surface',
+        habit.completed && 'ring-1 ring-inset ring-positive-border bg-positive-surface',
         togglingId === habit.id && 'opacity-60'
       )}
     >
