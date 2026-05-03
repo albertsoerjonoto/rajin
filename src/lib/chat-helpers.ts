@@ -15,6 +15,13 @@ import type {
 // the server (parse API trims its accepted image_urls list to this length).
 export const MAX_CHAT_IMAGES_PER_MESSAGE = 4;
 
+// Conversation-history window. Restored from 10 because the previous setting
+// erased per-day memory after ~5 turns. Both the client (when picking which
+// recent messages to send) and the server (when re-slicing the inbound list
+// before forwarding to Gemini) honour this constant — they MUST agree, or a
+// client-side bump would silently still get clamped down server-side.
+export const CHAT_HISTORY_WINDOW = 20;
+
 export interface ChatMessageView {
   id: string;
   role: 'user' | 'assistant';
@@ -75,7 +82,7 @@ export function dbRowToMessage(row: ChatMessage): ChatMessageView {
 // which the previous implementation incorrectly stripped and broke per-day memory.
 export function buildHistory(
   messages: ChatMessageView[],
-  limit = 20,
+  limit = CHAT_HISTORY_WINDOW,
 ): Array<{
   role: 'user' | 'assistant';
   content: string;
