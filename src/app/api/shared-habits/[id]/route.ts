@@ -37,7 +37,7 @@ export async function PATCH(
   }
 
   // Accept: create or link habit for the friend
-  const habitInfo = sharedHabit.habits as { name: string; emoji: string; category: 'habit' | 'supplement' | 'skincare' | null } | null;
+  const habitInfo = sharedHabit.habits as { name: string; emoji: string; category: 'habit' | 'supplement' | 'skincare' | 'superfood' | null } | null;
   const habitName = habitInfo?.name ?? 'Shared Habit';
   const habitEmoji = habitInfo?.emoji ?? '⭐';
   const habitCategory = habitInfo?.category ?? 'habit';
